@@ -40,30 +40,55 @@ MongoDB query optimization and indexing strategies from MongoDB Engineering. Con
 
 ## Installation
 
-### Option 1: Agent Skills CLI
+### Option 1: Claude Code (Personal Skills)
 
-```bash
-npx add-skill romiluz13/mongodb-agent-skills
-```
-
-### Option 2: Claude Code (Manual)
+Install skills for use across all your projects:
 
 ```bash
 # Clone the repository
 git clone https://github.com/romiluz13/mongodb-agent-skills.git
 
-# Copy skills to Claude's skills directory
+# Copy to your personal skills directory
 cp -r mongodb-agent-skills/skills/mongodb-schema-design ~/.claude/skills/
 cp -r mongodb-agent-skills/skills/mongodb-query-and-index-optimize ~/.claude/skills/
 ```
 
-### Option 3: Claude.ai / Project Knowledge
+Skills are automatically discovered by Claude Code. No restart required.
 
-1. Download the skill's `SKILL.md` file from:
+### Option 2: Claude Code (Project Skills)
+
+Install skills for a specific project (shared with your team via git):
+
+```bash
+# From your project root
+mkdir -p .claude/skills
+
+# Clone and copy
+git clone https://github.com/romiluz13/mongodb-agent-skills.git /tmp/mongodb-skills
+cp -r /tmp/mongodb-skills/skills/mongodb-schema-design .claude/skills/
+cp -r /tmp/mongodb-skills/skills/mongodb-query-and-index-optimize .claude/skills/
+rm -rf /tmp/mongodb-skills
+
+# Commit to share with team
+git add .claude/skills
+git commit -m "Add MongoDB agent skills"
+```
+
+### Option 3: Claude.ai (Project Knowledge)
+
+1. Download the `SKILL.md` file:
    - [mongodb-schema-design/SKILL.md](skills/mongodb-schema-design/SKILL.md)
    - [mongodb-query-and-index-optimize/SKILL.md](skills/mongodb-query-and-index-optimize/SKILL.md)
-2. Add to your project's knowledge base, or
-3. Paste the contents directly into a conversation
+2. In Claude.ai, go to your Project → Project Knowledge
+3. Upload the `SKILL.md` file(s)
+
+### Option 4: Community CLI
+
+Using the [Agent Skills CLI](https://agentskills.io/):
+
+```bash
+npx add-skill romiluz13/mongodb-agent-skills
+```
 
 ## Usage
 
