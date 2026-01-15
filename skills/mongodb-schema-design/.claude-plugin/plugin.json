@@ -1,0 +1,6 @@
+{
+  "name": "mongodb-schema-design",
+  "version": "1.0.0",
+  "description": "MongoDB data modeling patterns and anti-patterns from MongoDB Engineering. Contains 12 rules for schema design, embed vs reference decisions, and design patterns.",
+  "skills": ["./"]
+}

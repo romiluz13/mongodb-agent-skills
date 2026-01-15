@@ -1,0 +1,24 @@
+{
+  "name": "mongodb-agent-skills",
+  "owner": {
+    "name": "MongoDB",
+    "email": "rom.iluz@mongodb.com"
+  },
+  "metadata": {
+    "description": "MongoDB schema design and query optimization skills for AI coding agents"
+  },
+  "plugins": [
+    {
+      "name": "mongodb-schema-design",
+      "source": "./skills/mongodb-schema-design",
+      "description": "MongoDB data modeling patterns and anti-patterns",
+      "version": "1.0.0"
+    },
+    {
+      "name": "mongodb-query-optimize",
+      "source": "./skills/mongodb-query-and-index-optimize",
+      "description": "MongoDB query optimization and indexing strategies",
+      "version": "1.0.0"
+    }
+  ]
+}

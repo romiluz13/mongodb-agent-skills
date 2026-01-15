@@ -1,0 +1,6 @@
+{
+  "name": "mongodb-query-optimize",
+  "version": "1.0.0",
+  "description": "MongoDB query optimization and indexing strategies from MongoDB Engineering. Contains 15 rules for indexes, query patterns, and aggregation optimization.",
+  "skills": ["./"]
+}

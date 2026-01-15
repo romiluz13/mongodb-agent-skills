@@ -52,8 +52,9 @@ npx add-skill romiluz13/mongodb-agent-skills
 # Step 1: Add marketplace
 /plugin marketplace add romiluz13/mongodb-agent-skills
 
-# Step 2: Install plugin
-/plugin install mongodb-agent-skills@romiluz13
+# Step 2: Install plugins
+/plugin install mongodb-schema-design@mongodb-agent-skills
+/plugin install mongodb-query-optimize@mongodb-agent-skills
 
 # Step 3: Restart Claude Code
 ```
