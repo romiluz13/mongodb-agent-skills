@@ -1,0 +1,27 @@
+{
+  "name": "mongodb-skills-build",
+  "version": "1.0.0",
+  "description": "Build tooling for MongoDB Agent Skills",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm build-schema && pnpm build-query",
+    "build-schema": "tsx src/build.ts mongodb-schema-design",
+    "build-query": "tsx src/build.ts mongodb-query-and-index-optimize",
+    "validate": "tsx src/validate.ts",
+    "dev": "pnpm build && pnpm validate"
+  },
+  "keywords": [
+    "mongodb",
+    "schema-design",
+    "query-optimization",
+    "indexing",
+    "llm",
+    "agents"
+  ],
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}

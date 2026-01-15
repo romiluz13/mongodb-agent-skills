@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0",
+  "organization": "MongoDB",
+  "date": "January 2025",
+  "abstract": "MongoDB schema design patterns and anti-patterns for AI agents and developers. Contains 12 rules across 3 categories, prioritized by impact from critical (schema anti-patterns that cause unbounded growth and performance degradation) to medium (design patterns for specific use cases). Each rule includes code examples comparing incorrect vs. correct implementations, with measurable impact metrics to guide data model decisions.",
+  "references": [
+    "https://mongodb.com/docs/manual/data-modeling/",
+    "https://mongodb.com/docs/manual/data-modeling/schema-design-process/",
+    "https://mongodb.com/docs/manual/data-modeling/design-antipatterns/",
+    "https://mongodb.com/blog/post/building-with-patterns-a-summary",
+    "https://mongodb.com/docs/manual/core/schema-validation/",
+    "https://mongodb.com/docs/atlas/schema-suggestions/"
+  ]
+}

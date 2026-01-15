@@ -1,0 +1,61 @@
+name: MongoDB Skills CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'skills/**'
+      - 'packages/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'skills/**'
+      - 'packages/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: packages/mongodb-skills-build/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: packages/mongodb-skills-build
+        run: pnpm install
+
+      - name: Validate mongodb-schema-design
+        working-directory: packages/mongodb-skills-build
+        run: pnpm validate mongodb-schema-design
+
+      - name: Validate mongodb-query-and-index-optimize
+        working-directory: packages/mongodb-skills-build
+        run: pnpm validate mongodb-query-and-index-optimize
+
+      - name: Build mongodb-schema-design
+        working-directory: packages/mongodb-skills-build
+        run: pnpm build-schema
+
+      - name: Build mongodb-query-and-index-optimize
+        working-directory: packages/mongodb-skills-build
+        run: pnpm build-query
+
+      - name: Check for uncommitted changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::AGENTS.md files are out of sync. Run 'pnpm build' and commit the changes."
+            git diff
+            exit 1
+          fi
