@@ -40,54 +40,22 @@ MongoDB query optimization and indexing strategies from MongoDB Engineering. Con
 
 ## Installation
 
-### Option 1: Claude Code (Personal Skills)
-
-Install skills for use across all your projects:
-
-```bash
-# Clone the repository
-git clone https://github.com/romiluz13/mongodb-agent-skills.git
-
-# Copy to your personal skills directory
-cp -r mongodb-agent-skills/skills/mongodb-schema-design ~/.claude/skills/
-cp -r mongodb-agent-skills/skills/mongodb-query-and-index-optimize ~/.claude/skills/
-```
-
-Skills are automatically discovered by Claude Code. No restart required.
-
-### Option 2: Claude Code (Project Skills)
-
-Install skills for a specific project (shared with your team via git):
-
-```bash
-# From your project root
-mkdir -p .claude/skills
-
-# Clone and copy
-git clone https://github.com/romiluz13/mongodb-agent-skills.git /tmp/mongodb-skills
-cp -r /tmp/mongodb-skills/skills/mongodb-schema-design .claude/skills/
-cp -r /tmp/mongodb-skills/skills/mongodb-query-and-index-optimize .claude/skills/
-rm -rf /tmp/mongodb-skills
-
-# Commit to share with team
-git add .claude/skills
-git commit -m "Add MongoDB agent skills"
-```
-
-### Option 3: Claude.ai (Project Knowledge)
-
-1. Download the `SKILL.md` file:
-   - [mongodb-schema-design/SKILL.md](skills/mongodb-schema-design/SKILL.md)
-   - [mongodb-query-and-index-optimize/SKILL.md](skills/mongodb-query-and-index-optimize/SKILL.md)
-2. In Claude.ai, go to your Project → Project Knowledge
-3. Upload the `SKILL.md` file(s)
-
-### Option 4: Community CLI
-
-Using the [Agent Skills CLI](https://agentskills.io/):
+### Option 1: Agent Skills CLI
 
 ```bash
 npx add-skill romiluz13/mongodb-agent-skills
+```
+
+### Option 2: Claude Code Plugin
+
+```bash
+# Step 1: Add marketplace
+/plugin marketplace add romiluz13/mongodb-agent-skills
+
+# Step 2: Install plugin
+/plugin install mongodb-agent-skills@romiluz13
+
+# Step 3: Restart Claude Code
 ```
 
 ## Usage
