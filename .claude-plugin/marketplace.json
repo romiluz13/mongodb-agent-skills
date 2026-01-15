@@ -2,23 +2,38 @@
   "name": "mongodb-agent-skills",
   "owner": {
     "name": "MongoDB",
-    "email": "rom.iluz@mongodb.com"
+    "email": "rom.iluz@mongodb.com",
+    "url": "https://github.com/romiluz13"
   },
   "metadata": {
-    "description": "MongoDB schema design and query optimization skills for AI coding agents"
+    "description": "MongoDB schema design and query optimization skills for AI coding agents",
+    "version": "1.0.0"
   },
   "plugins": [
     {
-      "name": "mongodb-schema-design",
-      "source": "./skills/mongodb-schema-design",
-      "description": "MongoDB data modeling patterns and anti-patterns",
-      "version": "1.0.0"
-    },
-    {
-      "name": "mongodb-query-optimize",
-      "source": "./skills/mongodb-query-and-index-optimize",
-      "description": "MongoDB query optimization and indexing strategies",
-      "version": "1.0.0"
+      "name": "mongodb-agent-skills",
+      "description": "MongoDB best practices for schema design, query optimization, and indexing strategies. Contains 27 rules from MongoDB Engineering covering anti-patterns, data modeling, index strategies, and aggregation optimization.",
+      "version": "1.0.0",
+      "author": {
+        "name": "MongoDB",
+        "email": "rom.iluz@mongodb.com",
+        "url": "https://github.com/romiluz13"
+      },
+      "homepage": "https://github.com/romiluz13/mongodb-agent-skills",
+      "repository": "https://github.com/romiluz13/mongodb-agent-skills",
+      "license": "Apache-2.0",
+      "keywords": [
+        "mongodb",
+        "schema-design",
+        "query-optimization",
+        "indexing",
+        "aggregation",
+        "data-modeling",
+        "best-practices",
+        "claude-code"
+      ],
+      "category": "database",
+      "source": "./plugins/mongodb-agent-skills"
     }
   ]
 }

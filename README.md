@@ -52,9 +52,8 @@ npx add-skill romiluz13/mongodb-agent-skills
 # Step 1: Add marketplace
 /plugin marketplace add romiluz13/mongodb-agent-skills
 
-# Step 2: Install plugins
-/plugin install mongodb-schema-design@mongodb-agent-skills
-/plugin install mongodb-query-optimize@mongodb-agent-skills
+# Step 2: Install plugin (includes all skills)
+/plugin install mongodb-agent-skills@mongodb-agent-skills
 
 # Step 3: Restart Claude Code
 ```
@@ -77,12 +76,26 @@ Review this aggregation pipeline for performance
 Should I embed or reference this data?
 ```
 
-## Skill Structure
+## Structure
 
-Each skill contains:
-- `SKILL.md` - Instructions for the agent
-- `rules/` - Individual rule files with code examples
-- `metadata.json` - Skill metadata and references
+```
+mongodb-agent-skills/
+├── .claude-plugin/
+│   └── marketplace.json
+└── plugins/
+    └── mongodb-agent-skills/
+        ├── .claude-plugin/
+        │   └── plugin.json
+        └── skills/
+            ├── mongodb-schema-design/
+            │   ├── SKILL.md
+            │   ├── rules/
+            │   └── metadata.json
+            └── mongodb-query-and-index-optimize/
+                ├── SKILL.md
+                ├── rules/
+                └── metadata.json
+```
 
 ## License
 
