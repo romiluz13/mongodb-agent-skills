@@ -40,9 +40,30 @@ MongoDB query optimization and indexing strategies from MongoDB Engineering. Con
 
 ## Installation
 
+### Option 1: Agent Skills CLI
+
 ```bash
-npx add-skill mongodb/mongodb-agent-skills
+npx add-skill romiluz13/mongodb-agent-skills
 ```
+
+### Option 2: Claude Code (Manual)
+
+```bash
+# Clone the repository
+git clone https://github.com/romiluz13/mongodb-agent-skills.git
+
+# Copy skills to Claude's skills directory
+cp -r mongodb-agent-skills/skills/mongodb-schema-design ~/.claude/skills/
+cp -r mongodb-agent-skills/skills/mongodb-query-and-index-optimize ~/.claude/skills/
+```
+
+### Option 3: Claude.ai / Project Knowledge
+
+1. Download the skill's `SKILL.md` file from:
+   - [mongodb-schema-design/SKILL.md](skills/mongodb-schema-design/SKILL.md)
+   - [mongodb-query-and-index-optimize/SKILL.md](skills/mongodb-query-and-index-optimize/SKILL.md)
+2. Add to your project's knowledge base, or
+3. Paste the contents directly into a conversation
 
 ## Usage
 
