@@ -42,3 +42,12 @@ export interface GuidelinesDocument {
   sections: Section[]
   references?: string[]
 }
+
+export interface TestCase {
+  ruleId: string
+  ruleTitle: string
+  type: 'bad' | 'good'
+  code: string
+  language: string
+  description: string
+}

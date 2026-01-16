@@ -1,12 +1,16 @@
 {
   "name": "mongodb-skills-build",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Build tooling for MongoDB Agent Skills",
   "type": "module",
   "scripts": {
-    "build": "pnpm build-schema && pnpm build-query",
+    "build": "pnpm build-agents && pnpm extract-tests",
+    "build-agents": "pnpm build-schema && pnpm build-query",
     "build-schema": "tsx src/build.ts mongodb-schema-design",
     "build-query": "tsx src/build.ts mongodb-query-and-index-optimize",
+    "extract-tests": "pnpm extract-tests-schema && pnpm extract-tests-query",
+    "extract-tests-schema": "tsx src/extract-tests.ts mongodb-schema-design",
+    "extract-tests-query": "tsx src/extract-tests.ts mongodb-query-and-index-optimize",
     "validate": "tsx src/validate.ts",
     "dev": "pnpm build && pnpm validate"
   },

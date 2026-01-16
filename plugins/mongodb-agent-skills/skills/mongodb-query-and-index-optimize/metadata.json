@@ -1,13 +1,17 @@
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
   "organization": "MongoDB",
   "date": "January 2025",
-  "abstract": "MongoDB query optimization and indexing strategies for AI agents and developers. Contains 15 rules across 3 categories, prioritized by impact from critical (compound index ordering, avoiding collection scans) to high (aggregation pipeline optimization). Each rule includes code examples comparing incorrect vs. correct implementations, explain() output interpretation, and specific performance metrics.",
+  "abstract": "MongoDB query optimization and indexing strategies for AI agents and developers. Contains 30 rules across 5 categories: Index Essentials (CRITICAL - ESR rule, compound field order, covered queries, prefix principle, index sizing), Specialized Indexes (HIGH - partial, sparse, TTL, text search, wildcard, multikey, geospatial), Query Patterns (HIGH - projections, avoiding $ne/$nin, anchored regex, batching, pagination, $exists behavior), Aggregation Optimization (HIGH - $match/$project early, $sort+$limit coalescence, $lookup indexing, $unwind control, allowDiskUse), and Performance Diagnostics (MEDIUM - explain() interpretation, slow query profiler, $indexStats analysis). Each rule includes incorrect/correct code examples with quantified impact metrics, 'When NOT to use' exceptions, and verification diagnostics.",
   "references": [
     "https://mongodb.com/docs/manual/indexes/",
-    "https://mongodb.com/docs/manual/applications/indexes/",
+    "https://mongodb.com/docs/manual/core/indexes/index-types/",
+    "https://mongodb.com/docs/manual/core/indexes/create-index/",
     "https://mongodb.com/docs/manual/tutorial/analyze-query-plan/",
+    "https://mongodb.com/docs/manual/reference/explain-results/",
     "https://mongodb.com/docs/manual/core/aggregation-pipeline-optimization/",
+    "https://mongodb.com/docs/manual/tutorial/manage-the-database-profiler/",
+    "https://mongodb.com/docs/manual/reference/operator/aggregation/indexStats/",
     "https://mongodb.com/docs/atlas/performance-advisor/",
     "https://mongodb.com/developer/products/mongodb/performance-best-practices-indexing/"
   ]

@@ -1,12 +1,16 @@
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
   "organization": "MongoDB",
   "date": "January 2025",
-  "abstract": "MongoDB schema design patterns and anti-patterns for AI agents and developers. Contains 12 rules across 3 categories, prioritized by impact from critical (schema anti-patterns that cause unbounded growth and performance degradation) to medium (design patterns for specific use cases). Each rule includes code examples comparing incorrect vs. correct implementations, with measurable impact metrics to guide data model decisions.",
+  "abstract": "MongoDB schema design patterns and anti-patterns for AI agents and developers. Contains 23 rules across 5 categories: Schema Anti-Patterns (CRITICAL - unbounded arrays, bloated documents, schema drift), Schema Fundamentals (HIGH - embed vs reference, document model, 16MB awareness), Relationship Patterns (HIGH - one-to-one, one-to-few, one-to-many, many-to-many, tree structures), Design Patterns (MEDIUM - bucket, computed, subset, outlier, extended reference), and Schema Validation (MEDIUM - JSON Schema, validation levels). Each rule includes incorrect/correct code examples with quantified impact metrics, 'When NOT to use' exceptions, and verification diagnostics.",
   "references": [
     "https://mongodb.com/docs/manual/data-modeling/",
     "https://mongodb.com/docs/manual/data-modeling/schema-design-process/",
     "https://mongodb.com/docs/manual/data-modeling/design-antipatterns/",
+    "https://mongodb.com/docs/manual/data-modeling/concepts/embedding/",
+    "https://mongodb.com/docs/manual/data-modeling/concepts/referencing/",
+    "https://mongodb.com/docs/manual/data-modeling/concepts/data-model-tree/",
+    "https://mongodb.com/docs/manual/data-modeling/design-patterns/",
     "https://mongodb.com/blog/post/building-with-patterns-a-summary",
     "https://mongodb.com/docs/manual/core/schema-validation/",
     "https://mongodb.com/docs/atlas/schema-suggestions/"

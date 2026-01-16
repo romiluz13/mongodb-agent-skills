@@ -1,26 +1,31 @@
 ---
 title: Use Schema Validation
 impact: MEDIUM
-impactDescription: Prevents invalid data at database level
+impactDescription: "Prevents invalid data at database level, catches bugs before production corruption"
 tags: schema, validation, json-schema, data-integrity, fundamentals
 ---
 
 ## Use Schema Validation
 
-Enforce document structure with MongoDB's built-in JSON Schema validation. Catch invalid data before it corrupts your database, not after.
+**Enforce document structure with MongoDB's built-in JSON Schema validation.** Catch invalid data before it corrupts your database, not after you've shipped 10,000 malformed documents to production. Schema validation is your last line of defense when application bugs slip through.
 
 **Incorrect (no validation):**
 
 ```javascript
-// Any document can be inserted
+// Any document can be inserted - no safety net
 db.users.insertOne({ email: "not-an-email", age: "twenty" })
-// Invalid data now in production
+// Now you have: { email: "not-an-email", age: "twenty" }
+// Application crashes when parsing age as number
+// Or worse: silent data corruption, discovered months later
+
+db.users.insertOne({ name: "Bob" })  // Missing required email
+// Downstream systems expect email, fail silently
 ```
 
 **Correct (schema validation):**
 
 ```javascript
-// Create collection with validation
+// Create collection with validation rules
 db.createCollection("users", {
   validator: {
     $jsonSchema: {
@@ -30,31 +35,34 @@ db.createCollection("users", {
         email: {
           bsonType: "string",
           pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
-          description: "must be a valid email"
+          description: "must be a valid email address"
         },
         name: {
           bsonType: "string",
           minLength: 1,
-          maxLength: 100
+          maxLength: 100,
+          description: "must be 1-100 characters"
         },
         age: {
           bsonType: "int",
           minimum: 0,
-          maximum: 150
+          maximum: 150,
+          description: "must be integer 0-150"
         },
         status: {
-          enum: ["active", "inactive", "pending"]
+          enum: ["active", "inactive", "pending"],
+          description: "must be one of: active, inactive, pending"
         },
         addresses: {
           bsonType: "array",
-          maxItems: 10,
+          maxItems: 10,  // Prevent unbounded arrays
           items: {
             bsonType: "object",
             required: ["city"],
             properties: {
               street: { bsonType: "string" },
               city: { bsonType: "string" },
-              zip: { bsonType: "string" }
+              zip: { bsonType: "string", pattern: "^[0-9]{5}$" }
             }
           }
         }
@@ -65,28 +73,71 @@ db.createCollection("users", {
   validationAction: "error"
 })
 
-// Invalid inserts now fail
+// Invalid inserts now fail immediately with clear error
 db.users.insertOne({ email: "not-an-email" })
-// Error: Document failed validation
+// Error: Document failed validation:
+// "email" does not match pattern, "name" is required
 ```
 
-**Validation levels:**
+**Validation levels and actions:**
 
-- `strict`: Validate all inserts and updates (default)
-- `moderate`: Only validate documents that already match schema
+| validationLevel | Behavior |
+|-----------------|----------|
+| `strict` | Validate ALL inserts and updates (default, recommended) |
+| `moderate` | Only validate documents that already match schema |
 
-**Validation actions:**
-
-- `error`: Reject invalid documents (default)
-- `warn`: Allow but log warning
+| validationAction | Behavior |
+|------------------|----------|
+| `error` | Reject invalid documents (default, recommended) |
+| `warn` | Allow but log warning (use during migration only) |
 
 **Add validation to existing collection:**
 
 ```javascript
+// Start with moderate + warn to discover violations
 db.runCommand({
   collMod: "users",
   validator: { $jsonSchema: {...} },
-  validationLevel: "moderate" // Don't break existing invalid docs
+  validationLevel: "moderate",  // Don't break existing invalid docs
+  validationAction: "warn"       // Log violations, don't block
+})
+
+// Check logs for violations, fix existing data
+db.users.find({ $nor: [{ email: { $regex: /^[a-zA-Z0-9._%+-]+@/ } }] })
+
+// Then switch to strict + error
+db.runCommand({
+  collMod: "users",
+  validationLevel: "strict",
+  validationAction: "error"
+})
+```
+
+**When NOT to use this pattern:**
+
+- **Rapid prototyping**: Skip validation during early development, add before production.
+- **Schema-per-document designs**: Some collections intentionally store varied document shapes.
+- **Log/event collections**: High-write collections where validation overhead matters.
+
+**Verify with:**
+
+```javascript
+// Check if validation exists on collection
+db.getCollectionInfos({ name: "users" })[0].options.validator
+// Empty = no validation (add it!)
+
+// Test your validation rules
+db.runCommand({
+  validate: "users",
+  full: true
+})
+
+// Find documents that would fail current validation
+db.users.find({
+  $nor: [
+    { email: { $type: "string" } },
+    { name: { $type: "string" } }
+  ]
 })
 ```
 

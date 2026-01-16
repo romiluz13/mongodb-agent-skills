@@ -1,28 +1,55 @@
 ---
 title: Rule Title Here
 impact: CRITICAL|HIGH|MEDIUM
-impactDescription: Brief description of measurable impact
+impactDescription: "Specific quantified impact: 10-100× improvement, 16MB limit avoided, 50ms→5ms"
 tags: tag1, tag2, tag3
 ---
 
 ## Rule Title Here
 
-Brief explanation of why this rule matters and what problem it solves.
+**1-2 sentence explanation of WHY this matters with specific impact metrics.** Example: "This pattern prevents X which causes Y, improving performance by Z×."
 
 **Incorrect (description of the problem):**
 
 ```javascript
-// Bad code example using MongoDB Shell syntax
+// Bad code example with inline comments explaining the issue
+// Metric: "Results in X behavior, Y impact"
 db.collection.find({ field: "value" })
 ```
+
+Brief explanation of what goes wrong with this approach and why.
 
 **Correct (description of the solution):**
 
 ```javascript
-// Good code example using MongoDB Shell syntax
+// Good code example with inline comments explaining the fix
+// Metric: "Results in X behavior, Y improvement"
 db.collection.find({ field: "value" })
 ```
 
-Optional additional context, variations, or edge cases.
+Brief explanation of why this solution works better.
 
-Reference: [MongoDB Documentation](https://mongodb.com/docs/manual/)
+**Alternative approach (when applicable):**
+
+```javascript
+// Alternative solution for specific use cases
+db.collection.find({ field: "value" })
+```
+
+Explanation of when to use this alternative instead.
+
+**When NOT to use this pattern:**
+
+- Exception scenario 1 where this rule doesn't apply
+- Exception scenario 2 where the trade-off isn't worth it
+- Edge case that requires different handling
+
+**Verify with:**
+
+```javascript
+// Diagnostic command to confirm the issue or verify the fix
+db.collection.explain("executionStats").find({...})
+// Look for: specific indicators of success or failure
+```
+
+Reference: [MongoDB Documentation](https://mongodb.com/docs/manual/...)

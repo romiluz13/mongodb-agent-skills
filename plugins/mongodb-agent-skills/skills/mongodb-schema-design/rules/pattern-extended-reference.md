@@ -1,13 +1,13 @@
 ---
 title: Use Extended Reference Pattern
 impact: MEDIUM
-impactDescription: Eliminates frequent $lookup while maintaining data integrity
+impactDescription: "Eliminates $lookup for 80% of queries, 5-10× faster list views"
 tags: schema, patterns, extended-reference, denormalization, caching
 ---
 
 ## Use Extended Reference Pattern
 
-Copy frequently-accessed fields from referenced documents into the parent. Eliminates $lookup for common queries while keeping the full data normalized.
+**Copy frequently-accessed fields from referenced documents into the parent.** If you always display author name with articles, embed it. This eliminates $lookup for common queries while keeping the full data normalized—best of both worlds.
 
 **Incorrect (always $lookup for display data):**
 
@@ -15,72 +15,139 @@ Copy frequently-accessed fields from referenced documents into the parent. Elimi
 // Order references customer by ID only
 {
   _id: "order123",
-  customerId: "cust456", // Just an ID
+  customerId: "cust456",  // Just an ObjectId
   items: [...],
   total: 299.99
 }
 
-// Every order display requires $lookup
+// Every order list/display requires $lookup
 db.orders.aggregate([
-  { $match: { _id: "order123" } },
+  { $match: { status: "pending" } },
   { $lookup: {
-      from: "customers",
-      localField: "customerId",
-      foreignField: "_id",
-      as: "customer"
-  }}
+    from: "customers",
+    localField: "customerId",
+    foreignField: "_id",
+    as: "customer"
+  }},
+  { $unwind: "$customer" }
 ])
+// 50 orders × $lookup = 50 extra index lookups
+// List view: 50-200ms instead of 5-20ms
 ```
 
 **Correct (extended reference):**
 
 ```javascript
 // Order contains frequently-needed customer fields
+// Full customer data still in customers collection
 {
   _id: "order123",
   customer: {
-    _id: "cust456",         // Reference for full lookup when needed
+    _id: "cust456",         // Keep reference for full lookup
     name: "Alice Smith",    // Cached for display
     email: "alice@ex.com"   // Cached for notifications
   },
   items: [...],
-  total: 299.99
+  total: 299.99,
+  createdAt: ISODate("2024-01-15")
 }
 
-// Display order without $lookup
-db.orders.findOne({ _id: "order123" })
+// Order list without $lookup - single query
+db.orders.find({ status: "pending" })
+// Returns customer.name directly - no join needed
+// 50 orders in 5ms instead of 50ms
 
-// Full customer data still available when needed
-db.customers.findOne({ _id: order.customer._id })
+// Full customer data available when needed
+const fullCustomer = db.customers.findOne({ _id: order.customer._id })
 ```
 
-**When customer data changes:**
+**Keeping cached data in sync:**
 
 ```javascript
-// Update name in both places
+// When customer name changes (rare event)
 // 1. Update source of truth
 db.customers.updateOne(
   { _id: "cust456" },
   { $set: { name: "Alice Johnson" } }
 )
 
-// 2. Update cached copies (can be async/eventual)
+// 2. Update cached copies
+// Can be async via Change Streams or background job
 db.orders.updateMany(
   { "customer._id": "cust456" },
   { $set: { "customer.name": "Alice Johnson" } }
 )
+
+// For frequently-changing data, add timestamp
+{
+  customer: {
+    _id: "cust456",
+    name: "Alice Smith",
+    cachedAt: ISODate("2024-01-15")
+  }
+}
+// Application can refresh if cachedAt > threshold
 ```
 
-**What to cache:**
+**What to cache (extend):**
 
-- Fields displayed in lists (name, avatar, title)
-- Fields used for sorting/filtering
-- Slowly-changing data (name vs real-time balance)
+| Cache | Don't Cache |
+|-------|-------------|
+| Display name, avatar | Full bio, description |
+| Status, type | Sensitive PII |
+| Slowly-changing data | Real-time values (balance, inventory) |
+| Fields used in sorting/filtering | Large binary data |
 
-**What NOT to cache:**
+**Alternative: Hybrid pattern with cache expiry:**
 
-- Frequently-changing data (balance, inventory)
-- Sensitive data in non-sensitive collections
-- Large fields (bio, description)
+```javascript
+// For data that changes occasionally
+{
+  _id: "order123",
+  customerId: "cust456",        // Always have reference
+  customerCache: {              // Optional cache
+    name: "Alice Smith",
+    email: "alice@ex.com",
+    cachedAt: ISODate("2024-01-15")
+  }
+}
+
+// Application logic
+if (!order.customerCache ||
+    order.customerCache.cachedAt < oneDayAgo) {
+  // Refresh cache from customers collection
+  const customer = db.customers.findOne({ _id: order.customerId })
+  db.orders.updateOne(
+    { _id: order._id },
+    { $set: { customerCache: { ...customer, cachedAt: new Date() } } }
+  )
+}
+```
+
+**When NOT to use this pattern:**
+
+- **Frequently-changing data**: If customer name changes daily, update overhead exceeds $lookup cost.
+- **Large cached payloads**: Don't embed 50KB of author bio in every article.
+- **Sensitive data segregation**: Don't copy PII into collections with different access controls.
+- **Writes >> Reads**: If you write 100× more than read, caching adds overhead.
+
+**Verify with:**
+
+```javascript
+// Find $lookup-heavy aggregations in profile
+db.setProfilingLevel(1, { slowms: 20 })
+db.system.profile.find({
+  "command.pipeline": { $elemMatch: { "$lookup": { $exists: true } } }
+}).sort({ millis: -1 }).limit(10)
+
+// Check how often lookups hit same collections
+db.system.profile.aggregate([
+  { $match: { "command.pipeline.$lookup": { $exists: true } } },
+  { $unwind: "$command.pipeline" },
+  { $match: { "$lookup": { $exists: true } } },
+  { $group: { _id: "$command.pipeline.$lookup.from", count: { $sum: 1 } } }
+])
+// High count = candidate for extended reference
+```
 
 Reference: [Building with Patterns - Extended Reference](https://mongodb.com/blog/post/building-with-patterns-the-extended-reference-pattern)
