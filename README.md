@@ -1,112 +1,121 @@
 # MongoDB Agent Skills
 
-A collection of skills for AI coding agents. Skills are packaged instructions that extend agent capabilities for MongoDB development.
+**Stop writing slow MongoDB code.** These skills teach AI coding agents the patterns that MongoDB Engineers use to build applications that scale.
 
-Skills follow the [Agent Skills](https://agentskills.io/) format and are compatible with **15+ coding agents** including Claude Code, OpenCode, Cursor, Codex, and more.
+53 rules. Battle-tested patterns. The difference between a query that takes 10 seconds and one that takes 10 milliseconds.
+
+Skills follow the [Agent Skills](https://agentskills.io/) format and work with **15+ coding agents** including Claude Code, Cursor, Copilot, Codex, and more.
+
+## The Problem
+
+Every MongoDB performance issue we see follows the same patterns:
+- **COLLSCAN on 10M documents** - missing or wrong indexes
+- **16MB document limit hit** - unbounded arrays that grew forever
+- **N+1 query patterns** - $lookup without indexes, fetching references one-by-one
+- **Memory exhaustion** - aggregations that don't filter early
+
+These skills catch these problems *before* they hit production.
 
 ## Available Skills
 
 ### mongodb-schema-design
 
-MongoDB data modeling patterns and anti-patterns from MongoDB Engineering. Contains **23 rules across 5 categories**, prioritized by impact.
+**23 rules** for data modeling that scales. The patterns MongoDB Engineers recommend - and the anti-patterns that cause production incidents.
 
 **Use when:**
-- Designing a new MongoDB schema
+- Designing a new schema
 - Migrating from SQL to MongoDB
 - Reviewing existing data models
-- Troubleshooting slow queries caused by schema issues
 - Deciding between embedding and referencing
+- Hitting the 16MB document limit
 
-**Categories covered:**
-- Schema Anti-Patterns (Critical) - Unbounded arrays, bloated documents, schema drift
-- Schema Fundamentals (High) - Embed vs reference, 16MB awareness, document model
-- Relationship Patterns (High) - One-to-one, one-to-few, one-to-many, many-to-many, trees
-- Design Patterns (Medium) - Bucket, computed, subset, outlier, extended reference
-- Schema Validation (Medium) - JSON Schema, validation levels
+**What you'll learn:**
+| Category | Impact | Examples |
+|----------|--------|----------|
+| Anti-Patterns | Critical | Unbounded arrays, bloated documents, schema drift |
+| Fundamentals | High | Embed vs reference, document model thinking |
+| Relationships | High | One-to-many, many-to-many, tree structures |
+| Design Patterns | Medium | Bucket, computed, subset, outlier |
+| Validation | Medium | JSON Schema, validation levels |
 
 ### mongodb-query-and-index-optimize
 
-MongoDB query optimization and indexing strategies from MongoDB Engineering. Contains **30 rules across 5 categories**, prioritized by impact.
+**30 rules** for queries that fly. Turn collection scans into index scans. Turn seconds into milliseconds.
 
 **Use when:**
-- Writing new MongoDB queries or aggregations
-- Creating indexes for collections
-- Debugging slow queries (COLLSCAN, high execution time)
-- Reviewing explain() output
+- Writing queries or aggregations
+- Creating indexes
+- Debugging slow queries (COLLSCAN, high executionTimeMillis)
+- Reading explain() output
 - Optimizing aggregation pipelines
 
-**Categories covered:**
-- Index Essentials (Critical) - ESR rule, compound field order, covered queries, prefix principle
-- Specialized Indexes (High) - Partial, sparse, TTL, text, wildcard, multikey, geospatial
-- Query Patterns (High) - Projections, batch operations, pagination, $exists behavior
-- Aggregation Optimization (High) - $match early, $sort+$limit, indexed $lookup, allowDiskUse
-- Performance Diagnostics (Medium) - explain() interpretation, slow query profiler, $indexStats
+**What you'll learn:**
+| Category | Impact | Examples |
+|----------|--------|----------|
+| Index Essentials | Critical | ESR rule, compound field order, covered queries |
+| Specialized Indexes | High | Partial, sparse, TTL, text, wildcard, geospatial |
+| Query Patterns | High | Projections, batch operations, pagination |
+| Aggregation | High | $match early, $sort+$limit, indexed $lookup |
+| Diagnostics | Medium | explain() interpretation, profiler, $indexStats |
 
 ## Installation
 
-### Option 1: Agent Skills CLI (works with 15+ agents)
+### Option 1: Agent Skills CLI
+
+Works with 15+ agents (Claude Code, Cursor, Copilot, Codex, OpenCode, and more):
 
 ```bash
 npx add-skill romiluz13/mongodb-agent-skills
 ```
 
-Supports: OpenCode, Claude Code, Codex, Cursor, Amp, Kilo Code, Roo Code, Goose, Gemini CLI, Antigravity, GitHub Copilot, Clawdbot, Droid, Windsurf, and more.
-
 ### Option 2: Claude Code Plugin Marketplace
 
 ```bash
-# Step 1: Add marketplace
+# Add marketplace
 /plugin marketplace add romiluz13/mongodb-agent-skills
 
-# Step 2: Install plugin (includes all skills)
+# Install
 /plugin install mongodb-agent-skills@mongodb-agent-skills
 
-# Step 3: Restart Claude Code
+# Restart Claude Code
 ```
 
 ## Usage
 
-Skills are automatically available once installed. The agent will use them when relevant tasks are detected.
+Once installed, skills activate automatically. Just ask:
 
-**Examples:**
 ```
-Design a schema for an e-commerce application
+Design a schema for an e-commerce app with products, orders, and users
 ```
+
 ```
-Why is this MongoDB query slow?
+Why is this query slow? db.orders.find({ status: "pending" })
 ```
+
 ```
 Review this aggregation pipeline for performance
 ```
-```
-Should I embed or reference this data?
-```
-
-## Structure
 
 ```
-mongodb-agent-skills/
-├── skills/                              # agentskills.io format (symlinks)
-│   ├── mongodb-schema-design/
-│   └── mongodb-query-and-index-optimize/
-├── .claude-plugin/
-│   └── marketplace.json                 # Anthropic plugin marketplace
-└── plugins/
-    └── mongodb-agent-skills/
-        ├── .claude-plugin/
-        │   └── plugin.json
-        └── skills/                      # Actual skill files
-            ├── mongodb-schema-design/
-            │   ├── SKILL.md
-            │   ├── AGENTS.md
-            │   ├── rules/
-            │   └── metadata.json
-            └── mongodb-query-and-index-optimize/
-                ├── SKILL.md
-                ├── AGENTS.md
-                ├── rules/
-                └── metadata.json
+Should I embed order items or reference them?
 ```
+
+```
+Create indexes for this collection
+```
+
+## What Makes These Different
+
+These aren't generic best practices. They're the specific patterns that MongoDB Engineers see separate fast applications from slow ones:
+
+- **Quantified impact** - Every rule shows the performance difference (10x, 100x, etc.)
+- **Real code examples** - Bad patterns with inline metrics, fixed versions that actually work
+- **When NOT to use** - Every pattern has exceptions. We tell you what they are.
+- **Verification commands** - explain() queries to prove the optimization worked
+
+## Contributing
+
+Found a pattern we missed? Open an issue or PR.
 
 ## License
 
