@@ -1,8 +1,8 @@
 # MongoDB Query & Index Optimization
 
-**Version 2.0.0**
+**Version 2.1.0**
 MongoDB
-January 2025
+January 2026
 
 > **Note:**
 > This document is mainly for agents and LLMs to follow when maintaining,
@@ -14,7 +14,7 @@ January 2025
 
 ## Abstract
 
-MongoDB query optimization and indexing strategies for AI agents and developers. Contains 30 rules across 5 categories: Index Essentials (CRITICAL - ESR rule, compound field order, covered queries, prefix principle, index sizing), Specialized Indexes (HIGH - partial, sparse, TTL, text search, wildcard, multikey, geospatial), Query Patterns (HIGH - projections, avoiding $ne/$nin, anchored regex, batching, pagination, $exists behavior), Aggregation Optimization (HIGH - $match/$project early, $sort+$limit coalescence, $lookup indexing, $unwind control, allowDiskUse), and Performance Diagnostics (MEDIUM - explain() interpretation, slow query profiler, $indexStats analysis). Each rule includes incorrect/correct code examples with quantified impact metrics, 'When NOT to use' exceptions, and verification diagnostics.
+MongoDB query optimization and indexing strategies for AI agents and developers. Contains 39 rules across 5 categories: Index Essentials (CRITICAL - ESR rule, compound index usage, covered queries, prefix principle, index sizing), Specialized Indexes (HIGH - unique, partial, sparse, TTL, text search, wildcard, multikey, geospatial, hashed, clustered, hidden), Query Patterns (HIGH - projections, avoiding $ne/$nin, anchored regex, batching, pagination, $exists behavior, sort/collation alignment), Aggregation Optimization (HIGH - $match/$project early, $sort+$limit coalescence, $lookup indexing, $unwind control, allowDiskUse, $group memory control), and Performance Diagnostics (MEDIUM - explain() interpretation, slow query profiler, $indexStats analysis, hint usage, Atlas Performance Advisor). Each rule includes incorrect/correct code examples with quantified impact metrics, 'When NOT to use' exceptions, and verification diagnostics.
 
 ---
 
@@ -30,30 +30,39 @@ MongoDB query optimization and indexing strategies for AI agents and developers.
    - 1.7 [Remove Unused Indexes](#17-remove-unused-indexes)
    - 1.8 [Understand Index Prefix Principle](#18-understand-index-prefix-principle)
    - 1.9 [Understand Multikey Indexes for Arrays](#19-understand-multikey-indexes-for-arrays)
-   - 1.10 [Use Geospatial Indexes for Location Queries](#110-use-geospatial-indexes-for-location-queries)
-   - 1.11 [Use Partial Indexes to Reduce Size](#111-use-partial-indexes-to-reduce-size)
-   - 1.12 [Use Sparse Indexes for Optional Fields](#112-use-sparse-indexes-for-optional-fields)
-   - 1.13 [Use Text Indexes for Full-Text Search](#113-use-text-indexes-for-full-text-search)
-   - 1.14 [Use TTL Indexes for Automatic Data Expiration](#114-use-ttl-indexes-for-automatic-data-expiration)
-   - 1.15 [Use Wildcard Indexes for Dynamic Fields](#115-use-wildcard-indexes-for-dynamic-fields)
+   - 1.10 [Use Clustered Collections for Ordered Storage](#110-use-clustered-collections-for-ordered-storage)
+   - 1.11 [Use Compound Indexes for Multi-Field Queries](#111-use-compound-indexes-for-multi-field-queries)
+   - 1.12 [Use Geospatial Indexes for Location Queries](#112-use-geospatial-indexes-for-location-queries)
+   - 1.13 [Use Hashed Indexes for Evenly Distributed Equality Lookups](#113-use-hashed-indexes-for-evenly-distributed-equality-lookups)
+   - 1.14 [Use Hidden Indexes to Test Removals Safely](#114-use-hidden-indexes-to-test-removals-safely)
+   - 1.15 [Use Partial Indexes to Reduce Size](#115-use-partial-indexes-to-reduce-size)
+   - 1.16 [Use Sparse Indexes for Optional Fields](#116-use-sparse-indexes-for-optional-fields)
+   - 1.17 [Use Text Indexes for Full-Text Search](#117-use-text-indexes-for-full-text-search)
+   - 1.18 [Use TTL Indexes for Automatic Data Expiration](#118-use-ttl-indexes-for-automatic-data-expiration)
+   - 1.19 [Use Unique Indexes to Enforce Constraints](#119-use-unique-indexes-to-enforce-constraints)
+   - 1.20 [Use Wildcard Indexes for Dynamic Fields](#120-use-wildcard-indexes-for-dynamic-fields)
 3. [Query Patterns](#3-query-patterns) — **HIGH**
    - 3.1 [Anchor Regex Patterns with ^](#31-anchor-regex-patterns-with-)
    - 3.2 [Avoid $ne and $nin Operators](#32-avoid-ne-and-nin-operators)
    - 3.3 [Batch Operations to Avoid N+1 Queries](#33-batch-operations-to-avoid-n1-queries)
-   - 3.4 [Understand $exists Behavior with Sparse Indexes](#34-understand-exists-behavior-with-sparse-indexes)
-   - 3.5 [Use Projections to Limit Fields](#35-use-projections-to-limit-fields)
-   - 3.6 [Use Range-Based Pagination Instead of skip()](#36-use-range-based-pagination-instead-of-skip)
+   - 3.4 [Match Sort and Collation to Indexes](#34-match-sort-and-collation-to-indexes)
+   - 3.5 [Understand $exists Behavior with Sparse Indexes](#35-understand-exists-behavior-with-sparse-indexes)
+   - 3.6 [Use Projections to Limit Fields](#36-use-projections-to-limit-fields)
+   - 3.7 [Use Range-Based Pagination Instead of skip()](#37-use-range-based-pagination-instead-of-skip)
 4. [Aggregation Optimization](#4-aggregation-optimization) — **HIGH**
    - 4.1 [Avoid $unwind on Large Arrays](#41-avoid-unwind-on-large-arrays)
    - 4.2 [Combine $sort with $limit for Top-N Queries](#42-combine-sort-with-limit-for-top-n-queries)
-   - 4.3 [Index $lookup Foreign Fields](#43-index-lookup-foreign-fields)
-   - 4.4 [Place $match at Pipeline Start](#44-place-match-at-pipeline-start)
-   - 4.5 [Use $project Early to Reduce Document Size](#45-use-project-early-to-reduce-document-size)
-   - 4.6 [Use allowDiskUse for Large Aggregations](#46-use-allowdiskuse-for-large-aggregations)
+   - 4.3 [Control $group Memory Usage](#43-control-group-memory-usage)
+   - 4.4 [Index $lookup Foreign Fields](#44-index-lookup-foreign-fields)
+   - 4.5 [Place $match at Pipeline Start](#45-place-match-at-pipeline-start)
+   - 4.6 [Use $project Early to Reduce Document Size](#46-use-project-early-to-reduce-document-size)
+   - 4.7 [Use allowDiskUse for Large Aggregations](#47-use-allowdiskuse-for-large-aggregations)
 5. [Performance Diagnostics](#5-performance-diagnostics) — **MEDIUM**
    - 5.1 [Interpret explain() Output for Query Optimization](#51-interpret-explain-output-for-query-optimization)
    - 5.2 [Use $indexStats to Find Unused Indexes](#52-use-indexstats-to-find-unused-indexes)
-   - 5.3 [Use Slow Query Log to Find Performance Issues](#53-use-slow-query-log-to-find-performance-issues)
+   - 5.3 [Use Atlas Performance Advisor for Index Recommendations](#53-use-atlas-performance-advisor-for-index-recommendations)
+   - 5.4 [Use hint() to Control Query Plans When Necessary](#54-use-hint-to-control-query-plans-when-necessary)
+   - 5.5 [Use Slow Query Log to Find Performance Issues](#55-use-slow-query-log-to-find-performance-issues)
 
 ---
 
@@ -2075,7 +2084,103 @@ analyzeMultikeyIndex("products", "tags_1")
 
 Reference: [https://mongodb.com/docs/manual/core/indexes/index-types/index-multikey/](https://mongodb.com/docs/manual/core/indexes/index-types/index-multikey/)
 
-### 1.10 Use Geospatial Indexes for Location Queries
+### 1.10 Use Clustered Collections for Ordered Storage
+
+**Impact: HIGH (Speeds up range queries on the clustered key and reduces storage overhead)**
+
+**Clustered collections store documents ordered by a single clustered key.** This improves range query performance and can reduce storage because the clustered index and documents are stored together.
+
+**Incorrect: range queries on unclustered collections**
+
+```javascript
+// Default collection stores documents out of order
+// Range queries rely entirely on secondary indexes
+
+db.events.find({ eventId: { $gte: 1000, $lt: 2000 } })
+```
+
+**Correct: clustered collection on the range key**
+
+```javascript
+// Create a clustered collection at creation time
+
+db.createCollection("events", {
+  clusteredIndex: { key: { eventId: 1 }, unique: true }
+})
+
+// Range queries benefit from ordered storage
+
+db.events.find({ eventId: { $gte: 1000, $lt: 2000 } })
+```
+
+**When NOT to use this pattern:**
+
+- **Access pattern does not use the clustered key**: No benefit.
+
+- **Frequent updates to the clustered key**: Requires document relocation.
+
+- **Existing collections**: Clustered indexes must be defined at creation time.
+
+**Verify with:**
+
+```javascript
+// Inspect collection options for clusteredIndex
+
+db.getCollectionInfos({ name: "events" })
+```
+
+Reference: [https://mongodb.com/docs/manual/core/clustered-collections/](https://mongodb.com/docs/manual/core/clustered-collections/)
+
+### 1.11 Use Compound Indexes for Multi-Field Queries
+
+**Impact: CRITICAL (10-100× faster queries by avoiding scans and in-memory sorts)**
+
+**Single-field indexes are not a substitute for a compound index.** If your query filters and sorts on multiple fields, create a compound index that matches the full pattern. This avoids extra filtering and in-memory sorts.
+
+**Incorrect: separate single-field indexes**
+
+```javascript
+// Two single-field indexes
+
+db.orders.createIndex({ status: 1 })
+db.orders.createIndex({ createdAt: -1 })
+
+// Query filters and sorts on both fields
+// MongoDB still has to filter or sort in memory
+
+db.orders.find({ status: "shipped" }).sort({ createdAt: -1 })
+```
+
+**Correct: compound index matches the query**
+
+```javascript
+// Compound index supports filter + sort
+
+db.orders.createIndex({ status: 1, createdAt: -1 })
+
+db.orders.find({ status: "shipped" }).sort({ createdAt: -1 })
+// Uses IXSCAN with no in-memory sort
+```
+
+**When NOT to use this pattern:**
+
+- **Queries only filter on one field**: A single-field index may be enough.
+
+- **Write-heavy collections**: Extra indexes increase write cost.
+
+**Verify with:**
+
+```javascript
+// Check for SORT stage in explain
+
+db.orders.find({ status: "shipped" })
+  .sort({ createdAt: -1 })
+  .explain("executionStats")
+```
+
+Reference: [https://mongodb.com/docs/manual/core/indexes/index-types/index-compound/](https://mongodb.com/docs/manual/core/indexes/index-types/index-compound/)
+
+### 1.12 Use Geospatial Indexes for Location Queries
 
 **Impact: HIGH (Find nearby locations: 2dsphere index with $near returns results in milliseconds vs scanning all)**
 
@@ -2397,7 +2502,93 @@ analyzeGeoQuery("stores", [-73.9857, 40.7580], 5000)
 
 Reference: [https://mongodb.com/docs/manual/core/indexes/index-types/index-geospatial/](https://mongodb.com/docs/manual/core/indexes/index-types/index-geospatial/)
 
-### 1.11 Use Partial Indexes to Reduce Size
+### 1.13 Use Hashed Indexes for Evenly Distributed Equality Lookups
+
+**Impact: HIGH (Ensures uniform distribution for shard keys and fast equality lookups)**
+
+**Hashed indexes are optimized for equality matches and data distribution.** Use them for shard keys or lookup-heavy fields where range queries and sorting are not required.
+
+**Incorrect: expecting range/sort on hashed index**
+
+```javascript
+// Hashed index cannot support range queries or sorting
+
+db.users.createIndex({ userId: "hashed" })
+
+db.users.find({ userId: { $gt: 1000 } }).sort({ userId: 1 })
+// Range + sort cannot use the hashed index
+```
+
+**Correct: equality lookups**
+
+```javascript
+// Hashed index for equality queries
+
+db.users.createIndex({ userId: "hashed" })
+
+db.users.find({ userId: 123456 })
+// Uses the hashed index efficiently
+```
+
+**When NOT to use this pattern:**
+
+- **Range queries or sorting**: Hashed indexes do not preserve order.
+
+- **Prefix searches**: Hashed values break prefix scans.
+
+**Verify with:**
+
+```javascript
+// Confirm equality query uses IXSCAN
+
+db.users.find({ userId: 123456 }).explain("executionStats")
+```
+
+Reference: [https://mongodb.com/docs/manual/core/indexes/index-types/index-hashed/](https://mongodb.com/docs/manual/core/indexes/index-types/index-hashed/)
+
+### 1.14 Use Hidden Indexes to Test Removals Safely
+
+**Impact: HIGH (Lets you validate index removal without affecting production traffic)**
+
+**Hidden indexes let you validate index removal without dropping them.** You can hide an index, monitor performance, and unhide it instantly if queries regress.
+
+**Incorrect: drop index immediately**
+
+```javascript
+// Dropping blindly can break critical queries
+
+db.orders.dropIndex("status_1_createdAt_-1")
+```
+
+**Correct: hide, observe, then drop**
+
+```javascript
+// Hide the index first
+
+db.orders.hideIndex("status_1_createdAt_-1")
+
+// If performance regresses, unhide
+
+db.orders.unhideIndex("status_1_createdAt_-1")
+```
+
+**When NOT to use this pattern:**
+
+- **You need to reduce storage immediately**: Hidden indexes still consume disk.
+
+- **You are confident and have load-tested**: Dropping may be fine.
+
+**Verify with:**
+
+```javascript
+// Check hidden flag in index definitions
+
+db.orders.getIndexes()
+```
+
+Reference: [https://mongodb.com/docs/manual/core/index-hidden/](https://mongodb.com/docs/manual/core/index-hidden/)
+
+### 1.15 Use Partial Indexes to Reduce Size
 
 **Impact: HIGH (Index only active records: 90% smaller index, 10× faster writes, fits in RAM)**
 
@@ -2661,7 +2852,7 @@ checkPartialIndexUsage("orders", { customerId: "x", status: "pending" })
 
 Reference: [https://mongodb.com/docs/manual/core/index-partial/](https://mongodb.com/docs/manual/core/index-partial/)
 
-### 1.12 Use Sparse Indexes for Optional Fields
+### 1.16 Use Sparse Indexes for Optional Fields
 
 **Impact: HIGH (Optional field in 10% of docs: sparse index is 10× smaller, unique constraints work correctly)**
 
@@ -2872,7 +3063,7 @@ analyzeSparseIndex("users", "twitterHandle")
 
 Reference: [https://mongodb.com/docs/manual/core/index-sparse/](https://mongodb.com/docs/manual/core/index-sparse/)
 
-### 1.13 Use Text Indexes for Full-Text Search
+### 1.17 Use Text Indexes for Full-Text Search
 
 **Impact: HIGH (Keyword search across documents: text index with stemming and ranking vs regex COLLSCAN)**
 
@@ -3151,7 +3342,7 @@ analyzeTextSearch("articles", "mongodb database performance")
 
 Reference: [https://mongodb.com/docs/manual/core/indexes/index-types/index-text/](https://mongodb.com/docs/manual/core/indexes/index-types/index-text/)
 
-### 1.14 Use TTL Indexes for Automatic Data Expiration
+### 1.18 Use TTL Indexes for Automatic Data Expiration
 
 **Impact: HIGH (Auto-delete old sessions/logs: no cron jobs, no manual cleanup, constant collection size)**
 
@@ -3436,7 +3627,55 @@ checkTTLIndexes("sessions")
 
 Reference: [https://mongodb.com/docs/manual/core/index-ttl/](https://mongodb.com/docs/manual/core/index-ttl/)
 
-### 1.15 Use Wildcard Indexes for Dynamic Fields
+### 1.19 Use Unique Indexes to Enforce Constraints
+
+**Impact: HIGH (Prevents duplicate data and guarantees fast unique lookups)**
+
+**Unique indexes are your database-level guardrail.** They prevent duplicate values and ensure critical fields (email, SKU, external IDs) remain consistent even under concurrent writes.
+
+**Incorrect: application-only uniqueness**
+
+```javascript
+// Two concurrent requests insert the same email
+
+db.users.insertOne({ email: "ada@example.com" })
+db.users.insertOne({ email: "ada@example.com" })
+// Duplicates now exist
+```
+
+**Correct: unique index**
+
+```javascript
+// Enforce uniqueness at the database level
+
+db.users.createIndex({ email: 1 }, { unique: true })
+
+// Duplicate insert fails immediately
+
+db.users.insertOne({ email: "ada@example.com" })
+// Second insert throws duplicate key error
+```
+
+**When NOT to use this pattern:**
+
+- **Duplicates are valid**: If the field is not a true identifier.
+
+- **Existing duplicates**: Clean up data before creating the index.
+
+**Verify with:**
+
+```javascript
+// Find duplicates before adding the index
+
+db.users.aggregate([
+  { $group: { _id: "$email", count: { $sum: 1 } } },
+  { $match: { count: { $gt: 1 } } }
+])
+```
+
+Reference: [https://mongodb.com/docs/manual/core/index-unique/](https://mongodb.com/docs/manual/core/index-unique/)
+
+### 1.20 Use Wildcard Indexes for Dynamic Fields
 
 **Impact: HIGH (Dynamic/polymorphic schemas: one wildcard index covers arbitrary field patterns vs N indexes)**
 
@@ -4288,7 +4527,64 @@ db.system.profile.aggregate([
 
 Reference: [https://mongodb.com/docs/manual/core/query-optimization/](https://mongodb.com/docs/manual/core/query-optimization/)
 
-### 3.4 Understand $exists Behavior with Sparse Indexes
+### 3.4 Match Sort and Collation to Indexes
+
+**Impact: HIGH (Avoids in-memory sorts and ensures indexes are usable with collation)**
+
+**Sorts are only fast when an index can provide the order.** If the index does not include the sort fields (in the right order) or the query collation differs from the index collation, MongoDB falls back to an in-memory sort.
+
+**Incorrect: sort without matching index or collation**
+
+```javascript
+// Index uses default collation
+
+db.users.createIndex({ lastName: 1 })
+
+// Query uses a different collation
+
+db.users.find({ status: "active" })
+  .collation({ locale: "en", strength: 2 })
+  .sort({ lastName: 1 })
+// In-memory sort because collations do not match
+```
+
+**Correct: index includes sort fields and matching collation**
+
+```javascript
+// Create index with the same collation as the query
+
+db.users.createIndex(
+  { status: 1, lastName: 1, firstName: 1 },
+  { collation: { locale: "en", strength: 2 } }
+)
+
+// Query uses matching collation and sort order
+
+db.users.find({ status: "active" })
+  .collation({ locale: "en", strength: 2 })
+  .sort({ lastName: 1, firstName: 1 })
+```
+
+**When NOT to use this pattern:**
+
+- **Small result sets**: In-memory sort cost is negligible.
+
+- **No collation requirements**: Default collation can be simpler.
+
+**Verify with:**
+
+```javascript
+// Ensure no SORT stage in executionStats
+
+db.users.find({ status: "active" })
+  .collation({ locale: "en", strength: 2 })
+  .sort({ lastName: 1, firstName: 1 })
+  .explain("executionStats")
+```
+
+Reference: [https://mongodb.com/docs/manual/tutorial/sort-results-with-indexes/](https://mongodb.com/docs/manual/tutorial/sort-results-with-indexes/), [https://mongodb.com/docs/manual/reference/collation/](https://mongodb.com/docs/manual/reference/collation/)
+
+### 3.5 Understand $exists Behavior with Sparse Indexes
 
 **Impact: HIGH ({ field: { $exists: true } } may not use sparse index—understand the subtle interaction)**
 
@@ -4493,7 +4789,7 @@ checkExistsWithSparse("users", "twitterHandle")
 
 Reference: [https://mongodb.com/docs/manual/core/index-sparse/](https://mongodb.com/docs/manual/core/index-sparse/)
 
-### 3.5 Use Projections to Limit Fields
+### 3.6 Use Projections to Limit Fields
 
 **Impact: HIGH (50MB→200KB data transfer, 60× less bandwidth—only fetch what you display)**
 
@@ -4668,7 +4964,7 @@ measureProjectionImpact(
 
 Reference: [https://mongodb.com/docs/manual/tutorial/project-fields-from-query-results/](https://mongodb.com/docs/manual/tutorial/project-fields-from-query-results/)
 
-### 3.6 Use Range-Based Pagination Instead of skip()
+### 3.7 Use Range-Based Pagination Instead of skip()
 
 **Impact: HIGH (Page 10,000: skip() takes 20 seconds, range-based takes 5ms—O(n) vs O(1))**
 
@@ -5437,7 +5733,53 @@ checkSortLimitCoalescence("scores", [
 
 Reference: [https://mongodb.com/docs/manual/core/aggregation-pipeline-optimization/#sort-limit-coalescence](https://mongodb.com/docs/manual/core/aggregation-pipeline-optimization/#sort-limit-coalescence)
 
-### 4.3 Index $lookup Foreign Fields
+### 4.3 Control $group Memory Usage
+
+**Impact: HIGH (Prevents aggregation failures by keeping memory usage under limits)**
+
+**$group is one of the most memory-intensive stages.** If your grouping set is large or you push entire documents into arrays, you can hit the 100MB memory limit. Reduce input size early and avoid unbounded accumulators.
+
+**Incorrect: grouping full documents into arrays**
+
+```javascript
+// Collecting full documents explodes memory
+
+db.orders.aggregate([
+  { $group: { _id: "$customerId", orders: { $push: "$$ROOT" } } }
+])
+// Risk: 100MB limit exceeded
+```
+
+**Correct: project only needed fields + aggregate scalars**
+
+```javascript
+// Keep only required fields and use scalar accumulators
+
+db.orders.aggregate([
+  { $project: { customerId: 1, total: 1 } },
+  { $group: { _id: "$customerId", spend: { $sum: "$total" } } }
+], { allowDiskUse: true })
+```
+
+**When NOT to use this pattern:**
+
+- **Small datasets**: Memory limits are unlikely to be hit.
+
+- **You actually need full documents**: Consider a $lookup after grouping.
+
+**Verify with:**
+
+```javascript
+// Check if aggregation spills to disk
+
+db.orders.explain("executionStats").aggregate([
+  { $group: { _id: "$customerId", spend: { $sum: "$total" } } }
+])
+```
+
+Reference: [https://mongodb.com/docs/manual/core/aggregation-pipeline-limits/](https://mongodb.com/docs/manual/core/aggregation-pipeline-limits/)
+
+### 4.4 Index $lookup Foreign Fields
 
 **Impact: HIGH (Unindexed $lookup: 10K × 100K = 1B comparisons (minutes); indexed: 10K × log(100K) = 170K (seconds))**
 
@@ -5715,7 +6057,7 @@ checkLookupIndex("orders", {
 
 Reference: [https://mongodb.com/docs/manual/reference/operator/aggregation/lookup/](https://mongodb.com/docs/manual/reference/operator/aggregation/lookup/)
 
-### 4.4 Place $match at Pipeline Start
+### 4.5 Place $match at Pipeline Start
 
 **Impact: HIGH ($match after $lookup: 10M lookups; $match before: 10K lookups—1000× less work)**
 
@@ -5927,7 +6269,7 @@ checkMatchOptimization([
 
 Reference: [https://mongodb.com/docs/manual/core/aggregation-pipeline-optimization/](https://mongodb.com/docs/manual/core/aggregation-pipeline-optimization/)
 
-### 4.5 Use $project Early to Reduce Document Size
+### 4.6 Use $project Early to Reduce Document Size
 
 **Impact: HIGH (500KB docs → 500 bytes: 1000× less memory, avoids 100MB limit and disk spills)**
 
@@ -6183,7 +6525,7 @@ analyzePipelineMemory("articles", [
 
 Reference: [https://mongodb.com/docs/manual/core/aggregation-pipeline-limits/](https://mongodb.com/docs/manual/core/aggregation-pipeline-limits/)
 
-### 4.6 Use allowDiskUse for Large Aggregations
+### 4.7 Use allowDiskUse for Large Aggregations
 
 **Impact: MEDIUM (Aggregations exceeding 100MB limit: allowDiskUse prevents failure but is 10-100× slower than in-memory)**
 
@@ -6396,7 +6738,7 @@ Reference: [https://mongodb.com/docs/manual/core/aggregation-pipeline-limits/](h
 
 **Impact: MEDIUM**
 
-You can't optimize what you can't measure. explain("executionStats") reveals exactly what MongoDB did: COLLSCAN means no index was used, IXSCAN means indexed lookup, totalDocsExamined vs. nReturned shows scan efficiency (10000 examined for 10 returned = 99.9% wasted work). $indexStats shows which indexes are actually being used—unused indexes waste disk space and slow down writes. The slow query log captures queries exceeding a threshold. MongoDB Profiler records all operations with timing. Atlas Performance Advisor automatically suggests missing indexes. These tools turn "it's slow" into "this specific query scans 10M documents because it's missing an index on {userId, createdAt}".
+You can't optimize what you can't measure. explain("executionStats") reveals exactly what MongoDB did: COLLSCAN means no index was used, IXSCAN means indexed lookup, totalDocsExamined vs. nReturned shows scan efficiency (10000 examined for 10 returned = 99.9% wasted work). $indexStats shows which indexes are actually being used—unused indexes waste disk space and slow down writes. The slow query log captures queries exceeding a threshold. MongoDB Profiler records all operations with timing. Atlas Performance Advisor suggests missing indexes from real workloads. When needed, hint() lets you force a known-good plan. These tools turn "it's slow" into "this specific query scans 10M documents because it's missing an index on {userId, createdAt}".
 
 ### 5.1 Interpret explain() Output for Query Optimization
 
@@ -7003,7 +7345,92 @@ safeToDropIndex("orders", "old_unused_index_1")
 
 Reference: [https://mongodb.com/docs/manual/reference/operator/aggregation/indexStats/](https://mongodb.com/docs/manual/reference/operator/aggregation/indexStats/)
 
-### 5.3 Use Slow Query Log to Find Performance Issues
+### 5.3 Use Atlas Performance Advisor for Index Recommendations
+
+**Impact: MEDIUM (Finds high-impact missing indexes from real production workloads)**
+
+**Performance Advisor analyzes real workload and surfaces missing indexes.** Use it to prioritize high-impact indexes based on production queries rather than guesswork.
+
+**Incorrect: guessing indexes without workload data**
+
+```javascript
+// Adding indexes without evidence
+// May create unnecessary write overhead
+
+db.orders.createIndex({ status: 1 })
+```
+
+**Correct: use advisor output to guide changes**
+
+```javascript
+// Step 1: Review Performance Advisor suggestions in Atlas
+// Step 2: Validate with explain() on the exact query pattern
+
+db.orders.find({ status: "pending", createdAt: { $gte: ISODate("2025-01-01") } })
+  .explain("executionStats")
+```
+
+**When NOT to use this pattern:**
+
+- **Not on Atlas**: Use profiler and explain() instead.
+
+- **Synthetic workloads only**: Advisor needs real traffic to be effective.
+
+**Verify with:**
+
+```javascript
+// After creating suggested index, confirm plan improves
+
+db.orders.find({ status: "pending" }).explain("executionStats")
+```
+
+Reference: [https://mongodb.com/docs/atlas/performance-advisor/](https://mongodb.com/docs/atlas/performance-advisor/)
+
+### 5.4 Use hint() to Control Query Plans When Necessary
+
+**Impact: MEDIUM (Forces the intended index when the optimizer picks poorly)**
+
+**The optimizer usually picks the best index, but not always.** Use `hint()` to force a known-good index when explain shows a bad plan, especially for critical production queries.
+
+**Incorrect: accepting a poor plan**
+
+```javascript
+// Query planner picks a suboptimal index
+
+db.orders.find({ status: "shipped", createdAt: { $gte: ISODate("2025-01-01") } })
+// Uses a less selective index, causing high docsExamined
+```
+
+**Correct: force the intended index**
+
+```javascript
+// Force the compound index that matches the query
+
+db.orders.find({
+  status: "shipped",
+  createdAt: { $gte: ISODate("2025-01-01") }
+}).hint({ status: 1, createdAt: 1 })
+```
+
+**When NOT to use this pattern:**
+
+- **Unknown query patterns**: Hints can lock in a bad plan.
+
+- **Rapidly changing indexes**: Hints break if the index is removed.
+
+**Verify with:**
+
+```javascript
+// Compare plans with and without hint
+
+db.orders.find({ status: "shipped" })
+  .hint({ status: 1, createdAt: 1 })
+  .explain("executionStats")
+```
+
+Reference: [https://mongodb.com/docs/manual/reference/method/cursor.hint/](https://mongodb.com/docs/manual/reference/method/cursor.hint/)
+
+### 5.5 Use Slow Query Log to Find Performance Issues
 
 **Impact: HIGH (System profiler captures queries exceeding threshold—find the 20% of queries causing 80% of load)**
 
@@ -7333,3 +7760,10 @@ Reference: [https://mongodb.com/docs/manual/tutorial/manage-the-database-profile
 8. [https://mongodb.com/docs/manual/reference/operator/aggregation/indexStats/](https://mongodb.com/docs/manual/reference/operator/aggregation/indexStats/)
 9. [https://mongodb.com/docs/atlas/performance-advisor/](https://mongodb.com/docs/atlas/performance-advisor/)
 10. [https://mongodb.com/developer/products/mongodb/performance-best-practices-indexing/](https://mongodb.com/developer/products/mongodb/performance-best-practices-indexing/)
+11. [https://mongodb.com/docs/manual/core/index-unique/](https://mongodb.com/docs/manual/core/index-unique/)
+12. [https://mongodb.com/docs/manual/core/indexes/index-types/index-hashed/](https://mongodb.com/docs/manual/core/indexes/index-types/index-hashed/)
+13. [https://mongodb.com/docs/manual/core/clustered-collections/](https://mongodb.com/docs/manual/core/clustered-collections/)
+14. [https://mongodb.com/docs/manual/core/index-hidden/](https://mongodb.com/docs/manual/core/index-hidden/)
+15. [https://mongodb.com/docs/manual/tutorial/sort-results-with-indexes/](https://mongodb.com/docs/manual/tutorial/sort-results-with-indexes/)
+16. [https://mongodb.com/docs/manual/reference/collation/](https://mongodb.com/docs/manual/reference/collation/)
+17. [https://mongodb.com/docs/manual/reference/method/cursor.hint/](https://mongodb.com/docs/manual/reference/method/cursor.hint/)

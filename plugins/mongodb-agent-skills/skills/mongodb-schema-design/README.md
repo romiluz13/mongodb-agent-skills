@@ -9,6 +9,7 @@ A structured repository for creating and maintaining MongoDB Schema Design best 
   - `area-description.md` - Individual rule files
 - `metadata.json` - Document metadata (version, organization, abstract)
 - __`AGENTS.md`__ - Compiled output (generated)
+- __`test-cases.json`__ - Test cases for LLM evaluation (generated)
 
 ## Getting Started
 
@@ -27,13 +28,20 @@ A structured repository for creating and maintaining MongoDB Schema Design best 
    pnpm validate mongodb-schema-design
    ```
 
+4. Extract test cases:
+   ```bash
+   pnpm extract-tests mongodb-schema-design
+   ```
+
 ## Creating a New Rule
 
 1. Copy an existing rule file to `rules/area-description.md`
 2. Choose the appropriate area prefix:
    - `antipattern-` for Schema Anti-Patterns (Section 1)
    - `fundamental-` for Schema Fundamentals (Section 2)
-   - `pattern-` for Design Patterns (Section 3)
+   - `relationship-` for Relationship Patterns (Section 3)
+   - `pattern-` for Design Patterns (Section 4)
+   - `validation-` for Schema Validation (Section 5)
 3. Fill in the frontmatter and content
 4. Ensure you have clear bad/good examples with explanations
 5. Run `pnpm build mongodb-schema-design` to regenerate AGENTS.md
@@ -89,6 +97,7 @@ Reference: [MongoDB Documentation](https://mongodb.com/docs/manual/)
 
 - `pnpm build mongodb-schema-design` - Compile rules into AGENTS.md
 - `pnpm validate mongodb-schema-design` - Validate all rule files
+- `pnpm extract-tests mongodb-schema-design` - Extract test cases for LLM evaluation
 
 ## Contributing
 

@@ -1,0 +1,49 @@
+---
+title: Use Clustered Collections for Ordered Storage
+impact: HIGH
+impactDescription: "Speeds up range queries on the clustered key and reduces storage overhead"
+tags: index, clustered, collection, range-queries, storage
+---
+
+## Use Clustered Collections for Ordered Storage
+
+**Clustered collections store documents ordered by a single clustered key.** This improves range query performance and can reduce storage because the clustered index and documents are stored together.
+
+**Incorrect (range queries on unclustered collections):**
+
+```javascript
+// Default collection stores documents out of order
+// Range queries rely entirely on secondary indexes
+
+db.events.find({ eventId: { $gte: 1000, $lt: 2000 } })
+```
+
+**Correct (clustered collection on the range key):**
+
+```javascript
+// Create a clustered collection at creation time
+
+db.createCollection("events", {
+  clusteredIndex: { key: { eventId: 1 }, unique: true }
+})
+
+// Range queries benefit from ordered storage
+
+db.events.find({ eventId: { $gte: 1000, $lt: 2000 } })
+```
+
+**When NOT to use this pattern:**
+
+- **Access pattern does not use the clustered key**: No benefit.
+- **Frequent updates to the clustered key**: Requires document relocation.
+- **Existing collections**: Clustered indexes must be defined at creation time.
+
+**Verify with:**
+
+```javascript
+// Inspect collection options for clusteredIndex
+
+db.getCollectionInfos({ name: "events" })
+```
+
+Reference: [Clustered Collections](https://mongodb.com/docs/manual/core/clustered-collections/)

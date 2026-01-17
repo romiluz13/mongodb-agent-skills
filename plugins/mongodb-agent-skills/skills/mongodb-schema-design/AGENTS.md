@@ -1,8 +1,8 @@
 # MongoDB Schema Design Best Practices
 
-**Version 2.0.0**
+**Version 2.1.0**
 MongoDB
-January 2025
+January 2026
 
 > **Note:**
 > This document is mainly for agents and LLMs to follow when maintaining,
@@ -14,7 +14,7 @@ January 2025
 
 ## Abstract
 
-MongoDB schema design patterns and anti-patterns for AI agents and developers. Contains 23 rules across 5 categories: Schema Anti-Patterns (CRITICAL - unbounded arrays, bloated documents, schema drift), Schema Fundamentals (HIGH - embed vs reference, document model, 16MB awareness), Relationship Patterns (HIGH - one-to-one, one-to-few, one-to-many, many-to-many, tree structures), Design Patterns (MEDIUM - bucket, computed, subset, outlier, extended reference), and Schema Validation (MEDIUM - JSON Schema, validation levels). Each rule includes incorrect/correct code examples with quantified impact metrics, 'When NOT to use' exceptions, and verification diagnostics.
+MongoDB schema design patterns and anti-patterns for AI agents and developers. Contains 29 rules across 5 categories: Schema Anti-Patterns (CRITICAL - unbounded arrays, bloated documents, schema drift), Schema Fundamentals (HIGH - embed vs reference, document model, 16MB awareness), Relationship Patterns (HIGH - one-to-one, one-to-few, one-to-many, one-to-squillions, many-to-many, tree structures), Design Patterns (MEDIUM - bucket, time series collections, attribute, polymorphic, schema versioning, computed, subset, outlier, extended reference), and Schema Validation (MEDIUM - JSON Schema, validation levels, rollout strategy). Each rule includes incorrect/correct code examples with quantified impact metrics, 'When NOT to use' exceptions, and verification diagnostics.
 
 ---
 
@@ -38,16 +38,22 @@ MongoDB schema design patterns and anti-patterns for AI agents and developers. C
    - 3.2 [Model One-to-Few Relationships with Embedded Arrays](#32-model-one-to-few-relationships-with-embedded-arrays)
    - 3.3 [Model One-to-Many Relationships with References](#33-model-one-to-many-relationships-with-references)
    - 3.4 [Model One-to-One Relationships with Embedding](#34-model-one-to-one-relationships-with-embedding)
-   - 3.5 [Model Tree and Hierarchical Data](#35-model-tree-and-hierarchical-data)
+   - 3.5 [Model One-to-Squillions with References and Summaries](#35-model-one-to-squillions-with-references-and-summaries)
+   - 3.6 [Model Tree and Hierarchical Data](#36-model-tree-and-hierarchical-data)
 4. [Design Patterns](#4-design-patterns) — **MEDIUM**
-   - 4.1 [Use Bucket Pattern for Time-Series Data](#41-use-bucket-pattern-for-time-series-data)
-   - 4.2 [Use Computed Pattern for Expensive Calculations](#42-use-computed-pattern-for-expensive-calculations)
-   - 4.3 [Use Extended Reference Pattern](#43-use-extended-reference-pattern)
-   - 4.4 [Use Outlier Pattern for Exceptional Documents](#44-use-outlier-pattern-for-exceptional-documents)
-   - 4.5 [Use Subset Pattern for Hot/Cold Data](#45-use-subset-pattern-for-hotcold-data)
+   - 4.1 [Use Attribute Pattern for Sparse or Variable Fields](#41-use-attribute-pattern-for-sparse-or-variable-fields)
+   - 4.2 [Use Bucket Pattern for Time-Series Data](#42-use-bucket-pattern-for-time-series-data)
+   - 4.3 [Use Computed Pattern for Expensive Calculations](#43-use-computed-pattern-for-expensive-calculations)
+   - 4.4 [Use Extended Reference Pattern](#44-use-extended-reference-pattern)
+   - 4.5 [Use Outlier Pattern for Exceptional Documents](#45-use-outlier-pattern-for-exceptional-documents)
+   - 4.6 [Use Polymorphic Pattern for Heterogeneous Documents](#46-use-polymorphic-pattern-for-heterogeneous-documents)
+   - 4.7 [Use Schema Versioning for Safe Evolution](#47-use-schema-versioning-for-safe-evolution)
+   - 4.8 [Use Subset Pattern for Hot/Cold Data](#48-use-subset-pattern-for-hotcold-data)
+   - 4.9 [Use Time Series Collections for Time Series Data](#49-use-time-series-collections-for-time-series-data)
 5. [Schema Validation](#5-schema-validation) — **MEDIUM**
    - 5.1 [Choose Validation Level and Action Appropriately](#51-choose-validation-level-and-action-appropriately)
    - 5.2 [Define Validation Rules with JSON Schema](#52-define-validation-rules-with-json-schema)
+   - 5.3 [Roll Out Schema Validation Safely (Warn to Error)](#53-roll-out-schema-validation-safely-warn-to-error)
 
 ---
 
@@ -1688,7 +1694,7 @@ Reference: [https://mongodb.com/docs/manual/core/schema-validation/](https://mon
 
 **Impact: HIGH**
 
-Every relationship in your application needs a modeling decision: embed or reference? One-to-one is almost always embedded. One-to-few (comments on a post, addresses for a user) benefits from embedding with bounded arrays. One-to-many (orders for a customer) and many-to-many (students/courses) require references. Tree structures need special patterns (parent reference, child reference, materialized path). Wrong decisions create either bloated documents that hit the 16MB limit, or chatty applications that make 50 round-trips to load a single page. These patterns give you the decision framework.
+Every relationship in your application needs a modeling decision: embed or reference? One-to-one is almost always embedded. One-to-few (comments on a post, addresses for a user) benefits from embedding with bounded arrays. One-to-many (orders for a customer), one-to-squillions (activity logs, events), and many-to-many (students/courses) require references. Tree structures need special patterns (parent reference, child reference, materialized path). Wrong decisions create either bloated documents that hit the 16MB limit, or chatty applications that make 50 round-trips to load a single page. These patterns give you the decision framework.
 
 ### 3.1 Model Many-to-Many Relationships
 
@@ -2352,7 +2358,76 @@ db.profiles.aggregate([
 
 Reference: [https://mongodb.com/docs/manual/tutorial/model-embedded-one-to-one-relationships-between-documents/](https://mongodb.com/docs/manual/tutorial/model-embedded-one-to-one-relationships-between-documents/)
 
-### 3.5 Model Tree and Hierarchical Data
+### 3.5 Model One-to-Squillions with References and Summaries
+
+**Impact: HIGH (Prevents unbounded arrays and keeps parent documents small and fast)**
+
+**When a parent has millions of children, store children in a separate collection.** Embed only summary fields (counts, recent items) in the parent. This avoids unbounded arrays and keeps the parent document within the 16MB limit.
+
+**Incorrect: embed massive child arrays**
+
+```javascript
+// User document with millions of activity entries
+{
+  _id: "user123",
+  name: "Ada",
+  activities: [
+    // Unbounded array - will exceed 16MB
+    { ts: ISODate("2025-01-01"), action: "login" }
+  ]
+}
+```
+
+**Correct: reference children + summary in parent**
+
+```javascript
+// Parent with summary only
+{
+  _id: "user123",
+  name: "Ada",
+  activityCount: 15000000,
+  recentActivities: [
+    { ts: ISODate("2025-01-15"), action: "login" }
+  ]
+}
+
+// Child documents in separate collection
+{
+  _id: ObjectId("..."),
+  userId: "user123",
+  ts: ISODate("2025-01-01"),
+  action: "login"
+}
+
+// Index for efficient fan-out queries
+
+db.user_activities.createIndex({ userId: 1, ts: -1 })
+```
+
+**When NOT to use this pattern:**
+
+- **Small, bounded child sets**: Embed for simplicity and atomic reads.
+
+- **Always-accessed-together data**: Embedding may be faster.
+
+**Verify with:**
+
+```javascript
+// Ensure parent doc stays small
+
+db.users.aggregate([
+  { $project: { size: { $bsonSize: "$$ROOT" } } },
+  { $match: { size: { $gt: 1000000 } } }
+])
+
+// Ensure child lookups are indexed
+
+db.user_activities.find({ userId: "user123" }).explain("executionStats")
+```
+
+Reference: [https://mongodb.com/docs/manual/tutorial/model-referenced-one-to-many-relationships-between-documents/](https://mongodb.com/docs/manual/tutorial/model-referenced-one-to-many-relationships-between-documents/)
+
+### 3.6 Model Tree and Hierarchical Data
 
 **Impact: HIGH (Choose pattern based on query type—10-100× performance difference for tree operations)**
 
@@ -2529,9 +2604,79 @@ Reference: [https://mongodb.com/docs/manual/applications/data-models-tree-struct
 
 **Impact: MEDIUM**
 
-MongoDB's document model enables patterns impossible in relational databases. The Bucket pattern groups time-series data into fixed-size documents, reducing document count 10-100× for IoT and analytics workloads. The Computed pattern pre-calculates expensive aggregations, trading write complexity for read performance. The Subset pattern keeps hot data embedded while archiving cold data, keeping working sets small. The Outlier pattern handles the viral post with 1M comments without penalizing the 99.9% with normal engagement. Apply these patterns when your use case matches—don't over-engineer simple schemas.
+MongoDB's document model enables patterns impossible in relational databases. Time series collections and the Bucket pattern reduce document count 10-100× for IoT and analytics workloads. The Attribute and Polymorphic patterns tame variable schemas and keep queries indexable. The Schema Versioning pattern keeps applications online during migrations. The Computed pattern pre-calculates expensive aggregations, trading write complexity for read performance. The Subset pattern keeps hot data embedded while archiving cold data, keeping working sets small. The Outlier pattern handles the viral post with 1M comments without penalizing the 99.9% with normal engagement. Apply these patterns when your use case matches—don't over-engineer simple schemas.
 
-### 4.1 Use Bucket Pattern for Time-Series Data
+### 4.1 Use Attribute Pattern for Sparse or Variable Fields
+
+**Impact: MEDIUM (Reduces sparse indexes and enables efficient search across many optional fields)**
+
+**If documents have many optional fields, move them into a key-value array.** This avoids dozens of sparse indexes and lets you query across attributes with a single multikey index.
+
+**Incorrect: many optional fields and indexes**
+
+```javascript
+// Many optional fields - most are null or missing
+{
+  _id: 1,
+  name: "Bottle",
+  color: "red",
+  size: "M",
+  material: "glass",
+  // 20+ other optional fields
+}
+
+// Index explosion
+// db.items.createIndex({ color: 1 })
+// db.items.createIndex({ size: 1 })
+// db.items.createIndex({ material: 1 })
+```
+
+**Correct: attribute pattern**
+
+```javascript
+// Store optional fields as key-value pairs
+{
+  _id: 1,
+  name: "Bottle",
+  attributes: [
+    { k: "color", v: "red" },
+    { k: "size", v: "M" },
+    { k: "material", v: "glass" }
+  ]
+}
+
+// Single multikey index for all attributes
+
+db.items.createIndex({ "attributes.k": 1, "attributes.v": 1 })
+
+// Query for color = red
+
+db.items.find({
+  attributes: { $elemMatch: { k: "color", v: "red" } }
+})
+```
+
+**When NOT to use this pattern:**
+
+- **Fixed schema**: If fields are stable and always present.
+
+- **Type-specific validation**: If each field needs strict schema rules.
+
+- **Single-field queries only**: A normal field may be simpler and faster.
+
+**Verify with:**
+
+```javascript
+// Ensure queries use the multikey index
+
+db.items.find({
+  attributes: { $elemMatch: { k: "material", v: "glass" } }
+}).explain("executionStats")
+```
+
+Reference: [https://mongodb.com/docs/manual/data-modeling/design-patterns/group-data/attribute-pattern/](https://mongodb.com/docs/manual/data-modeling/design-patterns/group-data/attribute-pattern/)
+
+### 4.2 Use Bucket Pattern for Time-Series Data
 
 **Impact: MEDIUM (100-3600× fewer documents, 10-50× smaller indexes, 5-20× faster range queries)**
 
@@ -2659,7 +2804,7 @@ db.sensor_data.aggregate([
 
 Reference: [https://mongodb.com/blog/post/building-with-patterns-the-bucket-pattern](https://mongodb.com/blog/post/building-with-patterns-the-bucket-pattern)
 
-### 4.2 Use Computed Pattern for Expensive Calculations
+### 4.3 Use Computed Pattern for Expensive Calculations
 
 **Impact: MEDIUM (100-1000× faster reads by pre-computing aggregations)**
 
@@ -2860,7 +3005,7 @@ db.system.profile.aggregate([
 
 Reference: [https://mongodb.com/docs/manual/data-modeling/design-patterns/computed-values/computed-schema-pattern/](https://mongodb.com/docs/manual/data-modeling/design-patterns/computed-values/computed-schema-pattern/)
 
-### 4.3 Use Extended Reference Pattern
+### 4.4 Use Extended Reference Pattern
 
 **Impact: MEDIUM (Eliminates $lookup for 80% of queries, 5-10× faster list views)**
 
@@ -3017,7 +3162,7 @@ db.system.profile.aggregate([
 
 Reference: [https://mongodb.com/blog/post/building-with-patterns-the-extended-reference-pattern](https://mongodb.com/blog/post/building-with-patterns-the-extended-reference-pattern)
 
-### 4.4 Use Outlier Pattern for Exceptional Documents
+### 4.5 Use Outlier Pattern for Exceptional Documents
 
 **Impact: MEDIUM (Prevents 95% of queries from being slowed by 5% of outlier documents)**
 
@@ -3201,7 +3346,124 @@ db.books.stats().indexSizes
 
 Reference: [https://mongodb.com/docs/manual/data-modeling/design-patterns/group-data/outlier-pattern/](https://mongodb.com/docs/manual/data-modeling/design-patterns/group-data/outlier-pattern/)
 
-### 4.5 Use Subset Pattern for Hot/Cold Data
+### 4.6 Use Polymorphic Pattern for Heterogeneous Documents
+
+**Impact: MEDIUM (Keeps related entities in one collection while preserving type-specific fields)**
+
+**Store related but different document shapes in one collection with a type discriminator.** This keeps shared queries and indexes simple while allowing type-specific fields.
+
+**Incorrect: separate collections per subtype**
+
+```javascript
+// products_books, products_electronics, products_furniture
+// Queries across all products require multiple queries or unions
+```
+
+**Correct: single collection with a type field**
+
+```javascript
+// One collection with a discriminator
+{
+  _id: 1,
+  type: "book",
+  title: "Database Systems",
+  author: "Elmasri",
+  pages: 1200
+}
+
+{
+  _id: 2,
+  type: "electronics",
+  name: "Noise Cancelling Headphones",
+  wattage: 20,
+  batteryHours: 30
+}
+
+// Query by type
+
+db.products.createIndex({ type: 1 })
+
+db.products.find({ type: "book" })
+```
+
+**When NOT to use this pattern:**
+
+- **Conflicting index needs**: If each type needs very different indexes.
+
+- **Highly divergent access patterns**: Separate collections may be simpler.
+
+- **Strict schema enforcement per type**: Use separate collections if required.
+
+**Verify with:**
+
+```javascript
+// Ensure the type index is used
+
+db.products.find({ type: "electronics" }).explain("executionStats")
+```
+
+Reference: [https://mongodb.com/docs/manual/data-modeling/design-patterns/polymorphic-data/polymorphic-schema-pattern/](https://mongodb.com/docs/manual/data-modeling/design-patterns/polymorphic-data/polymorphic-schema-pattern/)
+
+### 4.7 Use Schema Versioning for Safe Evolution
+
+**Impact: MEDIUM (Avoids breaking reads/writes during migrations and enables online backfills)**
+
+**Schema changes are inevitable.** Add a `schemaVersion` field so your application can read old documents while you migrate data in-place. This prevents production outages caused by suddenly missing or renamed fields.
+
+**Incorrect: breaking change without versioning**
+
+```javascript
+// Old documents only have "address" as a string
+{ _id: 1, name: "Ada", address: "12 Main St" }
+
+// New code expects "address" to be an object
+// Old documents now break reads or writes
+```
+
+**Correct: versioned documents with backfill path**
+
+```javascript
+// New documents include version and new structure
+{ _id: 1, name: "Ada", schemaVersion: 2,
+  address: { street: "12 Main St", city: "NYC" } }
+
+// Application reads both versions
+// if schemaVersion < 2, treat address as legacy string
+
+// Online backfill for old docs
+// Upgrade only when safe for the workload
+
+db.users.updateMany(
+  { schemaVersion: { $ne: 2 } },
+  [
+    { $set: {
+        address: { street: "$address" },
+        schemaVersion: 2
+      } }
+  ]
+)
+```
+
+**When NOT to use this pattern:**
+
+- **Small datasets with downtime**: You can migrate offline in minutes.
+
+- **Truly stable schemas**: If no evolution is expected.
+
+**Verify with:**
+
+```javascript
+// Track version distribution
+
+db.users.aggregate([
+  { $group: { _id: "$schemaVersion", count: { $sum: 1 } } }
+])
+// Remaining old versions indicate incomplete migration
+```
+
+Reference: [https://mongodb.com/docs/manual/data-modeling/design-patterns/data-versioning/schema-versioning/](https://mongodb.com/docs/manual/data-modeling/design-patterns/data-versioning/schema-versioning/)
+
+### 4.8 Use Subset Pattern for Hot/Cold Data
 
 **Impact: MEDIUM (10-100× better working set efficiency, fits 100× more documents in RAM)**
 
@@ -3372,6 +3634,76 @@ db.serverStatus().wiredTiger.cache
 ```
 
 Reference: [https://mongodb.com/blog/post/building-with-patterns-the-subset-pattern](https://mongodb.com/blog/post/building-with-patterns-the-subset-pattern)
+
+### 4.9 Use Time Series Collections for Time Series Data
+
+**Impact: MEDIUM (10-100× lower storage and index overhead with automatic bucketing and compression)**
+
+**Time series collections are purpose-built for append-only measurements.** MongoDB automatically buckets, compresses, and indexes time series data so you get high ingest rates with far less storage and index overhead than a standard collection.
+
+**Incorrect: regular collection for measurements**
+
+```javascript
+// Regular collection: one document per reading
+// Creates huge collections and indexes at scale
+{
+  sensorId: "temp-01",
+  ts: ISODate("2025-01-15T10:00:00Z"),
+  value: 22.5
+}
+
+// Standard index (large and grows fast)
+db.sensor_data.createIndex({ sensorId: 1, ts: 1 })
+```
+
+**Correct: time series collection with metadata**
+
+```javascript
+// Native time series collection
+// MongoDB buckets and compresses automatically
+
+// Create the collection once
+// timeField = timestamp, metaField = shared metadata
+// granularity tunes bucket size for query patterns
+// expireAfterSeconds enables automatic retention
+
+db.createCollection("sensor_data", {
+  timeseries: {
+    timeField: "ts",
+    metaField: "sensorId",
+    granularity: "seconds"
+  },
+  expireAfterSeconds: 60 * 60 * 24 * 30
+})
+
+// Insert as one document per measurement
+// MongoDB stores buckets internally
+
+db.sensor_data.insertOne({
+  sensorId: "temp-01",
+  ts: new Date(),
+  value: 22.5
+})
+```
+
+**When NOT to use this pattern:**
+
+- **Not time-based data**: If the primary access is not time range queries.
+
+- **Frequent updates to old measurements**: Updates/deletes inside buckets are slower.
+
+- **Very low volume**: If you only store a few hundred events total.
+
+**Verify with:**
+
+```javascript
+// Confirm the collection is time series
+// Look for the "timeseries" section in the options
+
+db.getCollectionInfos({ name: "sensor_data" })
+```
+
+Reference: [https://mongodb.com/docs/manual/core/timeseries-collections/](https://mongodb.com/docs/manual/core/timeseries-collections/)
 
 ---
 
@@ -3902,6 +4234,63 @@ db.products.find({
 
 Reference: [https://mongodb.com/docs/manual/core/schema-validation/specify-json-schema/](https://mongodb.com/docs/manual/core/schema-validation/specify-json-schema/)
 
+### 5.3 Roll Out Schema Validation Safely (Warn to Error)
+
+**Impact: MEDIUM (Prevents production write failures when introducing new validation rules)**
+
+**Introduce validation in phases on existing collections.** Start with `validationAction: "warn"` so you can identify invalid documents without breaking writes, then backfill and switch to `"error"` when clean.
+
+**Incorrect: enable strict validation immediately**
+
+```javascript
+// Existing collection has legacy documents
+// Enabling strict validation can reject writes unexpectedly
+
+db.runCommand({
+  collMod: "users",
+  validator: { $jsonSchema: { bsonType: "object", required: ["email"] } },
+  validationAction: "error",
+  validationLevel: "strict"
+})
+```
+
+**Correct: staged rollout**
+
+```javascript
+// Phase 1: warn-only while you audit and fix data
+
+db.runCommand({
+  collMod: "users",
+  validator: { $jsonSchema: { bsonType: "object", required: ["email"] } },
+  validationAction: "warn",
+  validationLevel: "moderate"
+})
+
+// Phase 2: after backfill, enforce strictly
+
+db.runCommand({
+  collMod: "users",
+  validationAction: "error",
+  validationLevel: "strict"
+})
+```
+
+**When NOT to use this pattern:**
+
+- **Brand new collections**: Use `validationAction: "error"` immediately.
+
+- **Offline maintenance windows**: You can fix data first and enable strict mode directly.
+
+**Verify with:**
+
+```javascript
+// Inspect current validation settings
+
+db.getCollectionInfos({ name: "users" })
+```
+
+Reference: [https://mongodb.com/docs/manual/core/schema-validation/handle-invalid-documents/](https://mongodb.com/docs/manual/core/schema-validation/handle-invalid-documents/)
+
 ---
 
 ## References
@@ -3916,3 +4305,8 @@ Reference: [https://mongodb.com/docs/manual/core/schema-validation/specify-json-
 8. [https://mongodb.com/blog/post/building-with-patterns-a-summary](https://mongodb.com/blog/post/building-with-patterns-a-summary)
 9. [https://mongodb.com/docs/manual/core/schema-validation/](https://mongodb.com/docs/manual/core/schema-validation/)
 10. [https://mongodb.com/docs/atlas/schema-suggestions/](https://mongodb.com/docs/atlas/schema-suggestions/)
+11. [https://mongodb.com/docs/manual/core/timeseries-collections/](https://mongodb.com/docs/manual/core/timeseries-collections/)
+12. [https://mongodb.com/docs/manual/data-modeling/design-patterns/group-data/attribute-pattern/](https://mongodb.com/docs/manual/data-modeling/design-patterns/group-data/attribute-pattern/)
+13. [https://mongodb.com/docs/manual/data-modeling/design-patterns/polymorphic-data/polymorphic-schema-pattern/](https://mongodb.com/docs/manual/data-modeling/design-patterns/polymorphic-data/polymorphic-schema-pattern/)
+14. [https://mongodb.com/docs/manual/data-modeling/design-patterns/data-versioning/schema-versioning/](https://mongodb.com/docs/manual/data-modeling/design-patterns/data-versioning/schema-versioning/)
+15. [https://mongodb.com/docs/manual/core/schema-validation/handle-invalid-documents/](https://mongodb.com/docs/manual/core/schema-validation/handle-invalid-documents/)

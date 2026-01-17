@@ -1,10 +1,10 @@
 {
   "skill": "mongodb-query-and-index-optimize",
-  "generatedAt": "2026-01-16T13:56:15.862Z",
-  "totalTestCases": 58,
+  "generatedAt": "2026-01-17T17:41:29.811Z",
+  "totalTestCases": 76,
   "summary": {
-    "badExamples": 28,
-    "goodExamples": 30
+    "badExamples": 37,
+    "goodExamples": 39
   },
   "testCases": [
     {
@@ -38,6 +38,22 @@
       "code": "// Option 1: Use array operators instead of $unwind\ndb.posts.aggregate([\n  { $match: { featured: true } },\n  // Returns: 100 posts (stays 100 throughout)\n\n  {\n    $project: {\n      title: 1,\n      // Count without unwinding\n      commentCount: { $size: \"$comments\" },\n\n      // Get unique authors without unwinding\n      uniqueAuthors: {\n        $reduce: {\n          input: \"$comments.author\",\n          initialValue: [],\n          in: { $setUnion: [\"$$value\", [\"$$this\"]] }\n        }\n      },\n\n      // Get recent comments without unwinding\n      recentComments: { $slice: [\"$comments\", -5] },\n\n      // Filter specific comments without unwinding\n      approvedComments: {\n        $filter: {\n          input: \"$comments\",\n          cond: { $eq: [\"$$this.approved\", true] }\n        }\n      }\n    }\n  }\n])\n// Memory: 100 docs × 10KB = 1MB (not 1GB)",
       "language": "javascript",
       "description": "array operators—no document explosion"
+    },
+    {
+      "ruleId": "agg-group-memory-limit",
+      "ruleTitle": "Control $group Memory Usage",
+      "type": "bad",
+      "code": "// Collecting full documents explodes memory\n\ndb.orders.aggregate([\n  { $group: { _id: \"$customerId\", orders: { $push: \"$$ROOT\" } } }\n])\n// Risk: 100MB limit exceeded",
+      "language": "javascript",
+      "description": "grouping full documents into arrays"
+    },
+    {
+      "ruleId": "agg-group-memory-limit",
+      "ruleTitle": "Control $group Memory Usage",
+      "type": "good",
+      "code": "// Keep only required fields and use scalar accumulators\n\ndb.orders.aggregate([\n  { $project: { customerId: 1, total: 1 } },\n  { $group: { _id: \"$customerId\", spend: { $sum: \"$total\" } } }\n], { allowDiskUse: true })",
+      "language": "javascript",
+      "description": "project only needed fields + aggregate scalars"
     },
     {
       "ruleId": "agg-lookup-index",
@@ -104,6 +120,22 @@
       "description": "$limit immediately after $sort"
     },
     {
+      "ruleId": "index-clustered",
+      "ruleTitle": "Use Clustered Collections for Ordered Storage",
+      "type": "bad",
+      "code": "// Default collection stores documents out of order\n// Range queries rely entirely on secondary indexes\n\ndb.events.find({ eventId: { $gte: 1000, $lt: 2000 } })",
+      "language": "javascript",
+      "description": "range queries on unclustered collections"
+    },
+    {
+      "ruleId": "index-clustered",
+      "ruleTitle": "Use Clustered Collections for Ordered Storage",
+      "type": "good",
+      "code": "// Create a clustered collection at creation time\n\ndb.createCollection(\"events\", {\n  clusteredIndex: { key: { eventId: 1 }, unique: true }\n})\n\n// Range queries benefit from ordered storage\n\ndb.events.find({ eventId: { $gte: 1000, $lt: 2000 } })",
+      "language": "javascript",
+      "description": "clustered collection on the range key"
+    },
+    {
       "ruleId": "index-compound-field-order",
       "ruleTitle": "Order Compound Index Fields Correctly (ESR Rule)",
       "type": "bad",
@@ -118,6 +150,22 @@
       "code": "// Same query, ESR-compliant index\ndb.users.createIndex({ status: 1, name: 1, age: 1 })\n//                      E          S        R (correct!)\n\n// What happens:\n// 1. Jump to status=\"active\" (equality narrows to subset)\n// 2. Walk index in name order (sort is FREE - index already ordered)\n// 3. For each entry, check if age in range (filter inline)\n// Result: No in-memory sort, streaming results, 10ms response",
       "language": "javascript",
       "description": "Equality → Sort → Range"
+    },
+    {
+      "ruleId": "index-compound-multi-field",
+      "ruleTitle": "Use Compound Indexes for Multi-Field Queries",
+      "type": "bad",
+      "code": "// Two single-field indexes\n\ndb.orders.createIndex({ status: 1 })\ndb.orders.createIndex({ createdAt: -1 })\n\n// Query filters and sorts on both fields\n// MongoDB still has to filter or sort in memory\n\ndb.orders.find({ status: \"shipped\" }).sort({ createdAt: -1 })",
+      "language": "javascript",
+      "description": "separate single-field indexes"
+    },
+    {
+      "ruleId": "index-compound-multi-field",
+      "ruleTitle": "Use Compound Indexes for Multi-Field Queries",
+      "type": "good",
+      "code": "// Compound index supports filter + sort\n\ndb.orders.createIndex({ status: 1, createdAt: -1 })\n\ndb.orders.find({ status: \"shipped\" }).sort({ createdAt: -1 })\n// Uses IXSCAN with no in-memory sort",
+      "language": "javascript",
+      "description": "compound index matches the query"
     },
     {
       "ruleId": "index-covered-queries",
@@ -182,6 +230,38 @@
       "code": "// Create 2dsphere index on GeoJSON field\ndb.stores.createIndex({ location: \"2dsphere\" })\n\n// Now efficient geospatial queries work:\n\n// Find stores within 5km of a point\ndb.stores.find({\n  location: {\n    $near: {\n      $geometry: {\n        type: \"Point\",\n        coordinates: [-73.9857, 40.7484]  // User's location\n      },\n      $maxDistance: 5000  // 5km in meters\n    }\n  }\n})\n// Returns stores sorted by distance, nearest first\n// Uses spatial index for efficient candidate selection\n\n// Find stores within a polygon (delivery zone)\ndb.stores.find({\n  location: {\n    $geoWithin: {\n      $geometry: {\n        type: \"Polygon\",\n        coordinates: [[\n          [-74.0, 40.7],\n          [-73.9, 40.7],\n          [-73.9, 40.8],\n          [-74.0, 40.8],\n          [-74.0, 40.7]  // Close the polygon\n        ]]\n      }\n    }\n  }\n})",
       "language": "javascript",
       "description": "2dsphere index for geospatial queries"
+    },
+    {
+      "ruleId": "index-hashed",
+      "ruleTitle": "Use Hashed Indexes for Evenly Distributed Equality Lookups",
+      "type": "bad",
+      "code": "// Hashed index cannot support range queries or sorting\n\ndb.users.createIndex({ userId: \"hashed\" })\n\ndb.users.find({ userId: { $gt: 1000 } }).sort({ userId: 1 })\n// Range + sort cannot use the hashed index",
+      "language": "javascript",
+      "description": "expecting range/sort on hashed index"
+    },
+    {
+      "ruleId": "index-hashed",
+      "ruleTitle": "Use Hashed Indexes for Evenly Distributed Equality Lookups",
+      "type": "good",
+      "code": "// Hashed index for equality queries\n\ndb.users.createIndex({ userId: \"hashed\" })\n\ndb.users.find({ userId: 123456 })\n// Uses the hashed index efficiently",
+      "language": "javascript",
+      "description": "equality lookups"
+    },
+    {
+      "ruleId": "index-hidden",
+      "ruleTitle": "Use Hidden Indexes to Test Removals Safely",
+      "type": "bad",
+      "code": "// Dropping blindly can break critical queries\n\ndb.orders.dropIndex(\"status_1_createdAt_-1\")",
+      "language": "javascript",
+      "description": "drop index immediately"
+    },
+    {
+      "ruleId": "index-hidden",
+      "ruleTitle": "Use Hidden Indexes to Test Removals Safely",
+      "type": "good",
+      "code": "// Hide the index first\n\ndb.orders.hideIndex(\"status_1_createdAt_-1\")\n\n// If performance regresses, unhide\n\ndb.orders.unhideIndex(\"status_1_createdAt_-1\")",
+      "language": "javascript",
+      "description": "hide, observe, then drop"
     },
     {
       "ruleId": "index-high-cardinality-first",
@@ -328,6 +408,22 @@
       "description": "TTL index for automatic expiration"
     },
     {
+      "ruleId": "index-unique",
+      "ruleTitle": "Use Unique Indexes to Enforce Constraints",
+      "type": "bad",
+      "code": "// Two concurrent requests insert the same email\n\ndb.users.insertOne({ email: \"ada@example.com\" })\ndb.users.insertOne({ email: \"ada@example.com\" })\n// Duplicates now exist",
+      "language": "javascript",
+      "description": "application-only uniqueness"
+    },
+    {
+      "ruleId": "index-unique",
+      "ruleTitle": "Use Unique Indexes to Enforce Constraints",
+      "type": "good",
+      "code": "// Enforce uniqueness at the database level\n\ndb.users.createIndex({ email: 1 }, { unique: true })\n\n// Duplicate insert fails immediately\n\ndb.users.insertOne({ email: \"ada@example.com\" })\n// Second insert throws duplicate key error",
+      "language": "javascript",
+      "description": "unique index"
+    },
+    {
       "ruleId": "index-wildcard",
       "ruleTitle": "Use Wildcard Indexes for Dynamic Fields",
       "type": "bad",
@@ -342,6 +438,22 @@
       "code": "// Wildcard index covers ALL fields under attributes\ndb.products.createIndex({ \"attributes.$**\": 1 })\n\n// Now ALL attribute queries use this index:\ndb.products.find({ \"attributes.brand\": \"Dell\" })        // ✓ Uses index\ndb.products.find({ \"attributes.color\": \"blue\" })        // ✓ Uses index\ndb.products.find({ \"attributes.customField\": \"value\" }) // ✓ Uses index\ndb.products.find({ \"attributes.any.nested.path\": 1 })   // ✓ Uses index\n\n// One index, unlimited fields\n// New attributes automatically indexed without schema changes",
       "language": "javascript",
       "description": "wildcard index on dynamic fields"
+    },
+    {
+      "ruleId": "perf-atlas-performance-advisor",
+      "ruleTitle": "Use Atlas Performance Advisor for Index Recommendations",
+      "type": "bad",
+      "code": "// Adding indexes without evidence\n// May create unnecessary write overhead\n\ndb.orders.createIndex({ status: 1 })",
+      "language": "javascript",
+      "description": "guessing indexes without workload data"
+    },
+    {
+      "ruleId": "perf-atlas-performance-advisor",
+      "ruleTitle": "Use Atlas Performance Advisor for Index Recommendations",
+      "type": "good",
+      "code": "// Step 1: Review Performance Advisor suggestions in Atlas\n// Step 2: Validate with explain() on the exact query pattern\n\ndb.orders.find({ status: \"pending\", createdAt: { $gte: ISODate(\"2025-01-01\") } })\n  .explain(\"executionStats\")",
+      "language": "javascript",
+      "description": "use advisor output to guide changes"
     },
     {
       "ruleId": "perf-explain-interpretation",
@@ -366,6 +478,22 @@
       "code": "// Enable profiler to capture slow operations\ndb.setProfilingLevel(1, { slowms: 100 })\n\n// Wait for traffic, then find the actual bottlenecks\ndb.system.profile.find({ planSummary: \"COLLSCAN\" })\n  .sort({ millis: -1 })\n  .limit(5)\n// Output shows: products.find({ category: \"electronics\" }) - 2500ms COLLSCAN!\n\n// Now create the RIGHT index\ndb.products.createIndex({ category: 1 })\n\n// Verify improvement\ndb.products.find({ category: \"electronics\" }).explain(\"executionStats\")\n// executionTimeMillis: 5ms (was 2500ms) - 500× improvement!",
       "language": "javascript",
       "description": "using profiler to find actual slow queries"
+    },
+    {
+      "ruleId": "perf-use-hint",
+      "ruleTitle": "Use hint() to Control Query Plans When Necessary",
+      "type": "bad",
+      "code": "// Query planner picks a suboptimal index\n\ndb.orders.find({ status: \"shipped\", createdAt: { $gte: ISODate(\"2025-01-01\") } })\n// Uses a less selective index, causing high docsExamined",
+      "language": "javascript",
+      "description": "accepting a poor plan"
+    },
+    {
+      "ruleId": "perf-use-hint",
+      "ruleTitle": "Use hint() to Control Query Plans When Necessary",
+      "type": "good",
+      "code": "// Force the compound index that matches the query\n\ndb.orders.find({\n  status: \"shipped\",\n  createdAt: { $gte: ISODate(\"2025-01-01\") }\n}).hint({ status: 1, createdAt: 1 })",
+      "language": "javascript",
+      "description": "force the intended index"
     },
     {
       "ruleId": "query-anchored-regex",
@@ -454,6 +582,22 @@
       "code": "// Problem: Multiple posts can have same createdAt\n// Result: Some posts get skipped or duplicated\n\n// Solution: Add unique tiebreaker (_id)\n// Index must include both fields:\ndb.posts.createIndex({ createdAt: -1, _id: -1 })\n\nconst lastItem = page1[page1.length - 1]\n\n// Compound cursor condition\nconst page2 = await db.posts.find({\n  status: \"published\",\n  $or: [\n    // Either strictly before in time\n    { createdAt: { $lt: lastItem.createdAt } },\n    // Or same time but lower _id\n    {\n      createdAt: lastItem.createdAt,\n      _id: { $lt: lastItem._id }\n    }\n  ]\n})\n  .sort({ createdAt: -1, _id: -1 })\n  .limit(20)\n  .toArray()\n\n// This guarantees: no duplicates, no skips, deterministic order",
       "language": "javascript",
       "description": "Handle non-unique sort fields (critical for correctness) example for Use Range-Based Pagination Instead of skip()"
+    },
+    {
+      "ruleId": "query-sort-collation",
+      "ruleTitle": "Match Sort and Collation to Indexes",
+      "type": "bad",
+      "code": "// Index uses default collation\n\ndb.users.createIndex({ lastName: 1 })\n\n// Query uses a different collation\n\ndb.users.find({ status: \"active\" })\n  .collation({ locale: \"en\", strength: 2 })\n  .sort({ lastName: 1 })\n// In-memory sort because collations do not match",
+      "language": "javascript",
+      "description": "sort without matching index or collation"
+    },
+    {
+      "ruleId": "query-sort-collation",
+      "ruleTitle": "Match Sort and Collation to Indexes",
+      "type": "good",
+      "code": "// Create index with the same collation as the query\n\ndb.users.createIndex(\n  { status: 1, lastName: 1, firstName: 1 },\n  { collation: { locale: \"en\", strength: 2 } }\n)\n\n// Query uses matching collation and sort order\n\ndb.users.find({ status: \"active\" })\n  .collation({ locale: \"en\", strength: 2 })\n  .sort({ lastName: 1, firstName: 1 })",
+      "language": "javascript",
+      "description": "index includes sort fields and matching collation"
     },
     {
       "ruleId": "query-use-projection",

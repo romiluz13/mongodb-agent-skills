@@ -1,10 +1,10 @@
 {
   "skill": "mongodb-schema-design",
-  "generatedAt": "2026-01-16T13:56:15.136Z",
-  "totalTestCases": 46,
+  "generatedAt": "2026-01-17T17:41:29.200Z",
+  "totalTestCases": 58,
   "summary": {
-    "badExamples": 22,
-    "goodExamples": 24
+    "badExamples": 28,
+    "goodExamples": 30
   },
   "testCases": [
     {
@@ -184,6 +184,22 @@
       "description": "schema validation"
     },
     {
+      "ruleId": "pattern-attribute",
+      "ruleTitle": "Use Attribute Pattern for Sparse or Variable Fields",
+      "type": "bad",
+      "code": "// Many optional fields - most are null or missing\n{\n  _id: 1,\n  name: \"Bottle\",\n  color: \"red\",\n  size: \"M\",\n  material: \"glass\",\n  // 20+ other optional fields\n}\n\n// Index explosion\n// db.items.createIndex({ color: 1 })\n// db.items.createIndex({ size: 1 })\n// db.items.createIndex({ material: 1 })",
+      "language": "javascript",
+      "description": "many optional fields and indexes"
+    },
+    {
+      "ruleId": "pattern-attribute",
+      "ruleTitle": "Use Attribute Pattern for Sparse or Variable Fields",
+      "type": "good",
+      "code": "// Store optional fields as key-value pairs\n{\n  _id: 1,\n  name: \"Bottle\",\n  attributes: [\n    { k: \"color\", v: \"red\" },\n    { k: \"size\", v: \"M\" },\n    { k: \"material\", v: \"glass\" }\n  ]\n}\n\n// Single multikey index for all attributes\n\ndb.items.createIndex({ \"attributes.k\": 1, \"attributes.v\": 1 })\n\n// Query for color = red\n\ndb.items.find({\n  attributes: { $elemMatch: { k: \"color\", v: \"red\" } }\n})",
+      "language": "javascript",
+      "description": "attribute pattern"
+    },
+    {
       "ruleId": "pattern-bucket",
       "ruleTitle": "Use Bucket Pattern for Time-Series Data",
       "type": "bad",
@@ -240,6 +256,38 @@
       "description": "outlier pattern"
     },
     {
+      "ruleId": "pattern-polymorphic",
+      "ruleTitle": "Use Polymorphic Pattern for Heterogeneous Documents",
+      "type": "bad",
+      "code": "// products_books, products_electronics, products_furniture\n// Queries across all products require multiple queries or unions",
+      "language": "javascript",
+      "description": "separate collections per subtype"
+    },
+    {
+      "ruleId": "pattern-polymorphic",
+      "ruleTitle": "Use Polymorphic Pattern for Heterogeneous Documents",
+      "type": "good",
+      "code": "// One collection with a discriminator\n{\n  _id: 1,\n  type: \"book\",\n  title: \"Database Systems\",\n  author: \"Elmasri\",\n  pages: 1200\n}\n\n{\n  _id: 2,\n  type: \"electronics\",\n  name: \"Noise Cancelling Headphones\",\n  wattage: 20,\n  batteryHours: 30\n}\n\n// Query by type\n\ndb.products.createIndex({ type: 1 })\n\ndb.products.find({ type: \"book\" })",
+      "language": "javascript",
+      "description": "single collection with a type field"
+    },
+    {
+      "ruleId": "pattern-schema-versioning",
+      "ruleTitle": "Use Schema Versioning for Safe Evolution",
+      "type": "bad",
+      "code": "// Old documents only have \"address\" as a string\n{ _id: 1, name: \"Ada\", address: \"12 Main St\" }\n\n// New code expects \"address\" to be an object\n// Old documents now break reads or writes",
+      "language": "javascript",
+      "description": "breaking change without versioning"
+    },
+    {
+      "ruleId": "pattern-schema-versioning",
+      "ruleTitle": "Use Schema Versioning for Safe Evolution",
+      "type": "good",
+      "code": "// New documents include version and new structure\n{ _id: 1, name: \"Ada\", schemaVersion: 2,\n  address: { street: \"12 Main St\", city: \"NYC\" } }\n\n// Application reads both versions\n// if schemaVersion < 2, treat address as legacy string\n\n// Online backfill for old docs\n// Upgrade only when safe for the workload\n\ndb.users.updateMany(\n  { schemaVersion: { $ne: 2 } },\n  [\n    { $set: {\n        address: { street: \"$address\" },\n        schemaVersion: 2\n      } }\n  ]\n)",
+      "language": "javascript",
+      "description": "versioned documents with backfill path"
+    },
+    {
       "ruleId": "pattern-subset",
       "ruleTitle": "Use Subset Pattern for Hot/Cold Data",
       "type": "bad",
@@ -254,6 +302,22 @@
       "code": "// Movie with only hot data (~2KB)\n{\n  _id: \"movie123\",\n  title: \"The Matrix\",\n  year: 1999,\n  rating: 8.7,\n  plot: \"A computer hacker learns about the true nature...\",\n  // Summary stats - no full reviews\n  reviewStats: {\n    count: 10000,\n    avgRating: 4.2,\n    distribution: { 5: 4000, 4: 3000, 3: 2000, 2: 700, 1: 300 }\n  },\n  // Only top 5 featured reviews (~500 bytes)\n  featuredReviews: [\n    { user: \"critic1\", rating: 5, text: \"Masterpiece\", featured: true },\n    { user: \"critic2\", rating: 5, text: \"Revolutionary\", featured: true }\n  ]\n}\n// 1GB RAM = 500,000 movies cached (500× more)\n\n// Cold data: Full reviews in separate collection\n{\n  _id: ObjectId(\"...\"),\n  movieId: \"movie123\",\n  user: \"user456\",\n  rating: 4,\n  text: \"Great visual effects and deep storyline...\",\n  date: ISODate(\"2024-01-15\"),\n  helpful: 42\n}\n// Only loaded when user clicks \"Show all reviews\"",
       "language": "javascript",
       "description": "subset pattern"
+    },
+    {
+      "ruleId": "pattern-time-series-collections",
+      "ruleTitle": "Use Time Series Collections for Time Series Data",
+      "type": "bad",
+      "code": "// Regular collection: one document per reading\n// Creates huge collections and indexes at scale\n{\n  sensorId: \"temp-01\",\n  ts: ISODate(\"2025-01-15T10:00:00Z\"),\n  value: 22.5\n}\n\n// Standard index (large and grows fast)\ndb.sensor_data.createIndex({ sensorId: 1, ts: 1 })",
+      "language": "javascript",
+      "description": "regular collection for measurements"
+    },
+    {
+      "ruleId": "pattern-time-series-collections",
+      "ruleTitle": "Use Time Series Collections for Time Series Data",
+      "type": "good",
+      "code": "// Native time series collection\n// MongoDB buckets and compresses automatically\n\n// Create the collection once\n// timeField = timestamp, metaField = shared metadata\n// granularity tunes bucket size for query patterns\n// expireAfterSeconds enables automatic retention\n\ndb.createCollection(\"sensor_data\", {\n  timeseries: {\n    timeField: \"ts\",\n    metaField: \"sensorId\",\n    granularity: \"seconds\"\n  },\n  expireAfterSeconds: 60 * 60 * 24 * 30\n})\n\n// Insert as one document per measurement\n// MongoDB stores buckets internally\n\ndb.sensor_data.insertOne({\n  sensorId: \"temp-01\",\n  ts: new Date(),\n  value: 22.5\n})",
+      "language": "javascript",
+      "description": "time series collection with metadata"
     },
     {
       "ruleId": "relationship-many-to-many",
@@ -320,6 +384,22 @@
       "description": "embedded one-to-one document"
     },
     {
+      "ruleId": "relationship-one-to-squillions",
+      "ruleTitle": "Model One-to-Squillions with References and Summaries",
+      "type": "bad",
+      "code": "// User document with millions of activity entries\n{\n  _id: \"user123\",\n  name: \"Ada\",\n  activities: [\n    // Unbounded array - will exceed 16MB\n    { ts: ISODate(\"2025-01-01\"), action: \"login\" }\n  ]\n}",
+      "language": "javascript",
+      "description": "embed massive child arrays"
+    },
+    {
+      "ruleId": "relationship-one-to-squillions",
+      "ruleTitle": "Model One-to-Squillions with References and Summaries",
+      "type": "good",
+      "code": "// Parent with summary only\n{\n  _id: \"user123\",\n  name: \"Ada\",\n  activityCount: 15000000,\n  recentActivities: [\n    { ts: ISODate(\"2025-01-15\"), action: \"login\" }\n  ]\n}\n\n// Child documents in separate collection\n{\n  _id: ObjectId(\"...\"),\n  userId: \"user123\",\n  ts: ISODate(\"2025-01-01\"),\n  action: \"login\"\n}\n\n// Index for efficient fan-out queries\n\ndb.user_activities.createIndex({ userId: 1, ts: -1 })",
+      "language": "javascript",
+      "description": "reference children + summary in parent"
+    },
+    {
       "ruleId": "relationship-tree-structures",
       "ruleTitle": "Model Tree and Hierarchical Data",
       "type": "bad",
@@ -374,6 +454,22 @@
       "code": "db.createCollection(\"products\", {\n  validator: {\n    $jsonSchema: {\n      bsonType: \"object\",\n      required: [\"name\", \"price\", \"category\"],\n      properties: {\n        name: { bsonType: \"string\", minLength: 1 },\n        price: { bsonType: \"double\", minimum: 0 },\n        category: { enum: [\"electronics\", \"clothing\", \"food\"] }\n      }\n    }\n  }\n})\n\ndb.products.insertOne({ price: \"free\" })\n// Error: \"price\" must be double, got string\n// Data quality enforced at database level!",
       "language": "javascript",
       "description": "JSON Schema catches errors at insert"
+    },
+    {
+      "ruleId": "validation-rollout-strategy",
+      "ruleTitle": "Roll Out Schema Validation Safely (Warn to Error)",
+      "type": "bad",
+      "code": "// Existing collection has legacy documents\n// Enabling strict validation can reject writes unexpectedly\n\ndb.runCommand({\n  collMod: \"users\",\n  validator: { $jsonSchema: { bsonType: \"object\", required: [\"email\"] } },\n  validationAction: \"error\",\n  validationLevel: \"strict\"\n})",
+      "language": "javascript",
+      "description": "enable strict validation immediately"
+    },
+    {
+      "ruleId": "validation-rollout-strategy",
+      "ruleTitle": "Roll Out Schema Validation Safely (Warn to Error)",
+      "type": "good",
+      "code": "// Phase 1: warn-only while you audit and fix data\n\ndb.runCommand({\n  collMod: \"users\",\n  validator: { $jsonSchema: { bsonType: \"object\", required: [\"email\"] } },\n  validationAction: \"warn\",\n  validationLevel: \"moderate\"\n})\n\n// Phase 2: after backfill, enforce strictly\n\ndb.runCommand({\n  collMod: \"users\",\n  validationAction: \"error\",\n  validationLevel: \"strict\"\n})",
+      "language": "javascript",
+      "description": "staged rollout"
     }
   ]
 }

@@ -18,12 +18,12 @@ The section ID (in parentheses) is the filename prefix used to group rules.
 ## 3. Relationship Patterns (relationship)
 
 **Impact:** HIGH
-**Description:** Every relationship in your application needs a modeling decision: embed or reference? One-to-one is almost always embedded. One-to-few (comments on a post, addresses for a user) benefits from embedding with bounded arrays. One-to-many (orders for a customer) and many-to-many (students/courses) require references. Tree structures need special patterns (parent reference, child reference, materialized path). Wrong decisions create either bloated documents that hit the 16MB limit, or chatty applications that make 50 round-trips to load a single page. These patterns give you the decision framework.
+**Description:** Every relationship in your application needs a modeling decision: embed or reference? One-to-one is almost always embedded. One-to-few (comments on a post, addresses for a user) benefits from embedding with bounded arrays. One-to-many (orders for a customer), one-to-squillions (activity logs, events), and many-to-many (students/courses) require references. Tree structures need special patterns (parent reference, child reference, materialized path). Wrong decisions create either bloated documents that hit the 16MB limit, or chatty applications that make 50 round-trips to load a single page. These patterns give you the decision framework.
 
 ## 4. Design Patterns (pattern)
 
 **Impact:** MEDIUM
-**Description:** MongoDB's document model enables patterns impossible in relational databases. The Bucket pattern groups time-series data into fixed-size documents, reducing document count 10-100× for IoT and analytics workloads. The Computed pattern pre-calculates expensive aggregations, trading write complexity for read performance. The Subset pattern keeps hot data embedded while archiving cold data, keeping working sets small. The Outlier pattern handles the viral post with 1M comments without penalizing the 99.9% with normal engagement. Apply these patterns when your use case matches—don't over-engineer simple schemas.
+**Description:** MongoDB's document model enables patterns impossible in relational databases. Time series collections and the Bucket pattern reduce document count 10-100× for IoT and analytics workloads. The Attribute and Polymorphic patterns tame variable schemas and keep queries indexable. The Schema Versioning pattern keeps applications online during migrations. The Computed pattern pre-calculates expensive aggregations, trading write complexity for read performance. The Subset pattern keeps hot data embedded while archiving cold data, keeping working sets small. The Outlier pattern handles the viral post with 1M comments without penalizing the 99.9% with normal engagement. Apply these patterns when your use case matches—don't over-engineer simple schemas.
 
 ## 5. Schema Validation (validation)
 

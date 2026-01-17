@@ -9,6 +9,7 @@ A structured repository for creating and maintaining MongoDB Query and Index Opt
   - `area-description.md` - Individual rule files
 - `metadata.json` - Document metadata (version, organization, abstract)
 - __`AGENTS.md`__ - Compiled output (generated)
+- __`test-cases.json`__ - Test cases for LLM evaluation (generated)
 
 ## Getting Started
 
@@ -27,13 +28,19 @@ A structured repository for creating and maintaining MongoDB Query and Index Opt
    pnpm validate mongodb-query-and-index-optimize
    ```
 
+4. Extract test cases:
+   ```bash
+   pnpm extract-tests mongodb-query-and-index-optimize
+   ```
+
 ## Creating a New Rule
 
 1. Copy an existing rule file to `rules/area-description.md`
 2. Choose the appropriate area prefix:
-   - `index-` for Index Strategies (Section 1)
-   - `query-` for Query Patterns (Section 2)
-   - `agg-` for Aggregation Optimization (Section 3)
+   - `index-` for Index Essentials and Specialized Indexes (Sections 1-2)
+   - `query-` for Query Patterns (Section 3)
+   - `agg-` for Aggregation Optimization (Section 4)
+   - `perf-` for Performance Diagnostics (Section 5)
 3. Fill in the frontmatter and content
 4. Ensure you have clear bad/good examples with explanations
 5. Run `pnpm build mongodb-query-and-index-optimize` to regenerate AGENTS.md
@@ -89,6 +96,7 @@ Reference: [MongoDB Documentation](https://mongodb.com/docs/manual/)
 
 - `pnpm build mongodb-query-and-index-optimize` - Compile rules into AGENTS.md
 - `pnpm validate mongodb-query-and-index-optimize` - Validate all rule files
+- `pnpm extract-tests mongodb-query-and-index-optimize` - Extract test cases for LLM evaluation
 
 ## Contributing
 

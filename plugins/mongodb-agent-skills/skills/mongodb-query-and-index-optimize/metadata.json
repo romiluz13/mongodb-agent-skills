@@ -1,8 +1,8 @@
 {
-  "version": "2.0.0",
+  "version": "2.1.0",
   "organization": "MongoDB",
-  "date": "January 2025",
-  "abstract": "MongoDB query optimization and indexing strategies for AI agents and developers. Contains 30 rules across 5 categories: Index Essentials (CRITICAL - ESR rule, compound field order, covered queries, prefix principle, index sizing), Specialized Indexes (HIGH - partial, sparse, TTL, text search, wildcard, multikey, geospatial), Query Patterns (HIGH - projections, avoiding $ne/$nin, anchored regex, batching, pagination, $exists behavior), Aggregation Optimization (HIGH - $match/$project early, $sort+$limit coalescence, $lookup indexing, $unwind control, allowDiskUse), and Performance Diagnostics (MEDIUM - explain() interpretation, slow query profiler, $indexStats analysis). Each rule includes incorrect/correct code examples with quantified impact metrics, 'When NOT to use' exceptions, and verification diagnostics.",
+  "date": "January 2026",
+  "abstract": "MongoDB query optimization and indexing strategies for AI agents and developers. Contains 39 rules across 5 categories: Index Essentials (CRITICAL - ESR rule, compound index usage, covered queries, prefix principle, index sizing), Specialized Indexes (HIGH - unique, partial, sparse, TTL, text search, wildcard, multikey, geospatial, hashed, clustered, hidden), Query Patterns (HIGH - projections, avoiding $ne/$nin, anchored regex, batching, pagination, $exists behavior, sort/collation alignment), Aggregation Optimization (HIGH - $match/$project early, $sort+$limit coalescence, $lookup indexing, $unwind control, allowDiskUse, $group memory control), and Performance Diagnostics (MEDIUM - explain() interpretation, slow query profiler, $indexStats analysis, hint usage, Atlas Performance Advisor). Each rule includes incorrect/correct code examples with quantified impact metrics, 'When NOT to use' exceptions, and verification diagnostics.",
   "references": [
     "https://mongodb.com/docs/manual/indexes/",
     "https://mongodb.com/docs/manual/core/indexes/index-types/",
@@ -13,6 +13,13 @@
     "https://mongodb.com/docs/manual/tutorial/manage-the-database-profiler/",
     "https://mongodb.com/docs/manual/reference/operator/aggregation/indexStats/",
     "https://mongodb.com/docs/atlas/performance-advisor/",
-    "https://mongodb.com/developer/products/mongodb/performance-best-practices-indexing/"
+    "https://mongodb.com/developer/products/mongodb/performance-best-practices-indexing/",
+    "https://mongodb.com/docs/manual/core/index-unique/",
+    "https://mongodb.com/docs/manual/core/indexes/index-types/index-hashed/",
+    "https://mongodb.com/docs/manual/core/clustered-collections/",
+    "https://mongodb.com/docs/manual/core/index-hidden/",
+    "https://mongodb.com/docs/manual/tutorial/sort-results-with-indexes/",
+    "https://mongodb.com/docs/manual/reference/collation/",
+    "https://mongodb.com/docs/manual/reference/method/cursor.hint/"
   ]
 }

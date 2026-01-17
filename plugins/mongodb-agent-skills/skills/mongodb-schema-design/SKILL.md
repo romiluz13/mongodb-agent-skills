@@ -4,12 +4,12 @@ description: MongoDB schema design patterns and anti-patterns. Use when designin
 license: Apache-2.0
 metadata:
   author: mongodb
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
 # MongoDB Schema Design
 
-Data modeling patterns and anti-patterns for MongoDB, maintained by MongoDB. Contains **23 rules across 5 categories**, prioritized by impact. Bad schema is the root cause of most MongoDB performance and cost issues—queries and indexes cannot fix a fundamentally wrong model.
+Data modeling patterns and anti-patterns for MongoDB, maintained by MongoDB. Contains **29 rules across 5 categories**, prioritized by impact. Bad schema is the root cause of most MongoDB performance and cost issues—queries and indexes cannot fix a fundamentally wrong model.
 
 ## When to Apply
 
@@ -31,9 +31,9 @@ Reference these guidelines when:
 |----------|----------|--------|--------|-------|
 | 1 | Schema Anti-Patterns | CRITICAL | `antipattern-` | 6 |
 | 2 | Schema Fundamentals | HIGH | `fundamental-` | 5 |
-| 3 | Relationship Patterns | HIGH | `relationship-` | 5 |
-| 4 | Design Patterns | MEDIUM | `pattern-` | 5 |
-| 5 | Schema Validation | MEDIUM | `validation-` | 2 |
+| 3 | Relationship Patterns | HIGH | `relationship-` | 6 |
+| 4 | Design Patterns | MEDIUM | `pattern-` | 9 |
+| 5 | Schema Validation | MEDIUM | `validation-` | 3 |
 
 ## Quick Reference
 
@@ -54,26 +54,32 @@ Reference these guidelines when:
 - `fundamental-schema-validation` - Enforce structure with JSON Schema
 - `fundamental-16mb-awareness` - Design around BSON document limit
 
-### 3. Relationship Patterns (HIGH) - 5 rules
+### 3. Relationship Patterns (HIGH) - 6 rules
 
 - `relationship-one-to-one` - Embed for simplicity, reference for independence
 - `relationship-one-to-few` - Embed bounded arrays (addresses, phone numbers)
 - `relationship-one-to-many` - Reference for large/unbounded relationships
+- `relationship-one-to-squillions` - Reference massive child sets, store summaries
 - `relationship-many-to-many` - Two-way referencing for bidirectional access
 - `relationship-tree-structures` - Parent/child/materialized path patterns
 
-### 4. Design Patterns (MEDIUM) - 5 rules
+### 4. Design Patterns (MEDIUM) - 9 rules
 
+- `pattern-attribute` - Collapse many optional fields into key-value attributes
 - `pattern-bucket` - Group time-series or IoT data into buckets
+- `pattern-time-series-collections` - Use native time series collections when available
 - `pattern-extended-reference` - Cache frequently-accessed related data
 - `pattern-subset` - Store hot data in main doc, cold data elsewhere
 - `pattern-computed` - Pre-calculate expensive aggregations
 - `pattern-outlier` - Handle documents with exceptional array sizes
+- `pattern-polymorphic` - Store heterogeneous documents with a type discriminator
+- `pattern-schema-versioning` - Evolve schemas safely with version fields
 
-### 5. Schema Validation (MEDIUM) - 2 rules
+### 5. Schema Validation (MEDIUM) - 3 rules
 
 - `validation-json-schema` - Validate data types and structure at database level
 - `validation-action-levels` - Choose warn vs error mode for validation
+- `validation-rollout-strategy` - Introduce validation safely in production
 
 ## Key Principle
 

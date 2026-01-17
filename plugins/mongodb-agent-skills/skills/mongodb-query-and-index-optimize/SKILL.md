@@ -4,12 +4,12 @@ description: MongoDB query optimization and indexing strategies. Use when writin
 license: Apache-2.0
 metadata:
   author: mongodb
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
 # MongoDB Query and Index Optimization
 
-Query patterns and indexing strategies for MongoDB, maintained by MongoDB. Contains **30 rules across 5 categories**, prioritized by impact. Indexes are the primary tool for query performance—most slow queries are missing an appropriate index.
+Query patterns and indexing strategies for MongoDB, maintained by MongoDB. Contains **39 rules across 5 categories**, prioritized by impact. Indexes are the primary tool for query performance—most slow queries are missing an appropriate index.
 
 ## When to Apply
 
@@ -30,17 +30,18 @@ Reference these guidelines when:
 
 | Priority | Category | Impact | Prefix | Rules |
 |----------|----------|--------|--------|-------|
-| 1 | Index Essentials | CRITICAL | `index-` | 8 |
-| 2 | Specialized Indexes | HIGH | `index-` | 7 |
-| 3 | Query Patterns | HIGH | `query-` | 6 |
-| 4 | Aggregation Optimization | HIGH | `agg-` | 6 |
-| 5 | Performance Diagnostics | MEDIUM | `perf-` | 3 |
+| 1 | Index Essentials | CRITICAL | `index-` | 9 |
+| 2 | Specialized Indexes | HIGH | `index-` | 11 |
+| 3 | Query Patterns | HIGH | `query-` | 7 |
+| 4 | Aggregation Optimization | HIGH | `agg-` | 7 |
+| 5 | Performance Diagnostics | MEDIUM | `perf-` | 5 |
 
 ## Quick Reference
 
-### 1. Index Essentials (CRITICAL) - 8 rules
+### 1. Index Essentials (CRITICAL) - 9 rules
 
 - `index-compound-field-order` - Equality first, sort second, range last (ESR rule)
+- `index-compound-multi-field` - Use compound indexes for multi-field queries
 - `index-ensure-usage` - Avoid COLLSCAN, verify with explain()
 - `index-remove-unused` - Audit indexes with $indexStats
 - `index-high-cardinality-first` - Put selective fields at index start
@@ -49,8 +50,9 @@ Reference these guidelines when:
 - `index-creation-background` - Build indexes without blocking operations
 - `index-size-considerations` - Keep indexes in RAM for optimal performance
 
-### 2. Specialized Indexes (HIGH) - 7 rules
+### 2. Specialized Indexes (HIGH) - 11 rules
 
+- `index-unique` - Enforce uniqueness for identifiers and constraints
 - `index-partial` - Index subset of documents to reduce size
 - `index-sparse` - Skip documents missing the indexed field
 - `index-ttl` - Automatic document expiration for sessions/logs
@@ -58,8 +60,11 @@ Reference these guidelines when:
 - `index-wildcard` - Dynamic field indexing for polymorphic schemas
 - `index-multikey` - Array field indexing (one entry per element)
 - `index-geospatial` - 2dsphere indexes for location queries
+- `index-hashed` - Uniform distribution for equality lookups or shard keys
+- `index-clustered` - Ordered storage with clustered collections
+- `index-hidden` - Safely test index removals in production
 
-### 3. Query Patterns (HIGH) - 6 rules
+### 3. Query Patterns (HIGH) - 7 rules
 
 - `query-use-projection` - Fetch only needed fields
 - `query-avoid-ne-nin` - Use $in instead of negation operators
@@ -67,8 +72,9 @@ Reference these guidelines when:
 - `query-batch-operations` - Avoid N+1 patterns, use $in or $lookup
 - `query-pagination` - Use range-based pagination, not skip
 - `query-exists-with-sparse` - Understand $exists behavior with sparse indexes
+- `query-sort-collation` - Match sort order and collation to indexes
 
-### 4. Aggregation Optimization (HIGH) - 6 rules
+### 4. Aggregation Optimization (HIGH) - 7 rules
 
 - `agg-match-early` - Filter with $match at pipeline start
 - `agg-project-early` - Reduce document size with $project
@@ -76,12 +82,15 @@ Reference these guidelines when:
 - `agg-lookup-index` - Ensure $lookup foreign field is indexed
 - `agg-avoid-large-unwind` - Don't $unwind massive arrays
 - `agg-allowdiskuse` - Handle large aggregations exceeding 100MB
+- `agg-group-memory-limit` - Control $group memory and spills
 
-### 5. Performance Diagnostics (MEDIUM) - 3 rules
+### 5. Performance Diagnostics (MEDIUM) - 5 rules
 
 - `perf-explain-interpretation` - Read explain() output like a pro
 - `perf-slow-query-log` - Use profiler to find slow operations
 - `perf-index-stats` - Find unused indexes with $indexStats
+- `perf-use-hint` - Force a known-good index when the optimizer errs
+- `perf-atlas-performance-advisor` - Use Atlas suggestions for missing indexes
 
 ## Key Principle
 
