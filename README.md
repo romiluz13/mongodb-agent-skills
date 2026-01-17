@@ -2,13 +2,13 @@
 
 A collection of skills for AI coding agents. Skills are packaged instructions that extend agent capabilities for MongoDB development.
 
-Skills follow the [Agent Skills](https://agentskills.io/) format.
+Skills follow the [Agent Skills](https://agentskills.io/) format and are compatible with **15+ coding agents** including Claude Code, OpenCode, Cursor, Codex, and more.
 
 ## Available Skills
 
 ### mongodb-schema-design
 
-MongoDB data modeling patterns and anti-patterns from MongoDB Engineering. Contains 12 rules across 3 categories, prioritized by impact.
+MongoDB data modeling patterns and anti-patterns from MongoDB Engineering. Contains **23 rules across 5 categories**, prioritized by impact.
 
 **Use when:**
 - Designing a new MongoDB schema
@@ -18,13 +18,15 @@ MongoDB data modeling patterns and anti-patterns from MongoDB Engineering. Conta
 - Deciding between embedding and referencing
 
 **Categories covered:**
-- Schema Anti-Patterns (Critical) - Unbounded arrays, bloated documents, excessive collections
-- Schema Fundamentals (High) - Embed vs reference, data access patterns
-- Design Patterns (Medium) - Bucket, extended reference, subset patterns
+- Schema Anti-Patterns (Critical) - Unbounded arrays, bloated documents, schema drift
+- Schema Fundamentals (High) - Embed vs reference, 16MB awareness, document model
+- Relationship Patterns (High) - One-to-one, one-to-few, one-to-many, many-to-many, trees
+- Design Patterns (Medium) - Bucket, computed, subset, outlier, extended reference
+- Schema Validation (Medium) - JSON Schema, validation levels
 
 ### mongodb-query-and-index-optimize
 
-MongoDB query optimization and indexing strategies from MongoDB Engineering. Contains 15 rules across 3 categories, prioritized by impact.
+MongoDB query optimization and indexing strategies from MongoDB Engineering. Contains **30 rules across 5 categories**, prioritized by impact.
 
 **Use when:**
 - Writing new MongoDB queries or aggregations
@@ -34,19 +36,23 @@ MongoDB query optimization and indexing strategies from MongoDB Engineering. Con
 - Optimizing aggregation pipelines
 
 **Categories covered:**
-- Index Strategies (Critical) - Compound field order, ensure index usage, covered queries
-- Query Patterns (High) - Projections, batch operations, pagination
-- Aggregation Optimization (High) - $match early, $sort+$limit, indexed $lookup
+- Index Essentials (Critical) - ESR rule, compound field order, covered queries, prefix principle
+- Specialized Indexes (High) - Partial, sparse, TTL, text, wildcard, multikey, geospatial
+- Query Patterns (High) - Projections, batch operations, pagination, $exists behavior
+- Aggregation Optimization (High) - $match early, $sort+$limit, indexed $lookup, allowDiskUse
+- Performance Diagnostics (Medium) - explain() interpretation, slow query profiler, $indexStats
 
 ## Installation
 
-### Option 1: Agent Skills CLI
+### Option 1: Agent Skills CLI (works with 15+ agents)
 
 ```bash
 npx add-skill romiluz13/mongodb-agent-skills
 ```
 
-### Option 2: Claude Code Plugin
+Supports: OpenCode, Claude Code, Codex, Cursor, Amp, Kilo Code, Roo Code, Goose, Gemini CLI, Antigravity, GitHub Copilot, Clawdbot, Droid, Windsurf, and more.
+
+### Option 2: Claude Code Plugin Marketplace
 
 ```bash
 # Step 1: Add marketplace
@@ -80,19 +86,24 @@ Should I embed or reference this data?
 
 ```
 mongodb-agent-skills/
+├── skills/                              # agentskills.io format (symlinks)
+│   ├── mongodb-schema-design/
+│   └── mongodb-query-and-index-optimize/
 ├── .claude-plugin/
-│   └── marketplace.json
+│   └── marketplace.json                 # Anthropic plugin marketplace
 └── plugins/
     └── mongodb-agent-skills/
         ├── .claude-plugin/
         │   └── plugin.json
-        └── skills/
+        └── skills/                      # Actual skill files
             ├── mongodb-schema-design/
             │   ├── SKILL.md
+            │   ├── AGENTS.md
             │   ├── rules/
             │   └── metadata.json
             └── mongodb-query-and-index-optimize/
                 ├── SKILL.md
+                ├── AGENTS.md
                 ├── rules/
                 └── metadata.json
 ```
