@@ -102,4 +102,55 @@ db.addresses.aggregate([
 // If addresses always belong to customers, they should be embedded
 ```
 
+---
+
+## Before You Implement
+
+**I recommend embracing the document model, but please verify your current schema structure first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Count collections vs entities | Too many collections = SQL thinking | List collections and count |
+| Find foreign key patterns | Fields ending in "Id" suggest references | Scan schema for patterns |
+| Check for 1:1 relationships | These should always be embedded | Review related collections |
+| Measure queries per operation | Multiple queries indicate over-normalization | Profile application flow |
+
+**Verification query:**
+```javascript
+// Count collections per database
+db.adminCommand({ listDatabases: 1 }).databases.forEach(d => {
+  const colls = db.getSiblingDB(d.name).getCollectionNames().length
+  print(`${d.name}: ${colls} collections`)
+})
+
+// Find foreign key fields (SQL-style patterns)
+db.collection.aggregate([
+  { $project: { fields: { $objectToArray: "$$ROOT" } } },
+  { $unwind: "$fields" },
+  { $match: { "fields.k": { $regex: /Id$|_id$/ } } },
+  { $group: { _id: "$fields.k", count: { $sum: 1 } } },
+  { $sort: { count: -1 } }
+])
+```
+
+**Interpretation:**
+- Good result (few foreign keys, embedded objects): Document model is embraced
+- Warning (multiple *Id fields): Review if referenced data should be embedded
+- Bad result (many collections with foreign keys): SQL-style schema, plan migration
+
+---
+
+## MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__list-collections` - Count collections to detect over-normalization
+- `mcp__mongodb__collection-schema` - Identify foreign key fields and embedded objects
+- `mcp__mongodb__find` - Sample documents to see current structure
+
+**Just ask:** "Can you analyze my schema and identify where I'm using SQL patterns instead of the document model?"
+
+---
+
 Reference: [Schema Design Process](https://mongodb.com/docs/manual/data-modeling/schema-design-process/)

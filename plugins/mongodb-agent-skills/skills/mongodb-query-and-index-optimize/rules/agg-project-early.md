@@ -253,4 +253,53 @@ analyzePipelineMemory("articles", [
 ])
 ```
 
+---
+
+## Before You Implement
+
+**I recommend adding $project early in the pipeline to reduce memory usage, but please verify first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Average document size | Large docs benefit most from early $project | `db.collection.aggregate([{$sample:{size:10}},{$project:{size:{$bsonSize:"$$ROOT"}}}])` |
+| Fields needed in pipeline | Only keep fields used in later stages | Review your full pipeline |
+| Document count after $match | More docs = more memory savings | `db.collection.countDocuments(matchFilter)` |
+
+**Verification query:**
+```javascript
+// Calculate memory reduction from early $project
+db.collection.aggregate([
+  { $sample: { size: 100 } },
+  { $project: {
+    fullSize: { $bsonSize: "$$ROOT" },
+    projectedSize: { $bsonSize: { field1: "$field1", field2: "$field2" } }  // your projected fields
+  }},
+  { $group: {
+    _id: null,
+    avgFull: { $avg: "$fullSize" },
+    avgProjected: { $avg: "$projectedSize" }
+  }}
+])
+```
+
+**Interpretation:**
+- Good result: >80% size reduction - Significant memory savings, project early
+- Warning result: 20-80% reduction - Worth projecting for large result sets
+- Bad result: <20% reduction - Documents already small, $project adds overhead
+
+---
+
+## MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__aggregate` - Calculate document size before/after $project
+- `mcp__mongodb__collection-schema` - Identify large fields to exclude
+- `mcp__mongodb__explain` - Check for disk spills in memory-intensive stages
+
+**Just ask:** "Can you check document sizes in [collection] and recommend which fields to drop in early $project?"
+
+---
+
 Reference: [Aggregation Pipeline Limits](https://mongodb.com/docs/manual/core/aggregation-pipeline-limits/)

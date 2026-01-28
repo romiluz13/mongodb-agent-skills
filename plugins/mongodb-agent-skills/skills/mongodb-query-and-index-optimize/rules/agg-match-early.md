@@ -210,4 +210,42 @@ checkMatchOptimization([
 ])
 ```
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend moving $match early, but please verify first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Index exists for $match | First $match can use indexes | `db.collection.getIndexes()` |
+| Filter fields exist early | Can't filter on computed fields before they exist | Review pipeline |
+| Split $match if needed | Source filters before $lookup | Review pipeline structure |
+
+**Check $match placement:**
+```javascript
+const explain = db.collection.explain("executionStats")
+  .aggregate([{ $match: {...} }, ...])
+// Check if first stage uses IXSCAN
+```
+
+**Interpretation:**
+- ✅ First $match uses index: Optimal placement
+- ⚠️ $match after $lookup: Split filters
+- 🔴 No index for $match fields: Create supporting index
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__collection-indexes` - Check for supporting index
+- `mcp__mongodb__explain` - Analyze pipeline optimization
+
+**Just ask:** "Analyze $match placement in my aggregation on [collection]"
+
+---
+
 Reference: [Aggregation Pipeline Optimization](https://mongodb.com/docs/manual/core/aggregation-pipeline-optimization/)

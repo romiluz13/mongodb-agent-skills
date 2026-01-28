@@ -276,4 +276,42 @@ function analyzeTextSearch(collection, searchTerms) {
 analyzeTextSearch("articles", "mongodb database performance")
 ```
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend creating a text index, but please verify first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| No existing text index | Only ONE text index per collection | `db.collection.getIndexes()` |
+| Field contains text | Text indexes work on string fields | Check field types |
+| Consider Atlas Search | For production, Atlas Search has more features | Evaluate requirements |
+
+**Check for existing text index:**
+```javascript
+const hasTextIndex = db.collection.getIndexes()
+  .some(i => Object.values(i.key).includes("text"))
+print(hasTextIndex ? "Text index exists" : "No text index")
+```
+
+**Interpretation:**
+- ✅ No existing text index: Safe to create
+- ⚠️ Text index exists on different fields: Must drop and recreate with all fields
+- 🔴 Text index already covers your fields: No action needed
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__collection-indexes` - Check for existing text index
+- `mcp__mongodb__collection-schema` - Verify field types are strings
+
+**Just ask:** "Verify if I can add a text index on [collection]"
+
+---
+
 Reference: [Text Indexes](https://mongodb.com/docs/manual/core/indexes/index-types/index-text/)

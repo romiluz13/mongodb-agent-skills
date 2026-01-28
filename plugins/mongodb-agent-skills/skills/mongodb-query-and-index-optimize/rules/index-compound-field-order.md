@@ -159,4 +159,43 @@ if (hasInMemorySort(stats)) {
 { date: -1 }  // Optimal: natural index order matches query
 ```
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend reordering index fields based on ESR, but please verify first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Existing indexes | May already have an ESR-compliant index | `db.collection.getIndexes()` |
+| Query patterns | Ensure this query is actually slow | `db.collection.find(...).explain("executionStats")` |
+| In-memory sort | Confirm sort stage is present | Look for "SORT" in explain |
+
+**Check for existing indexes:**
+```javascript
+// List all indexes and check field order
+db.collection.getIndexes().forEach(idx => {
+  print(`${idx.name}: ${JSON.stringify(idx.key)}`)
+})
+```
+
+**Interpretation:**
+- ✅ No "SORT" stage in explain: Index already correctly ordered
+- ⚠️ "SORT" stage present but fast (<50ms): May not need optimization
+- 🔴 "SORT" stage + slow query (>100ms): Reorder fields using ESR
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__collection-indexes` - List current indexes
+- `mcp__mongodb__explain` - Analyze if query has in-memory sort
+
+**Just ask:** "Check if my [collection] queries need ESR reordering"
+
+---
+
 Reference: [ESR Rule - Compound Indexes](https://mongodb.com/docs/manual/tutorial/equality-sort-range-rule/)

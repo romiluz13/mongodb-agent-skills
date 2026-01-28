@@ -232,4 +232,75 @@ db.categories.find({
 })
 ```
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend a tree pattern, but please verify your hierarchy characteristics first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Primary query type | Different patterns optimize different queries | Identify most frequent tree operation |
+| Tree depth | Very deep trees need different strategies | Measure max depth |
+| Update frequency | Nested sets fail with frequent changes | Count tree modifications |
+| Existing tree fields | May already have parent/path/ancestors | Check current schema |
+
+**Verification query:**
+```javascript
+// Analyze existing tree structure
+db.collection.aggregate([
+  // Check for existing tree fields
+  { $project: {
+      hasParent: { $cond: [{ $ifNull: ["$parent", false] }, 1, 0] },
+      hasPath: { $cond: [{ $ifNull: ["$path", false] }, 1, 0] },
+      hasAncestors: { $cond: [{ $ifNull: ["$ancestors", false] }, 1, 0] },
+      hasChildren: { $cond: [{ $ifNull: ["$children", false] }, 1, 0] },
+      depth: { $ifNull: ["$depth", { $size: { $ifNull: ["$ancestors", []] } }] }
+  }},
+  { $group: {
+      _id: null,
+      withParent: { $sum: "$hasParent" },
+      withPath: { $sum: "$hasPath" },
+      withAncestors: { $sum: "$hasAncestors" },
+      withChildren: { $sum: "$hasChildren" },
+      maxDepth: { $max: "$depth" },
+      avgDepth: { $avg: "$depth" }
+  }}
+])
+
+// Check for orphaned nodes (parent reference doesn't exist)
+db.collection.aggregate([
+  { $match: { parent: { $ne: null } } },
+  { $lookup: {
+      from: "collection",
+      localField: "parent",
+      foreignField: "_id",
+      as: "parentDoc"
+  }},
+  { $match: { parentDoc: { $size: 0 } } },
+  { $count: "orphanedNodes" }
+])
+```
+
+**Interpretation:**
+- ✅ Existing parent field, depth <10: Parent references may suffice
+- ⚠️ Frequent breadcrumb queries, depth >5: Add ancestors array or materialized path
+- 🔴 Orphaned nodes found: Fix data integrity before adding tree indexes
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__collection-schema` - Detect existing tree structure fields
+- `mcp__mongodb__aggregate` - Measure tree depth and check for orphans
+- `mcp__mongodb__collection-indexes` - Verify indexes support tree queries
+- `mcp__mongodb__find` - Sample nodes to understand current structure
+
+**Just ask:** "Can you analyze my hierarchy and recommend the best tree pattern?"
+
+---
+
 Reference: [Model Tree Structures](https://mongodb.com/docs/manual/applications/data-models-tree-structures/)

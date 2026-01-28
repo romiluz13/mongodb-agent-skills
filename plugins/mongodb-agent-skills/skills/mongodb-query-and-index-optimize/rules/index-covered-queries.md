@@ -216,4 +216,42 @@ db.users.getIndexes().forEach(idx => {
 })
 ```
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend adding fields to index for coverage, but please verify first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Current index | May already cover your projection | `db.collection.getIndexes()` |
+| totalDocsExamined | Confirm query is fetching documents | `explain("executionStats")` |
+| Index size impact | Adding fields increases index size | Check index size before adding fields |
+
+**Check if query is already covered:**
+```javascript
+const stats = db.collection.find(filter, projection).explain("executionStats")
+print(`totalDocsExamined: ${stats.executionStats.totalDocsExamined}`)
+// If 0, query is already covered!
+```
+
+**Interpretation:**
+- ✅ totalDocsExamined = 0: Already a covered query, no change needed
+- ⚠️ totalDocsExamined low, query fast: May not be worth adding fields to index
+- 🔴 totalDocsExamined high, query frequent: Good candidate for covered query optimization
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__collection-indexes` - List current indexes
+- `mcp__mongodb__explain` - Check if query fetches documents
+
+**Just ask:** "Check if my [collection] query can be covered"
+
+---
+
 Reference: [Covered Queries](https://mongodb.com/docs/manual/core/query-optimization/#covered-query)

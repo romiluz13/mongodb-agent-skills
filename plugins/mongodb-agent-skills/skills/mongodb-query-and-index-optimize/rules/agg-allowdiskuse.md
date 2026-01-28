@@ -244,4 +244,49 @@ analyzeAggregationMemory("orders", [
 ])
 ```
 
+---
+
+## Before You Implement
+
+**I recommend using allowDiskUse for large aggregations, but please verify first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Result set size | Estimate if pipeline exceeds 100MB limit | `db.collection.countDocuments(matchFilter)` |
+| Document sizes | Large docs hit memory limit faster | `db.collection.aggregate([{$sample:{size:10}},{$project:{size:{$bsonSize:"$$ROOT"}}}])` |
+| Pipeline stages | $sort, $group, $bucket are memory-intensive | Review your pipeline |
+
+**Verification query:**
+```javascript
+// Test if aggregation needs allowDiskUse
+try {
+  db.collection.explain("executionStats").aggregate(yourPipeline)
+  print("Pipeline fits in memory")
+} catch(e) {
+  if (e.message.includes("memory limit")) {
+    print("Needs allowDiskUse: true")
+  }
+}
+```
+
+**Interpretation:**
+- Good result: Pipeline completes without error - No allowDiskUse needed
+- Warning result: usedDisk:true in explain - Working but slow, optimize pipeline
+- Bad result: Memory limit exceeded error - Must use allowDiskUse or optimize
+
+---
+
+## MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__count` - Estimate documents entering memory-intensive stages
+- `mcp__mongodb__collection-schema` - Check average document size
+- `mcp__mongodb__explain` - Verify if pipeline spills to disk
+
+**Just ask:** "Can you check if my aggregation pipeline on [collection] needs allowDiskUse?"
+
+---
+
 Reference: [Aggregation Pipeline Limits](https://mongodb.com/docs/manual/core/aggregation-pipeline-limits/)

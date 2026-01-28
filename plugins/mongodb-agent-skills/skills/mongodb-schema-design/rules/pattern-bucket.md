@@ -150,4 +150,67 @@ db.sensor_data.aggregate([
 // Bucketed: 10-100KB; Unbucketed: 100-500 bytes
 ```
 
+---
+
+## Before You Implement
+
+**I recommend the bucket pattern for time-series data, but please verify your data patterns first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Check document count growth | High growth rate = bucket pattern candidate | Count documents over time |
+| Analyze document size | Small uniform docs = ideal for bucketing | Measure average doc size |
+| Verify time-series nature | Data must have consistent time field | Check schema for timestamps |
+| Review query patterns | Range queries on time benefit most | Analyze common queries |
+
+**Verification query:**
+```javascript
+// Analyze time-series characteristics
+db.collection.aggregate([
+  { $facet: {
+    docCount: [{ $count: "total" }],
+    avgDocSize: [{
+      $project: { size: { $bsonSize: "$$ROOT" } }
+    }, {
+      $group: { _id: null, avgSize: { $avg: "$size" } }
+    }],
+    timeRange: [{
+      $group: {
+        _id: null,
+        oldest: { $min: "$timestamp" },
+        newest: { $max: "$timestamp" }
+      }
+    }],
+    docsPerDay: [{
+      $group: {
+        _id: { $dateToString: { format: "%Y-%m-%d", date: "$timestamp" } },
+        count: { $sum: 1 }
+      }
+    }, {
+      $group: { _id: null, avgPerDay: { $avg: "$count" } }
+    }]
+  }}
+])
+```
+
+**Interpretation:**
+- Good result (< 1000 docs/day, > 1KB each): Bucketing optional
+- Warning (1000-10000 docs/day): Consider bucket pattern for future scale
+- Bad result (> 10000 docs/day, < 500 bytes each): Bucket pattern strongly recommended
+
+---
+
+## MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__count` - Measure document count and growth rate
+- `mcp__mongodb__aggregate` - Analyze document sizes and time distribution
+- `mcp__mongodb__collection-schema` - Verify time field structure
+
+**Just ask:** "Can you analyze my time-series collection and tell me if the bucket pattern would improve performance?"
+
+---
+
 Reference: [Building with Patterns - Bucket Pattern](https://mongodb.com/blog/post/building-with-patterns-the-bucket-pattern)

@@ -210,4 +210,47 @@ db.system.profile.aggregate([
 // High count + similar query shape = likely N+1
 ```
 
+---
+
+## Before You Implement
+
+**I recommend batching with $in or $lookup to eliminate N+1 queries, but please verify first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Collection document count | Large collections benefit most from batching | `db.collection.countDocuments()` |
+| Current query patterns | Identify N+1 signatures in profiler | `db.system.profile.find({op:"query"})` |
+| Index on lookup field | $in and $lookup need indexed fields | `db.collection.getIndexes()` |
+
+**Verification query:**
+```javascript
+// Detect N+1 pattern: same query shape repeated many times
+db.system.profile.aggregate([
+  { $match: { op: "query", ts: { $gte: new Date(Date.now() - 60000) } } },
+  { $group: { _id: { ns: "$ns", filter: "$command.filter" }, count: { $sum: 1 } } },
+  { $match: { count: { $gt: 10 } } },
+  { $sort: { count: -1 } }
+])
+```
+
+**Interpretation:**
+- Good result: No repeated query patterns (count < 10) - N+1 unlikely
+- Warning result: Same query shape 10-50 times - Potential N+1, review code
+- Bad result: Same query shape 100+ times - Definite N+1, batch immediately
+
+---
+
+## MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__count` - Check collection sizes to estimate batch benefits
+- `mcp__mongodb__collection-indexes` - Verify indexes exist for $in/$lookup fields
+- `mcp__mongodb__aggregate` on system.profile - Detect N+1 query patterns
+
+**Just ask:** "Can you check if my [collection] queries show N+1 patterns and verify indexes for batching?"
+
+---
+
 Reference: [Query Optimization](https://mongodb.com/docs/manual/core/query-optimization/)

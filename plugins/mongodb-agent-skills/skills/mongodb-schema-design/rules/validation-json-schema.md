@@ -258,4 +258,65 @@ db.products.find({
 })
 ```
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend JSON Schema validation, but please verify your existing data first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Existing validator | May already have validation rules | Get collection options |
+| Field type consistency | Schema assumes consistent types | Sample field types |
+| Required field coverage | Documents missing required fields will fail | Check field existence |
+| Enum value completeness | All existing values must be in enum | Get distinct values |
+
+**Verification query:**
+```javascript
+// Check for existing validation
+const info = db.getCollectionInfos({ name: "collection" })[0]
+print("Existing validator:", JSON.stringify(info.options.validator, null, 2))
+
+// Check field type consistency (replace fieldName)
+db.collection.aggregate([
+  { $group: {
+      _id: { $type: "$fieldName" },
+      count: { $sum: 1 }
+  }},
+  { $sort: { count: -1 } }
+])
+
+// Check for documents missing required fields
+db.collection.countDocuments({
+  $or: [
+    { requiredField1: { $exists: false } },
+    { requiredField2: { $exists: false } }
+  ]
+})
+
+// Get distinct values for enum fields
+db.collection.distinct("enumField")
+```
+
+**Interpretation:**
+- ✅ Consistent types, no missing required fields: Safe to add strict validation
+- ⚠️ Mixed types or missing fields: Clean up data first or use moderate level
+- 🔴 Many type variations: May need polymorphic validation with oneOf
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__collection-schema` - Infer current schema from documents
+- `mcp__mongodb__aggregate` - Check field type consistency
+- `mcp__mongodb__count` - Count documents missing required fields
+- `mcp__mongodb__find` - Get distinct values for enum fields
+
+**Just ask:** "Can you analyze my collection before I add JSON Schema validation?"
+
+---
+
 Reference: [JSON Schema Validation](https://mongodb.com/docs/manual/core/schema-validation/specify-json-schema/)

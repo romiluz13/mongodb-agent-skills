@@ -234,4 +234,44 @@ async function comparePaginationMethods(collection, pageNumber, pageSize) {
 })
 ```
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend range-based pagination, but please verify first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Index supports sort | Range pagination needs indexed sort field | `db.collection.getIndexes()` |
+| Pagination depth | skip() is fine for shallow pages | Review user behavior |
+| Sort field has tiebreaker | Non-unique sort needs _id tiebreaker | Review schema |
+
+**Check current pagination performance:**
+```javascript
+const explain = db.collection.find().sort({ sortField: -1 }).skip(1000).limit(20)
+  .explain("executionStats")
+print(`Docs examined: ${explain.executionStats.totalDocsExamined}`)
+print(`Time: ${explain.executionStats.executionTimeMillis}ms`)
+// If >1000 docs examined for 20 results, range pagination will help
+```
+
+**Interpretation:**
+- ✅ Deep pagination (>100 pages): Range-based highly recommended
+- ⚠️ Shallow pagination (<10 pages): skip() may be simpler
+- 🔴 Random page access needed: skip() may be necessary
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__collection-indexes` - Verify sort field indexed
+- `mcp__mongodb__explain` - Analyze pagination query
+
+**Just ask:** "Analyze pagination performance for [collection]"
+
+---
+
 Reference: [Cursor Methods](https://mongodb.com/docs/manual/reference/method/cursor.skip/)

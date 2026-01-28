@@ -46,4 +46,40 @@ db.events.find({ eventId: { $gte: 1000, $lt: 2000 } })
 db.getCollectionInfos({ name: "events" })
 ```
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend a clustered collection, but please verify first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| New collection | Clustered index must be set at creation | Check if collection exists |
+| Range queries on key | Only benefits ordered access | Review query patterns |
+| Key rarely updated | Updates to clustered key relocate doc | Review update patterns |
+
+**Check if collection already exists:**
+```javascript
+db.getCollectionNames().includes("collectionName")
+// If true, cannot add clustered index to existing collection
+```
+
+**Interpretation:**
+- ✅ New collection + range queries: Good candidate
+- ⚠️ Existing collection: Must recreate (migrate data)
+- 🔴 Clustered key frequently updated: Avoid
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__list-collections` - Check if collection exists
+
+**Just ask:** "Verify if I can create a clustered collection [name]"
+
+---
+
 Reference: [Clustered Collections](https://mongodb.com/docs/manual/core/clustered-collections/)

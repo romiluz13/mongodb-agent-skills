@@ -206,4 +206,63 @@ db.users.aggregate([
 db.documentSizeAlerts.find({ size: { $gt: 10000000 } })
 ```
 
+---
+
+## Before You Implement
+
+**I recommend designing for size constraints, but please verify your current document sizes first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Find largest documents | Identifies documents at risk | Run size aggregation |
+| Check size distribution | Reveals growth patterns | Bucket documents by size |
+| Identify growing fields | Arrays and embedded docs that grow unbounded | Analyze field-level sizes |
+| Monitor size trends | Catching growth early prevents emergencies | Compare sizes over time |
+
+**Verification query:**
+```javascript
+// Find largest documents and their sizes
+db.collection.aggregate([
+  { $project: {
+    _id: 1,
+    totalSize: { $bsonSize: "$$ROOT" },
+    // Add specific array fields to check
+    // arrayFieldSize: { $bsonSize: { $ifNull: ["$arrayField", []] } }
+  }},
+  { $sort: { totalSize: -1 } },
+  { $limit: 10 }
+])
+
+// Size distribution buckets
+db.collection.aggregate([
+  { $project: { size: { $bsonSize: "$$ROOT" } } },
+  { $bucket: {
+    groupBy: "$size",
+    boundaries: [0, 102400, 1048576, 5242880, 10485760, 16777216],
+    default: "over16MB",
+    output: { count: { $sum: 1 } }
+  }}
+])
+```
+
+**Interpretation:**
+- Good result (all < 1MB): Safe, but set up monitoring
+- Warning (1-5MB documents): Plan refactoring, add size alerts
+- Bad result (> 5MB): High risk, refactor immediately to avoid failures
+
+---
+
+## MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__aggregate` - Find largest documents and size distribution
+- `mcp__mongodb__collection-schema` - Identify array fields that could grow unbounded
+- `mcp__mongodb__collection-storage-size` - Check overall collection storage
+
+**Just ask:** "Can you check my collection for large documents and identify which ones are at risk of hitting the 16MB limit?"
+
+---
+
 Reference: [BSON Document Size Limit](https://mongodb.com/docs/manual/reference/limits/#std-label-limit-bson-document-size)

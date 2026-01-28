@@ -173,4 +173,42 @@ measureProjectionImpact(
 )
 ```
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend using projections, but please verify first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Document size significant | Projections help most with large docs | Sample document size |
+| Fields actually needed | Don't over-project | Review code usage |
+| Covered query possible | May need specific fields in index | Check index fields |
+
+**Measure potential savings:**
+```javascript
+const fullDoc = db.collection.findOne()
+const projectedDoc = db.collection.findOne({}, { field1: 1, field2: 1 })
+print(`Full: ${JSON.stringify(fullDoc).length} bytes`)
+print(`Projected: ${JSON.stringify(projectedDoc).length} bytes`)
+```
+
+**Interpretation:**
+- ✅ >50% size reduction: Projection highly recommended
+- ⚠️ 20-50% reduction: Worth considering
+- 🔴 <20% reduction: Overhead may not be worth it
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__find` - Sample documents to measure sizes
+
+**Just ask:** "Analyze projection savings for [collection]"
+
+---
+
 Reference: [Project Fields to Return](https://mongodb.com/docs/manual/tutorial/project-fields-from-query-results/)

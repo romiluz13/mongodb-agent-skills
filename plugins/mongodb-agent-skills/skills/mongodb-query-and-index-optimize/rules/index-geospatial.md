@@ -320,4 +320,48 @@ function analyzeGeoQuery(collection, centerPoint, maxDistanceMeters) {
 analyzeGeoQuery("stores", [-73.9857, 40.7580], 5000)
 ```
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend a geospatial index, but please verify first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| No existing 2dsphere index | Avoid duplicate indexes | `db.collection.getIndexes()` |
+| GeoJSON format correct | Must be `{type: "Point", coordinates: [lng, lat]}` | Sample documents |
+| Coordinates are [lng, lat] | NOT [lat, lng] - common mistake! | Verify sample data |
+
+**Check for existing geospatial index:**
+```javascript
+db.collection.getIndexes().filter(i =>
+  Object.values(i.key).some(v => v === "2dsphere" || v === "2d")
+)
+```
+
+**Validate GeoJSON format:**
+```javascript
+db.collection.findOne({}, { location: 1 })
+// Should show: { type: "Point", coordinates: [longitude, latitude] }
+```
+
+**Interpretation:**
+- ✅ No geo index + valid GeoJSON: Safe to create
+- ⚠️ Coordinates may be [lat, lng]: Fix data before indexing
+- 🔴 Geo index already exists: No action needed
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__collection-indexes` - Check for existing geo indexes
+- `mcp__mongodb__find` - Sample documents to verify GeoJSON format
+
+**Just ask:** "Verify if I can add a geospatial index on [collection]"
+
+---
+
 Reference: [Geospatial Indexes](https://mongodb.com/docs/manual/core/indexes/index-types/index-geospatial/)

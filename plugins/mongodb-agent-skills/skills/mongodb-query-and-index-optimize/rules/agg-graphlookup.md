@@ -279,4 +279,45 @@ const pipeline = [
 analyzeGraphLookup(pipeline, "employees")
 ```
 
+---
+
+## Before You Implement
+
+**I recommend using $graphLookup for recursive traversal with indexed connectToField, but please verify first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Index on connectToField | Without index, each recursion level does COLLSCAN | `db.collection.getIndexes()` |
+| Graph depth estimate | Deep graphs may exceed memory limits | Test with maxDepth limits |
+| Connected node count | Large result sets need allowDiskUse | `db.collection.countDocuments()` |
+
+**Verification query:**
+```javascript
+// Check index exists on connectToField
+const connectToField = "reportsTo"  // your field
+const indexes = db.collection.getIndexes()
+const hasIndex = indexes.some(idx => Object.keys(idx.key)[0] === connectToField)
+print(`Index on ${connectToField}: ${hasIndex ? "YES" : "NO - CREATE ONE!"}`)
+```
+
+**Interpretation:**
+- Good result: Index exists on connectToField - $graphLookup will be efficient
+- Warning result: No index, small collection (<10K) - May work but slow
+- Bad result: No index, large collection - Must create index first
+
+---
+
+## MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__collection-indexes` - Verify index on connectToField exists
+- `mcp__mongodb__count` - Estimate graph size and potential result count
+- `mcp__mongodb__explain` - Check for COLLSCAN in $graphLookup execution
+
+**Just ask:** "Can you check if my $graphLookup on [collection] has the required index on [connectToField]?"
+
+---
+
 Reference: [$graphLookup Aggregation Stage](https://mongodb.com/docs/manual/reference/operator/aggregation/graphLookup/)

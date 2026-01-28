@@ -115,4 +115,48 @@ db.products.aggregate([
 
 Atlas Schema Suggestions flags: "Document size exceeds recommended limit"
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend reviewing document sizes, but please verify first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Actual document sizes | May be smaller than expected | See query below |
+| Access patterns | If all fields needed, splitting adds overhead | Review queries |
+| Working set vs RAM | Small collections may not need optimization | Check cache stats |
+
+**Measure document sizes:**
+```javascript
+db.collection.aggregate([
+  { $project: { size: { $bsonSize: "$$ROOT" } } },
+  { $group: {
+      _id: null,
+      avgSize: { $avg: "$size" },
+      maxSize: { $max: "$size" },
+      count: { $sum: 1 }
+  }}
+])
+```
+
+**Interpretation:**
+- ✅ avgSize < 16KB: Documents are reasonably sized.
+- ⚠️ avgSize 16KB-100KB: Consider splitting cold data.
+- 🔴 avgSize > 100KB: Strong candidate for restructuring.
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__aggregate` - Measure document sizes
+- `mcp__mongodb__db-stats` - Check cache pressure
+
+**Just ask:** "Analyze document sizes in my [collection] collection"
+
+---
+
 Reference: [Reduce Bloated Documents](https://mongodb.com/docs/manual/data-modeling/design-antipatterns/bloated-documents/)

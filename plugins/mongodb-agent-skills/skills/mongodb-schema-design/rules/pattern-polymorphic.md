@@ -324,4 +324,51 @@ function analyzePolymorphicCollection(collectionName, typeField = "type") {
 analyzePolymorphicCollection("products", "type")
 ```
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend the polymorphic pattern, but please verify your collection first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Existing discriminator field | May already have a type field with different values | Query for distinct values of candidate fields |
+| Document size variance | Large size differences between types hurt working set | Check avg document size per type |
+| Current index strategy | Existing indexes may conflict with polymorphic approach | Review current indexes |
+| Query patterns by type | Confirm cross-type queries are actually needed | Analyze application query logs |
+
+**Verification query:**
+```javascript
+// Check for existing type-like fields and their distributions
+db.collection.aggregate([
+  { $group: {
+      _id: { type: "$type", kind: "$kind", docType: "$docType" },
+      count: { $sum: 1 },
+      avgSize: { $avg: { $bsonSize: "$$ROOT" } }
+  }},
+  { $sort: { count: -1 } },
+  { $limit: 20 }
+])
+```
+
+**Interpretation:**
+- ✅ Single null group: Collection has no discriminator yet - safe to add
+- ⚠️ Multiple groups with varying sizes: Review size variance before proceeding
+- 🔴 Existing discriminator with many values: Coordinate with existing type system
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__collection-schema` - Detect existing type/discriminator fields
+- `mcp__mongodb__aggregate` - Analyze type distribution and document sizes
+- `mcp__mongodb__collection-indexes` - Check for conflicting index strategies
+
+**Just ask:** "Can you check if my collection is ready for the polymorphic pattern?"
+
+---
+
 Reference: [Polymorphic Schema Pattern](https://mongodb.com/docs/manual/data-modeling/design-patterns/polymorphic-data/polymorphic-schema-pattern/)

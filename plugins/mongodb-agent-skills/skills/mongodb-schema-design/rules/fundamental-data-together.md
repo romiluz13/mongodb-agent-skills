@@ -122,4 +122,59 @@ db.system.profile.aggregate([
 // Collections queried in same minute = candidates for embedding
 ```
 
+---
+
+## Before You Implement
+
+**I recommend embedding data accessed together, but please verify your access patterns first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Profile actual queries | Reveals what data is fetched together | Enable query profiling |
+| Map API endpoints to data | Each endpoint should ideally hit one collection | Review application code |
+| Check query timing patterns | Collections queried in same request should embed | Analyze profile by timestamp |
+| Measure network round-trips | Multiple queries add latency | Count queries per operation |
+
+**Verification query:**
+```javascript
+// Find queries that happen together (within same minute)
+db.setProfilingLevel(1, { slowms: 10 })
+// ... run your application ...
+
+db.system.profile.aggregate([
+  { $match: { op: "query" } },
+  { $group: {
+    _id: {
+      minute: { $dateToString: { format: "%Y-%m-%d %H:%M", date: "$ts" } }
+    },
+    collections: { $addToSet: "$ns" },
+    count: { $sum: 1 }
+  }},
+  { $match: { "collections.1": { $exists: true } } },
+  { $sort: { count: -1 } },
+  { $limit: 10 }
+])
+// Collections appearing together = candidates for embedding
+```
+
+**Interpretation:**
+- Good result (single collection per operation): Data is properly co-located
+- Warning (2 collections frequently): Consider embedding if data is 1:1 or 1:few
+- Bad result (3+ collections per operation): Strong candidate for schema redesign
+
+---
+
+## MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__collection-schema` - Understand current document structure
+- `mcp__mongodb__find` - Sample documents to see current data organization
+- `mcp__mongodb__aggregate` - Analyze query patterns from profiler
+
+**Just ask:** "Can you analyze my query patterns and recommend which data should be embedded together?"
+
+---
+
 Reference: [Data Modeling Introduction](https://mongodb.com/docs/manual/data-modeling/)

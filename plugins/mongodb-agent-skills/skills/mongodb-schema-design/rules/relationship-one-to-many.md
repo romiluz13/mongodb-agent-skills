@@ -161,4 +161,68 @@ db.books.aggregate([
 // Orphans indicate data integrity issues
 ```
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend references for one-to-many, but please verify your setup first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Reference field indexed | Queries from child to parent need index | Check child collection indexes |
+| Cardinality is unbounded | Only use references if truly unbounded | Check max children per parent |
+| Query direction | If mostly parent→children, consider embedding | Review query patterns |
+| Orphan prevention | No foreign keys - orphans can accumulate | Check for orphaned references |
+
+**Verification query:**
+```javascript
+// Check for missing indexes on reference fields
+db.childCollection.getIndexes()
+// Look for index on parent_id or similar reference field
+
+// Check cardinality distribution
+db.childCollection.aggregate([
+  { $group: { _id: "$parent_id", count: { $sum: 1 } } },
+  { $group: {
+      _id: null,
+      avgChildren: { $avg: "$count" },
+      maxChildren: { $max: "$count" },
+      parentCount: { $sum: 1 }
+  }}
+])
+
+// Check for orphaned references
+db.childCollection.aggregate([
+  { $lookup: {
+      from: "parentCollection",
+      localField: "parent_id",
+      foreignField: "_id",
+      as: "parent"
+  }},
+  { $match: { parent: { $size: 0 } } },
+  { $count: "orphanedChildren" }
+])
+```
+
+**Interpretation:**
+- ✅ Index exists, no orphans, unbounded growth: References are appropriate
+- ⚠️ No index on reference field: Add index before proceeding
+- 🔴 Max children <50: Consider embedding instead of references
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__collection-indexes` - Verify index on reference field
+- `mcp__mongodb__aggregate` - Check cardinality and orphan count
+- `mcp__mongodb__collection-schema` - Confirm reference field structure
+- `mcp__mongodb__explain` - Test query performance with references
+
+**Just ask:** "Can you check if my one-to-many reference pattern is set up correctly?"
+
+---
+
 Reference: [Model One-to-Many Relationships with Document References](https://mongodb.com/docs/manual/tutorial/model-referenced-one-to-many-relationships-between-documents/)

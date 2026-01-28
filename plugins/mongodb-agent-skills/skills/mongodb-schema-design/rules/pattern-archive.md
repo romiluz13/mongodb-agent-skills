@@ -272,4 +272,66 @@ function analyzeArchiveCandidates(collection, dateField, yearsThreshold) {
 analyzeArchiveCandidates("sales", "date", 5)
 ```
 
+---
+
+## Before You Implement
+
+**I recommend archiving old data, but please verify your archival needs first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Analyze age distribution | Reveals how much data is archivable | Bucket documents by date |
+| Check query patterns | Ensure old data is rarely accessed | Profile queries by date range |
+| Verify date field exists | Archive requires reliable date field | Check schema for date fields |
+| Calculate storage impact | Quantifies benefit of archiving | Measure old vs new data size |
+
+**Verification query:**
+```javascript
+// Analyze archive candidates (replace 'date' with your date field)
+db.collection.aggregate([
+  { $facet: {
+    total: [{ $count: "count" }],
+    byAge: [{
+      $bucket: {
+        groupBy: "$date",
+        boundaries: [
+          new Date("2020-01-01"),
+          new Date("2022-01-01"),
+          new Date("2023-01-01"),
+          new Date("2024-01-01"),
+          new Date("2025-01-01")
+        ],
+        default: "older",
+        output: { count: { $sum: 1 } }
+      }
+    }],
+    oldestDoc: [
+      { $sort: { date: 1 } },
+      { $limit: 1 },
+      { $project: { date: 1 } }
+    ]
+  }}
+])
+```
+
+**Interpretation:**
+- Good result (< 30% old data): Archiving optional, monitor growth
+- Warning (30-60% old data): Archive recommended for performance improvement
+- Bad result (> 60% old data): Archive urgently to reduce collection size significantly
+
+---
+
+## MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__aggregate` - Analyze document age distribution
+- `mcp__mongodb__count` - Count documents by age range
+- `mcp__mongodb__collection-storage-size` - Measure storage impact
+
+**Just ask:** "Can you analyze my collection and tell me how much data I should archive and the expected storage savings?"
+
+---
+
 Reference: [Archive Pattern](https://mongodb.com/docs/manual/data-modeling/design-patterns/archive/)

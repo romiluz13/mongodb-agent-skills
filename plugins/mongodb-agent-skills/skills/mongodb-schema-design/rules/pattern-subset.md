@@ -165,4 +165,66 @@ db.serverStatus().wiredTiger.cache
 // If near max, subset pattern will help significantly
 ```
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend the subset pattern, but please verify your access patterns first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Hot vs cold data ratio | Subset only helps if cold data is >10x hot data | Measure field sizes separately |
+| Access frequency | Confirm cold data is rarely accessed | Check application query patterns |
+| Update patterns | Subset requires maintaining summary data | Review how often cold data changes |
+| Working set pressure | Pattern most valuable when RAM is constrained | Check cache hit ratio |
+
+**Verification query:**
+```javascript
+// Analyze hot vs cold data distribution
+db.collection.aggregate([
+  { $sample: { size: 100 } },
+  { $project: {
+      totalSize: { $bsonSize: "$$ROOT" },
+      // Replace 'coldField' with your suspected cold array field
+      coldFieldSize: { $bsonSize: { $ifNull: ["$coldField", []] } },
+      coldFieldCount: { $size: { $ifNull: ["$coldField", []] } }
+  }},
+  { $group: {
+      _id: null,
+      avgTotal: { $avg: "$totalSize" },
+      avgCold: { $avg: "$coldFieldSize" },
+      avgColdCount: { $avg: "$coldFieldCount" },
+      maxColdCount: { $max: "$coldFieldCount" }
+  }},
+  { $project: {
+      avgTotalKB: { $divide: ["$avgTotal", 1024] },
+      avgColdKB: { $divide: ["$avgCold", 1024] },
+      coldPercentage: { $multiply: [{ $divide: ["$avgCold", "$avgTotal"] }, 100] },
+      avgColdCount: 1,
+      maxColdCount: 1
+  }}
+])
+```
+
+**Interpretation:**
+- ✅ Cold >80% of document size: Subset pattern will significantly help
+- ⚠️ Cold 50-80%: Moderate benefit, consider complexity tradeoff
+- 🔴 Cold <50%: Subset pattern adds complexity with limited benefit
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__collection-schema` - Identify candidate cold data arrays
+- `mcp__mongodb__aggregate` - Measure hot vs cold data sizes
+- `mcp__mongodb__collection-storage-size` - Check overall collection size
+- `mcp__mongodb__db-stats` - Analyze working set and cache pressure
+
+**Just ask:** "Can you analyze my collection to see if the subset pattern would help?"
+
+---
+
 Reference: [Building with Patterns - Subset Pattern](https://mongodb.com/blog/post/building-with-patterns-the-subset-pattern)

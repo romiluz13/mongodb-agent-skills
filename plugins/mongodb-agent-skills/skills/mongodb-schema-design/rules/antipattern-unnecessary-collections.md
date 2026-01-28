@@ -154,4 +154,55 @@ db.system.profile.aggregate([
 
 Atlas Schema Suggestions flags: "Reduce number of collections"
 
+---
+
+## Before You Implement
+
+**I recommend embedding related data, but please verify your current collection usage first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Count total collections | Too many collections = SQL-style thinking | List collections in database |
+| Identify $lookup patterns | Collections always joined should be embedded | Profile aggregation queries |
+| Check collection access patterns | Collections queried together should be merged | Analyze query logs |
+| Review data relationships | 1:1 and 1:few relationships should embed | Examine foreign key fields |
+
+**Verification query:**
+```javascript
+// Count collections and identify potential merge candidates
+db.adminCommand({ listDatabases: 1 }).databases.forEach(d => {
+  const colls = db.getSiblingDB(d.name).getCollectionNames()
+  print(`${d.name}: ${colls.length} collections`)
+  colls.forEach(c => print(`  - ${c}`))
+})
+
+// Find collections with foreign key patterns (candidates for embedding)
+db.collection.aggregate([
+  { $project: { fields: { $objectToArray: "$$ROOT" } } },
+  { $unwind: "$fields" },
+  { $match: { "fields.k": { $regex: /Id$/ } } },
+  { $group: { _id: "$fields.k", count: { $sum: 1 } } }
+])
+```
+
+**Interpretation:**
+- Good result (< 10 collections for simple app): Collection count is appropriate
+- Warning (10-20 collections): Review for embedding opportunities
+- Bad result (> 20 collections for simple app): Likely over-normalized, plan consolidation
+
+---
+
+## MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__list-collections` - Count and list all collections
+- `mcp__mongodb__collection-schema` - Identify foreign key fields indicating references
+- `mcp__mongodb__aggregate` - Analyze $lookup usage patterns
+
+**Just ask:** "Can you analyze my database structure and identify which collections should be merged or embedded?"
+
+---
+
 Reference: [Embedding vs Referencing](https://mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/)

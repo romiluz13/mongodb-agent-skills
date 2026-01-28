@@ -266,4 +266,47 @@ function analyzeMultikeyIndex(collection, indexName) {
 analyzeMultikeyIndex("products", "tags_1")
 ```
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend a multikey index, but please verify first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Array sizes bounded | Large arrays = huge index | See analysis query |
+| Only one array in compound | Can't index parallel arrays | Review index fields |
+| No existing multikey | Avoid duplicates | `db.collection.getIndexes()` |
+
+**Analyze array sizes:**
+```javascript
+db.collection.aggregate([
+  { $project: { arrSize: { $size: { $ifNull: ["$arrayField", []] } } } },
+  { $group: {
+      _id: null,
+      avgSize: { $avg: "$arrSize" },
+      maxSize: { $max: "$arrSize" }
+  }}
+])
+```
+
+**Interpretation:**
+- ✅ avgSize < 50, maxSize < 200: Standard multikey index is fine
+- ⚠️ avgSize > 100: Large index, monitor size
+- 🔴 maxSize > 1000: Very large arrays, consider schema redesign
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__collection-indexes` - Check for existing multikey indexes
+- `mcp__mongodb__aggregate` - Analyze array sizes
+
+**Just ask:** "Analyze array sizes for [field] on [collection]"
+
+---
+
 Reference: [Multikey Indexes](https://mongodb.com/docs/manual/core/indexes/index-types/index-multikey/)

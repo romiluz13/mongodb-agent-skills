@@ -185,4 +185,66 @@ db.students.aggregate([
 ])
 ```
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend a many-to-many approach, but please verify your query patterns first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Primary query direction | Determines which side to embed references | Analyze most frequent queries |
+| Cardinality both sides | High cardinality needs reference-only pattern | Count relationships per entity |
+| Update frequency | Bidirectional embedding requires dual updates | Review relationship change rate |
+| Consistency requirements | May need transactions for bidirectional updates | Check if eventual consistency is OK |
+
+**Verification query:**
+```javascript
+// Check cardinality on the "many" side (e.g., students per class)
+db.students.aggregate([
+  { $project: {
+      relationshipCount: { $size: { $ifNull: ["$classes", []] } }
+  }},
+  { $group: {
+      _id: null,
+      avg: { $avg: "$relationshipCount" },
+      max: { $max: "$relationshipCount" },
+      p95: { $percentile: { input: "$relationshipCount", p: [0.95], method: "approximate" } }
+  }}
+])
+
+// Repeat for the other side (classes per student)
+db.classes.aggregate([
+  { $project: {
+      relationshipCount: { $size: { $ifNull: ["$students", []] } }
+  }},
+  { $group: {
+      _id: null,
+      avg: { $avg: "$relationshipCount" },
+      max: { $max: "$relationshipCount" }
+  }}
+])
+```
+
+**Interpretation:**
+- ✅ Both sides avg <20, max <100: Bidirectional embedding works well
+- ⚠️ One side max >100: Embed only on low-cardinality side
+- 🔴 Both sides max >100: Use reference-only pattern with $lookup
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__collection-schema` - Identify relationship fields on both sides
+- `mcp__mongodb__aggregate` - Measure cardinality in both directions
+- `mcp__mongodb__collection-indexes` - Check for indexes on relationship fields
+- `mcp__mongodb__find` - Sample documents to verify consistency
+
+**Just ask:** "Can you analyze my many-to-many relationship cardinality?"
+
+---
+
 Reference: [Model Many-to-Many Relationships](https://mongodb.com/docs/manual/tutorial/model-embedded-many-to-many-relationships-between-documents/)

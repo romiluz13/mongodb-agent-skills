@@ -174,4 +174,46 @@ compareIndexOrder(
 )
 ```
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend reordering fields by cardinality, but please verify first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Measure actual cardinality | Don't assume - verify | See analysis query |
+| Check existing indexes | May already have optimal order | `db.collection.getIndexes()` |
+| Consider ESR rule | Sort fields may override cardinality | Review query patterns |
+
+**Measure cardinality:**
+```javascript
+db.collection.aggregate([
+  { $facet: {
+    field1: [{ $group: { _id: "$field1" } }, { $count: "n" }],
+    field2: [{ $group: { _id: "$field2" } }, { $count: "n" }]
+  }}
+])
+// Higher n = higher cardinality = should come first
+```
+
+**Interpretation:**
+- ✅ Clear cardinality difference (10x+): Reorder recommended
+- ⚠️ Similar cardinality: Order may not matter much
+- 🔴 Query has sort: ESR rule takes precedence over cardinality
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__collection-indexes` - Check existing index field order
+- `mcp__mongodb__aggregate` - Measure cardinality of fields
+
+**Just ask:** "Analyze cardinality for index fields on [collection]"
+
+---
+
 Reference: [Index Selectivity](https://mongodb.com/docs/manual/tutorial/create-queries-that-ensure-selectivity/)

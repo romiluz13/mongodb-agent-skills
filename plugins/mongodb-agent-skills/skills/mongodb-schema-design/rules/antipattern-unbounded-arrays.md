@@ -100,4 +100,51 @@ db.users.aggregate([
 
 Atlas Schema Suggestions flags: "Array field 'activityLog' may grow without bound"
 
+---
+
+## ⚠️ Before You Implement
+
+**I analyzed your code pattern, but couldn't verify actual data. Please check:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Actual array sizes | Your array might be bounded by business logic | See query below |
+| Growth rate | Static arrays don't need restructuring | Compare old vs new docs |
+| Update frequency | Write-once arrays are fine | Check if $push is used |
+
+**Measure your actual array sizes:**
+```javascript
+db.collection.aggregate([
+  { $project: {
+      arraySize: { $size: { $ifNull: ["$arrayField", []] } },
+      docSize: { $bsonSize: "$$ROOT" }
+  }},
+  { $group: {
+      _id: null,
+      maxArray: { $max: "$arraySize" },
+      avgArray: { $avg: "$arraySize" },
+      maxDoc: { $max: "$docSize" }
+  }}
+])
+```
+
+**Interpretation:**
+- ✅ maxArray < 100: Your array is likely bounded. Monitor but no action needed.
+- ⚠️ maxArray 100-500: Consider adding schema validation with maxItems.
+- 🔴 maxArray > 500 or growing: Recommend restructuring.
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__aggregate` - Measure actual array sizes
+- `mcp__mongodb__collection-schema` - Analyze schema patterns
+
+**Just ask:** "Analyze the [arrayField] array in my [collection] collection"
+
+---
+
 Reference: [Avoid Unbounded Arrays](https://mongodb.com/docs/manual/data-modeling/design-antipatterns/unbounded-arrays/)

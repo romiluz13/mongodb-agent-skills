@@ -135,6 +135,80 @@ Each rule file contains:
 - How to verify with explain()
 - Performance impact and metrics
 
+---
+
+## How These Rules Work
+
+### Recommendations with Verification
+
+Every rule in this skill provides:
+1. **A recommendation** based on best practices
+2. **A verification checklist** of things that should be confirmed
+3. **Commands to verify** so you can check before implementing
+4. **MCP integration** for automatic verification when connected
+
+### Why Verification Matters
+
+I analyze code patterns, but I can't see your actual database without a connection.
+This means I might suggest:
+- Creating an index that already exists
+- Optimizing a query that's already using an efficient index
+- Adding a compound index when a prefix already covers the query
+
+**Always verify before implementing.** Each rule includes verification commands.
+
+### MongoDB MCP Integration
+
+For automatic verification, connect the [MongoDB MCP Server](https://github.com/mongodb-js/mongodb-mcp-server):
+
+**Option 1: Connection String**
+```json
+{
+  "mcpServers": {
+    "mongodb": {
+      "command": "npx",
+      "args": ["-y", "mongodb-mcp-server", "--readOnly"],
+      "env": {
+        "MDB_MCP_CONNECTION_STRING": "mongodb+srv://user:pass@cluster.mongodb.net/mydb"
+      }
+    }
+  }
+}
+```
+
+**Option 2: Local MongoDB**
+```json
+{
+  "mcpServers": {
+    "mongodb": {
+      "command": "npx",
+      "args": ["-y", "mongodb-mcp-server", "--readOnly"],
+      "env": {
+        "MDB_MCP_CONNECTION_STRING": "mongodb://localhost:27017/mydb"
+      }
+    }
+  }
+}
+```
+
+**⚠️ Security**: Use `--readOnly` for safety. Remove only if you need write operations.
+
+When connected, I can automatically:
+- Check existing indexes via `mcp__mongodb__collection-indexes`
+- Analyze query performance via `mcp__mongodb__explain`
+- Verify data patterns via `mcp__mongodb__aggregate`
+
+### Working Together
+
+If you're not sure about a recommendation:
+1. Run the verification commands I provide
+2. Share the output with me
+3. I'll adjust my recommendation based on your actual data
+
+We're a team—let's get this right together.
+
+---
+
 ## Full Compiled Document
 
 For the complete guide with all rules expanded: `AGENTS.md`

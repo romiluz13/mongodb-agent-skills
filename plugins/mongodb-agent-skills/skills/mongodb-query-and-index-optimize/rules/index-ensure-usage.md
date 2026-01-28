@@ -179,4 +179,43 @@ function checkIndexUsage(query) {
 checkIndexUsage(db.orders.find({ customerId: "cust123" }))
 ```
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend creating an index, but please verify first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Index doesn't exist | Avoid creating duplicate indexes | `db.collection.getIndexes()` |
+| No prefix coverage | Compound index may already cover this | Check existing compound indexes |
+| Collection size | Small collections (<1000 docs) may not need index | `db.collection.countDocuments({})` |
+
+**Check existing indexes:**
+```javascript
+db.collection.getIndexes().forEach(idx => {
+  print(`${idx.name}: ${JSON.stringify(idx.key)}`)
+})
+```
+
+**Interpretation:**
+- ✅ No existing index on query fields: Safe to create new index
+- ⚠️ Compound index exists with your field as prefix: May already be covered
+- 🔴 Exact index already exists: Do NOT create duplicate
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__collection-indexes` - Check for existing indexes
+- `mcp__mongodb__explain` - Verify query is doing COLLSCAN
+- `mcp__mongodb__count` - Check collection size
+
+**Just ask:** "Verify if I need an index for [query] on [collection]"
+
+---
+
 Reference: [Analyze Query Performance](https://mongodb.com/docs/manual/tutorial/analyze-query-plan/)

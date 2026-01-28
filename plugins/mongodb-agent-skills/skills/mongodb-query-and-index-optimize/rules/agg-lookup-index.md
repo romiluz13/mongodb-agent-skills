@@ -276,4 +276,45 @@ checkLookupIndex("orders", {
 })
 ```
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend indexing the foreignField, but please verify first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| foreignField is not _id | _id is automatically indexed | Review $lookup definition |
+| Index doesn't exist | Avoid duplicates | `db.foreignColl.getIndexes()` |
+| Foreign collection size | Small collections may not need | `db.foreignColl.countDocuments()` |
+
+**Check foreign collection index:**
+```javascript
+const foreignColl = "products"  // your foreign collection
+const foreignField = "sku"      // your foreignField
+db[foreignColl].getIndexes().forEach(i =>
+  print(`${i.name}: ${JSON.stringify(i.key)}`)
+)
+// Look for index starting with foreignField
+```
+
+**Interpretation:**
+- ✅ No index on foreignField: Create one
+- ⚠️ foreignField is _id: No action needed
+- 🔴 Index already exists: No action needed
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__collection-indexes` - Check foreign collection indexes
+- `mcp__mongodb__count` - Check foreign collection size
+
+**Just ask:** "Verify if my $lookup needs index on [foreignCollection].[foreignField]"
+
+---
+
 Reference: [$lookup Aggregation](https://mongodb.com/docs/manual/reference/operator/aggregation/lookup/)

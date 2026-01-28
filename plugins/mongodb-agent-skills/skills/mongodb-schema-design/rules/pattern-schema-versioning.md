@@ -363,4 +363,61 @@ function analyzeSchemaVersions(collectionName, versionField = "schemaVersion") {
 analyzeSchemaVersions("users", "schemaVersion")
 ```
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend schema versioning, but please verify your migration needs first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Existing schemaVersion field | May already have versioning in place | Check for existing version fields |
+| Current schema variations | Understand how many implicit versions exist | Sample documents for field differences |
+| Application code readiness | Code must handle multiple versions simultaneously | Review read/write paths |
+| Migration timeline | Estimate how long dual-version support is needed | Count documents needing migration |
+
+**Verification query:**
+```javascript
+// Detect existing schema variations
+db.collection.aggregate([
+  { $sample: { size: 1000 } },
+  { $project: {
+      schemaVersion: { $ifNull: ["$schemaVersion", "missing"] },
+      fieldSignature: { $objectToArray: "$$ROOT" }
+  }},
+  { $project: {
+      schemaVersion: 1,
+      fieldCount: { $size: "$fieldSignature" },
+      fields: { $map: { input: "$fieldSignature", as: "f", in: "$$f.k" } }
+  }},
+  { $group: {
+      _id: { version: "$schemaVersion", fieldCount: "$fieldCount" },
+      count: { $sum: 1 },
+      sampleFields: { $first: "$fields" }
+  }},
+  { $sort: { count: -1 } }
+])
+```
+
+**Interpretation:**
+- ✅ Single schema pattern: Simple migration, versioning may be overkill
+- ⚠️ 2-3 patterns without version field: Add schemaVersion retroactively
+- 🔴 Many patterns: Complex migration - plan carefully before adding versioning
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__collection-schema` - Detect current schema structure
+- `mcp__mongodb__aggregate` - Find schema variations and version distribution
+- `mcp__mongodb__count` - Count documents per schema version
+- `mcp__mongodb__find` - Sample documents to compare field structures
+
+**Just ask:** "Can you analyze my collection's schema versions before I implement versioning?"
+
+---
+
 Reference: [Schema Versioning Pattern](https://mongodb.com/docs/manual/data-modeling/design-patterns/data-versioning/schema-versioning/)

@@ -314,4 +314,45 @@ function analyzeSlowQueries(thresholdMs = 100, minutes = 60) {
 analyzeSlowQueries(100, 60)  // Queries >100ms in last hour
 ```
 
+---
+
+## Before You Implement
+
+**I recommend enabling the profiler to find actual slow queries, but please verify first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Current profiling level | May already be enabled | `db.getProfilingStatus()` |
+| slowms threshold | Too low = overhead, too high = miss issues | Check current setting |
+| Sample rate | High traffic needs sampling to reduce overhead | Check sampleRate setting |
+
+**Verification query:**
+```javascript
+// Check profiler status and recent slow queries
+print("Profiler status:", JSON.stringify(db.getProfilingStatus()))
+print("Recent slow queries:", db.system.profile.countDocuments({
+  ts: { $gte: new Date(Date.now() - 3600000) }  // last hour
+}))
+```
+
+**Interpretation:**
+- Good result: Profiler enabled, capturing slow queries - Analyze and optimize
+- Warning result: Profiler off or threshold too high - Enable with appropriate settings
+- Bad result: Level 2 in production - Too much overhead, switch to level 1
+
+---
+
+## MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__find` on system.profile - Retrieve actual slow queries
+- `mcp__mongodb__aggregate` on system.profile - Group by query pattern to find worst offenders
+- `mcp__mongodb__explain` - Analyze specific slow queries identified
+
+**Just ask:** "Can you check my slow query log and identify the top performance issues?"
+
+---
+
 Reference: [Database Profiler](https://mongodb.com/docs/manual/tutorial/manage-the-database-profiler/)

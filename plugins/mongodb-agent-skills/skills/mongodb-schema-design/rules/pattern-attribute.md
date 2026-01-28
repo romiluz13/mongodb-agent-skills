@@ -69,4 +69,58 @@ db.items.find({
 }).explain("executionStats")
 ```
 
+---
+
+## Before You Implement
+
+**I recommend the attribute pattern for sparse fields, but please verify your field sparsity first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Count sparse/optional fields | Many optional fields = attribute pattern candidate | Analyze field presence |
+| Check index count | Too many sparse indexes indicate need for pattern | List collection indexes |
+| Measure field presence rates | Low presence rate = good attribute candidate | Sample document analysis |
+| Review query patterns | Ensure attribute queries are supported | Check application queries |
+
+**Verification query:**
+```javascript
+// Find sparse fields (fields present in < 50% of documents)
+db.collection.aggregate([
+  { $sample: { size: 1000 } },
+  { $project: { fields: { $objectToArray: "$$ROOT" } } },
+  { $unwind: "$fields" },
+  { $group: {
+    _id: "$fields.k",
+    count: { $sum: 1 }
+  }},
+  { $project: {
+    field: "$_id",
+    presenceRate: { $divide: ["$count", 1000] }
+  }},
+  { $match: { presenceRate: { $lt: 0.5, $gt: 0 } } },
+  { $sort: { presenceRate: 1 } }
+])
+// Fields with low presence rate are candidates for attribute pattern
+```
+
+**Interpretation:**
+- Good result (few sparse fields, < 5 indexes): Current schema is fine
+- Warning (10+ sparse fields or indexes): Consider attribute pattern
+- Bad result (20+ sparse fields): Attribute pattern strongly recommended
+
+---
+
+## MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to verify before implementing.
+
+**What I'll check:**
+- `mcp__mongodb__collection-schema` - Identify optional/sparse fields
+- `mcp__mongodb__collection-indexes` - Count existing indexes
+- `mcp__mongodb__aggregate` - Analyze field presence rates
+
+**Just ask:** "Can you analyze my collection for sparse fields and tell me if the attribute pattern would help?"
+
+---
+
 Reference: [Attribute Pattern](https://mongodb.com/docs/manual/data-modeling/design-patterns/group-data/attribute-pattern/)

@@ -312,4 +312,41 @@ function safeToDropIndex(collection, indexName) {
 safeToDropIndex("orders", "old_unused_index_1")
 ```
 
+---
+
+## ⚠️ Before You Implement
+
+**I recommend auditing indexes, but please verify first:**
+
+| Check | Why It Matters | How to Verify |
+|-------|----------------|---------------|
+| Check "since" date | Stats reset on restart | Look at accesses.since |
+| Wait 30+ days | Allow time for all queries | Check date range |
+| Ask team about rare queries | Monthly reports may use index | Verify with team |
+
+**Get index stats:**
+```javascript
+db.collection.aggregate([{ $indexStats: {} }])
+  .forEach(s => print(`${s.name}: ${s.accesses.ops} ops since ${s.accesses.since}`))
+```
+
+**Interpretation:**
+- ✅ 0 ops for 30+ days + not critical: Safe to hide/drop
+- ⚠️ Low ops but important query: Keep
+- 🔴 Active usage: Do not remove
+
+---
+
+## 🔌 MongoDB MCP Auto-Verification
+
+If MongoDB MCP is connected, ask me to run the audit.
+
+**What I'll check:**
+- `mcp__mongodb__aggregate` - Run $indexStats
+- `mcp__mongodb__collection-indexes` - List index details
+
+**Just ask:** "Audit unused indexes on [collection]"
+
+---
+
 Reference: [$indexStats](https://mongodb.com/docs/manual/reference/operator/aggregation/indexStats/)
