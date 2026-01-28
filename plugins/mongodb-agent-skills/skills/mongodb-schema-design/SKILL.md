@@ -9,7 +9,7 @@ metadata:
 
 # MongoDB Schema Design
 
-Data modeling patterns and anti-patterns for MongoDB, maintained by MongoDB. Contains **29 rules across 5 categories**, prioritized by impact. Bad schema is the root cause of most MongoDB performance and cost issues—queries and indexes cannot fix a fundamentally wrong model.
+Data modeling patterns and anti-patterns for MongoDB, maintained by MongoDB. Contains **30 rules across 5 categories**, prioritized by impact. Bad schema is the root cause of most MongoDB performance and cost issues—queries and indexes cannot fix a fundamentally wrong model.
 
 ## When to Apply
 
@@ -63,8 +63,9 @@ Reference these guidelines when:
 - `relationship-many-to-many` - Two-way referencing for bidirectional access
 - `relationship-tree-structures` - Parent/child/materialized path patterns
 
-### 4. Design Patterns (MEDIUM) - 9 rules
+### 4. Design Patterns (MEDIUM) - 10 rules
 
+- `pattern-archive` - Move historical data to separate storage for performance
 - `pattern-attribute` - Collapse many optional fields into key-value attributes
 - `pattern-bucket` - Group time-series or IoT data into buckets
 - `pattern-time-series-collections` - Use native time series collections when available

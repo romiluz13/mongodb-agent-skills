@@ -16,7 +16,7 @@
 
 **Stop writing slow MongoDB code.**
 
-*68 rules. Battle-tested patterns.*
+*70 rules. Battle-tested patterns.*
 *The difference between 10 seconds and 10 milliseconds.*
 
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-compatible-00ED64?style=for-the-badge)](https://agentskills.io/)
@@ -52,7 +52,7 @@ db.logs.aggregate([{ $group: ... }])            // Memory exhaustion, no $match
 
 ```
 ┌─────────────────────────────────────┐
-│  29 RULES FOR DATA MODELING        │
+│  30 RULES FOR DATA MODELING        │
 │  THAT SCALES                        │
 └─────────────────────────────────────┘
 ```
@@ -78,7 +78,7 @@ db.logs.aggregate([{ $group: ... }])            // Memory exhaustion, no $match
 
 ```
 ┌─────────────────────────────────────┐
-│  39 RULES FOR QUERIES THAT FLY     │
+│  40 RULES FOR QUERIES THAT FLY     │
 │  COLLSCAN → IXSCAN                  │
 └─────────────────────────────────────┘
 ```

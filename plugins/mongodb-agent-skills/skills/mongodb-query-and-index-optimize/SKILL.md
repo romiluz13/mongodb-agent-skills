@@ -9,7 +9,7 @@ metadata:
 
 # MongoDB Query and Index Optimization
 
-Query patterns and indexing strategies for MongoDB, maintained by MongoDB. Contains **39 rules across 5 categories**, prioritized by impact. Indexes are the primary tool for query performance—most slow queries are missing an appropriate index.
+Query patterns and indexing strategies for MongoDB, maintained by MongoDB. Contains **40 rules across 5 categories**, prioritized by impact. Indexes are the primary tool for query performance—most slow queries are missing an appropriate index.
 
 ## When to Apply
 
@@ -84,11 +84,12 @@ Reference these guidelines when:
 - `agg-allowdiskuse` - Handle large aggregations exceeding 100MB
 - `agg-group-memory-limit` - Control $group memory and spills
 
-### 5. Performance Diagnostics (MEDIUM) - 5 rules
+### 5. Performance Diagnostics (MEDIUM) - 6 rules
 
 - `perf-explain-interpretation` - Read explain() output like a pro
 - `perf-slow-query-log` - Use profiler to find slow operations
 - `perf-index-stats` - Find unused indexes with $indexStats
+- `perf-query-plan-cache` - Understand and manage query plan cache
 - `perf-use-hint` - Force a known-good index when the optimizer errs
 - `perf-atlas-performance-advisor` - Use Atlas suggestions for missing indexes
 
