@@ -184,43 +184,4 @@ checkRegexIndexUse("users", "email", "gmail")      // No index
 checkRegexIndexUse("users", "email", "^alice")     // Uses index
 ```
 
----
-
-## ⚠️ Before You Implement
-
-**I recommend anchoring your regex, but please verify first:**
-
-| Check | Why It Matters | How to Verify |
-|-------|----------------|---------------|
-| Index exists on field | Anchored regex only helps if indexed | `db.collection.getIndexes()` |
-| Pattern can be anchored | Some searches need substring match | Review search requirements |
-| Consider text/Atlas Search | Better for complex search | Evaluate alternatives |
-
-**Check current regex performance:**
-```javascript
-const explain = db.collection.find({ field: /pattern/ }).explain("executionStats")
-print(`Stage: ${explain.queryPlanner.winningPlan.stage}`)
-print(`Docs examined: ${explain.executionStats.totalDocsExamined}`)
-// COLLSCAN = full scan, needs anchoring or different approach
-```
-
-**Interpretation:**
-- ✅ Pattern can start with ^: Anchor for index usage
-- ⚠️ Need substring search: Consider text index or Atlas Search
-- 🔴 Small collection: COLLSCAN may be acceptable
-
----
-
-## 🔌 MongoDB MCP Auto-Verification
-
-If MongoDB MCP is connected, ask me to verify before implementing.
-
-**What I'll check:**
-- `mcp__mongodb__collection-indexes` - Verify index on field
-- `mcp__mongodb__explain` - Analyze regex query
-
-**Just ask:** "Analyze regex query performance on [collection]"
-
----
-
 Reference: [Regular Expressions](https://mongodb.com/docs/manual/reference/operator/query/regex/)

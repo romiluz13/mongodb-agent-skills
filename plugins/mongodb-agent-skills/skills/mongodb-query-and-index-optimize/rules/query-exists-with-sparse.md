@@ -240,46 +240,4 @@ function checkExistsWithSparse(collection, field) {
 checkExistsWithSparse("users", "twitterHandle")
 ```
 
----
-
-## Before You Implement
-
-**I recommend understanding sparse index behavior with $exists queries, but please verify first:**
-
-| Check | Why It Matters | How to Verify |
-|-------|----------------|---------------|
-| Sparse index exists | Confirm sparse index is on the target field | `db.collection.getIndexes()` |
-| Field existence ratio | Know how many docs have/lack the field | `db.collection.countDocuments({field:{$exists:true}})` |
-| Query patterns used | $exists:false cannot use sparse indexes | `db.collection.find().explain()` |
-
-**Verification query:**
-```javascript
-// Check sparse index behavior with $exists
-const field = "yourField"
-const total = db.collection.countDocuments()
-const withField = db.collection.countDocuments({ [field]: { $exists: true } })
-print(`With ${field}: ${withField} (${(withField/total*100).toFixed(1)}%)`)
-print(`Without ${field}: ${total - withField} (${((total-withField)/total*100).toFixed(1)}%)`)
-```
-
-**Interpretation:**
-- Good result: Most docs have the field (>80%) - Sparse index is efficient
-- Warning result: 50/50 split - Consider partial index instead of sparse
-- Bad result: Querying $exists:false on sparse - Will always COLLSCAN
-
----
-
-## MongoDB MCP Auto-Verification
-
-If MongoDB MCP is connected, ask me to verify before implementing.
-
-**What I'll check:**
-- `mcp__mongodb__collection-indexes` - Identify sparse indexes on your collection
-- `mcp__mongodb__count` with $exists filter - Check field existence distribution
-- `mcp__mongodb__explain` - Verify query plan for $exists queries
-
-**Just ask:** "Can you check if my sparse index on [field] will work efficiently with my $exists queries?"
-
----
-
 Reference: [Sparse Indexes](https://mongodb.com/docs/manual/core/index-sparse/)

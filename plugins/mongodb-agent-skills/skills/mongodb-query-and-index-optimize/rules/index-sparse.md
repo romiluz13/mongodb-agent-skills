@@ -235,43 +235,4 @@ function analyzeSparseIndex(collection, field) {
 analyzeSparseIndex("users", "twitterHandle")
 ```
 
----
-
-## ⚠️ Before You Implement
-
-**I recommend a sparse index, but please verify first:**
-
-| Check | Why It Matters | How to Verify |
-|-------|----------------|---------------|
-| Field is truly optional | Sparse only helps if many docs lack the field | See analysis query |
-| No $exists: false queries | Sparse index can't support these | Review query patterns |
-| No sort on full collection | Sparse can't sort docs without the field | Review query patterns |
-
-**Analyze field presence:**
-```javascript
-const total = db.collection.countDocuments()
-const withField = db.collection.countDocuments({ field: { $exists: true } })
-print(`Docs with field: ${withField} (${(withField/total*100).toFixed(1)}%)`)
-print(`Docs without field: ${total - withField} (${((total-withField)/total*100).toFixed(1)}%)`)
-```
-
-**Interpretation:**
-- ✅ >30% docs lack field: Sparse index recommended
-- ⚠️ 10-30% lack field: Moderate benefit
-- 🔴 <10% lack field: Regular index may be simpler
-
----
-
-## 🔌 MongoDB MCP Auto-Verification
-
-If MongoDB MCP is connected, ask me to verify before implementing.
-
-**What I'll check:**
-- `mcp__mongodb__collection-indexes` - Check existing indexes on field
-- `mcp__mongodb__aggregate` - Analyze field presence distribution
-
-**Just ask:** "Analyze if a sparse index makes sense for [field] on [collection]"
-
----
-
 Reference: [Sparse Indexes](https://mongodb.com/docs/manual/core/index-sparse/)

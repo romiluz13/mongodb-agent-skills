@@ -291,44 +291,4 @@ function analyzeQuery(collection, query, options = {}) {
 analyzeQuery("orders", { status: "pending", customerId: "x" }, { sort: { createdAt: -1 } })
 ```
 
----
-
-## ⚠️ Before You Implement
-
-**explain() is a diagnostic tool—use it to verify issues before optimizing:**
-
-| Check | Why It Matters | How to Verify |
-|-------|----------------|---------------|
-| Run explain first | Don't optimize without data | `query.explain("executionStats")` |
-| Check stage | COLLSCAN vs IXSCAN | Look at winningPlan.stage |
-| Compare docs examined vs returned | High ratio = inefficiency | executionStats |
-
-**Quick explain check:**
-```javascript
-const explain = db.collection.find(query).explain("executionStats")
-print(`Stage: ${explain.queryPlanner.winningPlan.stage}`)
-print(`Docs examined: ${explain.executionStats.totalDocsExamined}`)
-print(`Returned: ${explain.executionStats.nReturned}`)
-print(`Time: ${explain.executionStats.executionTimeMillis}ms`)
-```
-
-**Interpretation:**
-- ✅ IXSCAN + low ratio: Query is optimized
-- ⚠️ IXSCAN + high ratio: Index may not be selective
-- 🔴 COLLSCAN: Missing index
-
----
-
-## 🔌 MongoDB MCP Auto-Verification
-
-If MongoDB MCP is connected, ask me to run explain for you.
-
-**What I'll check:**
-- `mcp__mongodb__explain` - Run explain on your query
-- `mcp__mongodb__collection-indexes` - List available indexes
-
-**Just ask:** "Analyze query performance for [query] on [collection]"
-
----
-
 Reference: [Explain Results](https://mongodb.com/docs/manual/reference/explain-results/)

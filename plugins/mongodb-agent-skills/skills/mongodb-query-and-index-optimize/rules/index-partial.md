@@ -262,43 +262,4 @@ function checkPartialIndexUsage(collection, query) {
 checkPartialIndexUsage("orders", { customerId: "x", status: "pending" })
 ```
 
----
-
-## ⚠️ Before You Implement
-
-**I recommend a partial index, but please verify first:**
-
-| Check | Why It Matters | How to Verify |
-|-------|----------------|---------------|
-| Significant subset excluded | Partial index only helps if excluding >30% | See measurement query |
-| Query always includes filter | Partial index only used when query matches filter expression | Review query patterns |
-| No existing partial index | Avoid duplicates | `db.collection.getIndexes()` |
-
-**Measure potential savings:**
-```javascript
-const total = db.collection.countDocuments()
-const filtered = db.collection.countDocuments({ status: "pending" })
-const savings = ((total - filtered) / total * 100).toFixed(1)
-print(`Potential savings: ${savings}%`)
-```
-
-**Interpretation:**
-- ✅ Excludes >50% of docs: Significant savings, recommended
-- ⚠️ Excludes 30-50%: Moderate savings, consider complexity tradeoff
-- 🔴 Excludes <30%: Minimal savings, regular index may be simpler
-
----
-
-## 🔌 MongoDB MCP Auto-Verification
-
-If MongoDB MCP is connected, ask me to verify before implementing.
-
-**What I'll check:**
-- `mcp__mongodb__collection-indexes` - Check for existing partial indexes
-- `mcp__mongodb__count` - Measure subset size for savings calculation
-
-**Just ask:** "Analyze if a partial index makes sense for [collection]"
-
----
-
 Reference: [Partial Indexes](https://mongodb.com/docs/manual/core/index-partial/)

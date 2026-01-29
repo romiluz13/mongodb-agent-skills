@@ -41,43 +41,4 @@ db.orders.find({ status: "pending", createdAt: { $gte: ISODate("2025-01-01") } }
 db.orders.find({ status: "pending" }).explain("executionStats")
 ```
 
----
-
-## Before You Implement
-
-**I recommend using Atlas Performance Advisor for index recommendations, but please verify first:**
-
-| Check | Why It Matters | How to Verify |
-|-------|----------------|---------------|
-| Running on Atlas | Advisor is Atlas-only feature | Check deployment type |
-| Sufficient traffic | Advisor needs real queries to analyze | Review Performance Advisor in Atlas UI |
-| Current index count | May already have similar indexes | `db.collection.getIndexes()` |
-
-**Verification query:**
-```javascript
-// Before creating suggested index, validate with explain
-db.collection.find(yourQueryPattern).explain("executionStats")
-// Check: docsExamined >> nReturned indicates missing index
-```
-
-**Interpretation:**
-- Good result: Performance Advisor shows clear index recommendations - Review and implement
-- Warning result: No suggestions despite slow queries - Check if profiler is capturing traffic
-- Bad result: Not on Atlas - Use system.profile and explain() instead
-
----
-
-## MongoDB MCP Auto-Verification
-
-If MongoDB MCP is connected, ask me to verify before implementing.
-
-**What I'll check:**
-- `mcp__mongodb__collection-indexes` - See current indexes before adding new ones
-- `mcp__mongodb__explain` - Validate suggested index improves query plan
-- `mcp__mongodb__find` on system.profile - Identify slow queries manually if not on Atlas
-
-**Just ask:** "Can you check my current indexes on [collection] and validate if a new index on [fields] would help?"
-
----
-
 Reference: [Atlas Performance Advisor](https://mongodb.com/docs/atlas/performance-advisor/)

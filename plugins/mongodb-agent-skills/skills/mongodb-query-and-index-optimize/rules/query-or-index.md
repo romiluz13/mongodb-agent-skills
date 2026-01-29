@@ -197,44 +197,4 @@ checkOrIndexUsage("tasks", {
 })
 ```
 
----
-
-## ⚠️ Before You Implement
-
-**I recommend indexing all $or clauses, but please verify first:**
-
-| Check | Why It Matters | How to Verify |
-|-------|----------------|---------------|
-| Identify all $or clauses | Each clause needs an index | Review query |
-| Check existing indexes | May already have coverage | `db.collection.getIndexes()` |
-| Consider $in alternative | Same-field OR should use $in | Review query pattern |
-
-**Check $or query index usage:**
-```javascript
-const explain = db.collection.find({
-  $or: [{ field1: "a" }, { field2: "b" }]
-}).explain("executionStats")
-print(`Stage: ${explain.queryPlanner.winningPlan.stage}`)
-// COLLSCAN = at least one clause missing index
-```
-
-**Interpretation:**
-- ✅ All clauses indexed: Parallel index scans merged
-- ⚠️ Same-field $or: Convert to $in
-- 🔴 COLLSCAN: Find and index missing clause
-
----
-
-## 🔌 MongoDB MCP Auto-Verification
-
-If MongoDB MCP is connected, ask me to verify before implementing.
-
-**What I'll check:**
-- `mcp__mongodb__collection-indexes` - List all indexes
-- `mcp__mongodb__explain` - Analyze $or query
-
-**Just ask:** "Verify $or query indexing on [collection]"
-
----
-
 Reference: [$or Query Operator](https://mongodb.com/docs/manual/reference/operator/query/or/)

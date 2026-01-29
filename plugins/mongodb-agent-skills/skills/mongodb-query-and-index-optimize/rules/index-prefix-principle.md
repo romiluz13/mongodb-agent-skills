@@ -223,44 +223,4 @@ function findRedundantIndexes(collection) {
 findRedundantIndexes("orders")
 ```
 
----
-
-## Before You Implement
-
-**I recommend consolidating redundant indexes using prefix coverage, but please verify first:**
-
-| Check | Why It Matters | How to Verify |
-|-------|----------------|---------------|
-| Current compound indexes | Need to see existing index structure | `db.collection.getIndexes()` |
-| Query patterns in profiler | Ensure removed indexes won't break queries | `db.system.profile.find()` |
-| Index usage statistics | Identify which indexes are actually used | `db.collection.aggregate([{$indexStats:{}}])` |
-
-**Verification query:**
-```javascript
-// Find redundant indexes covered by compound index prefixes
-db.collection.getIndexes().forEach(idx => {
-  print(`Index: ${idx.name}, Keys: ${JSON.stringify(idx.key)}`)
-})
-```
-
-**Interpretation:**
-- Good result: Clear prefix hierarchy, no overlapping single-field indexes - Safe to consolidate
-- Warning result: Multiple indexes with same leading field - Review query patterns first
-- Bad result: Index usage stats show all indexes heavily used - Investigate before dropping
-
----
-
-## MongoDB MCP Auto-Verification
-
-If MongoDB MCP is connected, ask me to verify before implementing.
-
-**What I'll check:**
-- `mcp__mongodb__collection-indexes` - View all current indexes on the collection
-- `mcp__mongodb__aggregate` with $indexStats - Check actual index usage patterns
-- `mcp__mongodb__find` on system.profile - Identify query patterns using each index
-
-**Just ask:** "Can you check my current indexes on [collection] and identify any redundant ones based on prefix coverage?"
-
----
-
 Reference: [Compound Indexes](https://mongodb.com/docs/manual/core/indexes/index-types/index-compound/)

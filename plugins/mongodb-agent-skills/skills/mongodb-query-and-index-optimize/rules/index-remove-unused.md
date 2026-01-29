@@ -167,42 +167,4 @@ function auditIndexes(collectionName) {
 auditIndexes("products")
 ```
 
----
-
-## ⚠️ Before You Implement
-
-**I recommend removing unused indexes, but please verify first:**
-
-| Check | Why It Matters | How to Verify |
-|-------|----------------|---------------|
-| Check $indexStats | Confirm index truly has 0 ops | `db.collection.aggregate([{$indexStats:{}}])` |
-| Wait 30+ days | New indexes need time to show usage | Check `since` date in stats |
-| Check for TTL/unique | These serve purposes beyond queries | Review index options |
-| Check infrequent queries | Monthly reports may use the index | Ask team about rare query patterns |
-
-**Get index usage stats:**
-```javascript
-db.collection.aggregate([{ $indexStats: {} }])
-  .forEach(s => print(`${s.name}: ${s.accesses.ops} ops since ${s.accesses.since}`))
-```
-
-**Interpretation:**
-- ✅ 0 ops for 30+ days + not TTL/unique: Safe to drop
-- ⚠️ Low ops (<100) but used: Investigate before dropping
-- 🔴 Used for critical queries (even infrequently): Keep
-
----
-
-## 🔌 MongoDB MCP Auto-Verification
-
-If MongoDB MCP is connected, ask me to verify before implementing.
-
-**What I'll check:**
-- `mcp__mongodb__collection-indexes` - List all indexes with options
-- `mcp__mongodb__aggregate` - Run $indexStats to check usage
-
-**Just ask:** "Audit unused indexes on [collection]"
-
----
-
 Reference: [Measure Index Use](https://mongodb.com/docs/manual/tutorial/measure-index-use/)

@@ -229,47 +229,4 @@ checkSortLimitCoalescence("scores", [
 ])
 ```
 
----
-
-## Before You Implement
-
-**I recommend placing $limit immediately after $sort for top-N optimization, but please verify first:**
-
-| Check | Why It Matters | How to Verify |
-|-------|----------------|---------------|
-| $limit position | Must be immediately after $sort for coalescence | Review your pipeline stages |
-| Index on sort fields | Index-backed sort eliminates in-memory sort | `db.collection.getIndexes()` |
-| Result set size | Large sets benefit most from coalescence | `db.collection.countDocuments(matchFilter)` |
-
-**Verification query:**
-```javascript
-// Check if sort+limit coalescence is applied
-const explain = db.collection.explain("executionStats").aggregate([
-  { $match: yourFilter },
-  { $sort: { yourField: -1 } },
-  { $limit: 10 }
-])
-print(`Coalescence: ${JSON.stringify(explain).includes("sortLimitCoalesced") ? "YES" : "NO"}`)
-```
-
-**Interpretation:**
-- Good result: sortLimitCoalesced:true - Optimal heap-based sorting
-- Warning result: No coalescence but small result set - Performance impact minimal
-- Bad result: No coalescence on large result set - Move $limit immediately after $sort
-
----
-
-## MongoDB MCP Auto-Verification
-
-If MongoDB MCP is connected, ask me to verify before implementing.
-
-**What I'll check:**
-- `mcp__mongodb__explain` - Verify sortLimitCoalesced is true
-- `mcp__mongodb__collection-indexes` - Check for index supporting sort order
-- `mcp__mongodb__count` - Estimate documents being sorted
-
-**Just ask:** "Can you check if my $sort + $limit pipeline on [collection] is using coalescence optimization?"
-
----
-
 Reference: [Sort and Limit Coalescence](https://mongodb.com/docs/manual/core/aggregation-pipeline-optimization/#sort-limit-coalescence)

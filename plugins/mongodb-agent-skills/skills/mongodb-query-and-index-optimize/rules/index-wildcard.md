@@ -251,42 +251,4 @@ function analyzeWildcardIndex(collection) {
 analyzeWildcardIndex("products")
 ```
 
----
-
-## ⚠️ Before You Implement
-
-**I recommend a wildcard index, but please verify first:**
-
-| Check | Why It Matters | How to Verify |
-|-------|----------------|---------------|
-| Truly dynamic fields | Wildcard is for unknown fields; explicit indexes better for known fields | Review schema patterns |
-| No existing wildcard | Only one wildcard index per path | `db.collection.getIndexes()` |
-| No sort needed | Wildcard indexes can't support sort on dynamic paths | Review query requirements |
-
-**Check for existing wildcard indexes:**
-```javascript
-db.collection.getIndexes().filter(i =>
-  Object.keys(i.key).some(k => k.includes("$**"))
-)
-```
-
-**Interpretation:**
-- ✅ Dynamic fields + no existing wildcard: Good candidate
-- ⚠️ Known high-frequency fields: Add explicit indexes for those
-- 🔴 Sort required on dynamic paths: Wildcard won't help
-
----
-
-## 🔌 MongoDB MCP Auto-Verification
-
-If MongoDB MCP is connected, ask me to verify before implementing.
-
-**What I'll check:**
-- `mcp__mongodb__collection-indexes` - Check for existing wildcard indexes
-- `mcp__mongodb__collection-schema` - Analyze field patterns
-
-**Just ask:** "Verify if a wildcard index makes sense for [collection]"
-
----
-
 Reference: [Wildcard Indexes](https://mongodb.com/docs/manual/core/indexes/index-types/index-wildcard/)

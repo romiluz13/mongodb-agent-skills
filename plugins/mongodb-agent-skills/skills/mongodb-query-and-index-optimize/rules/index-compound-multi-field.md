@@ -49,42 +49,4 @@ db.orders.find({ status: "shipped" })
   .explain("executionStats")
 ```
 
----
-
-## ⚠️ Before You Implement
-
-**I recommend a compound index, but please verify first:**
-
-| Check | Why It Matters | How to Verify |
-|-------|----------------|---------------|
-| Index doesn't exist | Avoid duplicates | `db.collection.getIndexes()` |
-| Not covered by prefix | Existing compound may already cover | Review existing indexes |
-| Query uses multiple fields | Single-field index may suffice | Review query patterns |
-
-**Check existing indexes:**
-```javascript
-db.collection.getIndexes().forEach(i =>
-  print(`${i.name}: ${JSON.stringify(i.key)}`)
-)
-```
-
-**Interpretation:**
-- ✅ Multi-field query + no covering compound: Create compound index
-- ⚠️ Existing compound with same prefix: May not need new index
-- 🔴 Exact compound already exists: Do NOT create duplicate
-
----
-
-## 🔌 MongoDB MCP Auto-Verification
-
-If MongoDB MCP is connected, ask me to verify before implementing.
-
-**What I'll check:**
-- `mcp__mongodb__collection-indexes` - Check for existing compound indexes
-- `mcp__mongodb__explain` - Verify query needs compound coverage
-
-**Just ask:** "Verify if I need a compound index for [query] on [collection]"
-
----
-
 Reference: [Compound Indexes](https://mongodb.com/docs/manual/core/indexes/index-types/index-compound/)

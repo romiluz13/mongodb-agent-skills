@@ -151,47 +151,4 @@ db.products.aggregate([
 
 Atlas Schema Suggestions flags: "Reduce $lookup operations"
 
----
-
-## Before You Implement
-
-**I recommend denormalizing frequently-joined data, but please verify your $lookup usage first:**
-
-| Check | Why It Matters | How to Verify |
-|-------|----------------|---------------|
-| Count $lookup stages per query | Multiple $lookups compound latency | Check aggregation pipelines in code |
-| Verify foreign field indexes | Unindexed $lookup = collection scan | Run `db.collection.getIndexes()` |
-| Measure actual $lookup latency | May be acceptable for rare queries | Profile slow queries |
-| Check data change frequency | Frequently-changing data may not be worth denormalizing | Review update patterns |
-
-**Verification query:**
-```javascript
-// Find aggregations with multiple $lookup stages
-db.setProfilingLevel(1, { slowms: 50 })
-db.system.profile.find({
-  "command.aggregate": { $exists: true },
-  "command.pipeline": { $elemMatch: { "$lookup": { $exists: true } } }
-}).sort({ millis: -1 }).limit(10)
-```
-
-**Interpretation:**
-- Good result (millis < 50): $lookup performance is acceptable, denormalization optional
-- Warning (50-200ms): Consider denormalizing for high-traffic queries
-- Bad result (> 200ms): Denormalization strongly recommended
-
----
-
-## MongoDB MCP Auto-Verification
-
-If MongoDB MCP is connected, ask me to verify before implementing.
-
-**What I'll check:**
-- `mcp__mongodb__aggregate` - Run explain on your $lookup pipelines
-- `mcp__mongodb__collection-indexes` - Verify indexes exist on foreign fields
-- `mcp__mongodb__find` - Sample documents to assess denormalization candidates
-
-**Just ask:** "Can you check my $lookup performance and recommend which collections to denormalize?"
-
----
-
 Reference: [Reduce Lookup Operations](https://mongodb.com/docs/manual/data-modeling/design-antipatterns/reduce-lookup-operations/)

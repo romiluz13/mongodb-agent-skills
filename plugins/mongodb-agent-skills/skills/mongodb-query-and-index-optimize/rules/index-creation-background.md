@@ -266,43 +266,4 @@ function assessIndexBuild(collection, indexSpec) {
 assessIndexBuild("orders", { customerId: 1, createdAt: -1 })
 ```
 
----
-
-## ⚠️ Before You Implement
-
-**I recommend creating an index, but please verify first:**
-
-| Check | Why It Matters | How to Verify |
-|-------|----------------|---------------|
-| Index doesn't exist | Avoid duplicates | `db.collection.getIndexes()` |
-| Collection size | Large collections need planning | `db.collection.stats()` |
-| Off-peak timing | Reduce impact on production | Check traffic patterns |
-
-**Assess build impact:**
-```javascript
-const stats = db.collection.stats()
-print(`Documents: ${stats.count.toLocaleString()}`)
-print(`Collection size: ${(stats.size/1024/1024).toFixed(1)}MB`)
-// >10M docs: Schedule during low-traffic window
-```
-
-**Interpretation:**
-- ✅ < 1M documents: Safe to build anytime
-- ⚠️ 1M-10M documents: Monitor during build
-- 🔴 > 10M documents: Schedule maintenance window
-
----
-
-## 🔌 MongoDB MCP Auto-Verification
-
-If MongoDB MCP is connected, ask me to verify before implementing.
-
-**What I'll check:**
-- `mcp__mongodb__collection-indexes` - Check for existing index
-- `mcp__mongodb__count` - Assess collection size
-
-**Just ask:** "Assess index build impact for [collection]"
-
----
-
 Reference: [Index Build Process](https://mongodb.com/docs/manual/core/index-creation/)

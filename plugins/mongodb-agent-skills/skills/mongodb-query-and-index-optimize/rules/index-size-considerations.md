@@ -323,44 +323,4 @@ function indexSizeReport() {
 indexSizeReport()
 ```
 
----
-
-## ⚠️ Before You Implement
-
-**I recommend reviewing index sizes, but please verify first:**
-
-| Check | Why It Matters | How to Verify |
-|-------|----------------|---------------|
-| Current total index size | Must fit in RAM | `db.collection.stats().totalIndexSize` |
-| Cache size | Target index < 50% of cache | `db.serverStatus().wiredTiger.cache` |
-| Unused indexes | Remove before adding new | `$indexStats` |
-
-**Check current index sizes:**
-```javascript
-const stats = db.collection.stats()
-print(`Total index size: ${(stats.totalIndexSize/1024/1024).toFixed(1)}MB`)
-Object.entries(stats.indexSizes).forEach(([name, size]) => {
-  print(`  ${name}: ${(size/1024/1024).toFixed(1)}MB`)
-})
-```
-
-**Interpretation:**
-- ✅ Indexes < 50% of cache: Healthy
-- ⚠️ Indexes 50-80% of cache: Monitor closely
-- 🔴 Indexes > 80% of cache: Remove unused, use partial indexes
-
----
-
-## 🔌 MongoDB MCP Auto-Verification
-
-If MongoDB MCP is connected, ask me to verify before implementing.
-
-**What I'll check:**
-- `mcp__mongodb__collection-indexes` - List current indexes
-- `mcp__mongodb__db-stats` - Check database size metrics
-
-**Just ask:** "Analyze index sizes for [collection]"
-
----
-
 Reference: [Index Limitations](https://mongodb.com/docs/manual/reference/limits/#indexes)

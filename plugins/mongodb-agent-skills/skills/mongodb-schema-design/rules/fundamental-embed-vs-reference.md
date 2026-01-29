@@ -142,47 +142,4 @@ db.profiles.aggregate([
 // Orphans suggest 1:1 should be embedded
 ```
 
----
-
-## ⚠️ Before You Implement
-
-**I recommend a schema approach, but please verify your access patterns first:**
-
-| Check | Why It Matters | How to Verify |
-|-------|----------------|---------------|
-| Access patterns | Do you query parent+child together? | Review application queries |
-| Array boundedness | Unbounded arrays must be referenced | See size query below |
-| Update frequency | Different frequencies favor referencing | Review write patterns |
-
-**Check if embedding would exceed limits:**
-```javascript
-db.collection.aggregate([
-  { $project: {
-      childCount: { $size: { $ifNull: ["$children", []] } },
-      docSize: { $bsonSize: "$$ROOT" }
-  }},
-  { $match: { $or: [{ childCount: { $gt: 100 } }, { docSize: { $gt: 1000000 } }] } },
-  { $count: "problematic" }
-])
-```
-
-**Interpretation:**
-- ✅ 1:1 or 1:few + bounded: Embed for atomic operations.
-- ⚠️ 1:many but bounded: Embed if always accessed together.
-- 🔴 Unbounded or many-to-many: Reference with separate collection.
-
----
-
-## 🔌 MongoDB MCP Auto-Verification
-
-If MongoDB MCP is connected, ask me to verify before implementing.
-
-**What I'll check:**
-- `mcp__mongodb__collection-schema` - Analyze current schema
-- `mcp__mongodb__aggregate` - Check document/array sizes
-
-**Just ask:** "Help me decide embed vs reference for [relationship]"
-
----
-
 Reference: [Embedding vs Referencing](https://mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/)

@@ -182,44 +182,4 @@ async function compareNegationVsPositive(collection, field, excludeValue) {
 compareNegationVsPositive("users", "status", "deleted")
 ```
 
----
-
-## ⚠️ Before You Implement
-
-**I recommend replacing $ne/$nin with $in, but please verify first:**
-
-| Check | Why It Matters | How to Verify |
-|-------|----------------|---------------|
-| Enumerate possible values | Need to list positive values for $in | `db.collection.distinct("field")` |
-| Check value distribution | $ne is OK if excluding <1% | See analysis query |
-| Index exists on field | Optimization only helps if indexed | `db.collection.getIndexes()` |
-
-**Analyze value distribution:**
-```javascript
-const values = db.collection.distinct("field")
-print(`Distinct values: ${values.length}`)
-values.forEach(v => {
-  const count = db.collection.countDocuments({ field: v })
-  print(`  ${v}: ${count}`)
-})
-```
-
-**Interpretation:**
-- ✅ Few distinct values: $in with positive list is practical
-- ⚠️ Excluding <1% of data: $ne may be acceptable
-- 🔴 Many distinct values: Consider schema redesign
-
----
-
-## 🔌 MongoDB MCP Auto-Verification
-
-If MongoDB MCP is connected, ask me to verify before implementing.
-
-**What I'll check:**
-- `mcp__mongodb__aggregate` - Analyze value distribution
-
-**Just ask:** "Analyze [field] distribution on [collection]"
-
----
-
 Reference: [Query Operators](https://mongodb.com/docs/manual/reference/operator/query/)
