@@ -198,6 +198,24 @@ When connected, I can automatically:
 - Analyze query performance via `mcp__mongodb__explain`
 - Verify data patterns via `mcp__mongodb__aggregate`
 
+### ⚠️ Action Policy
+
+**I will NEVER execute write operations without your explicit approval.**
+
+| Operation Type | MCP Tools | Action |
+|---------------|-----------|--------|
+| **Read (Safe)** | `find`, `aggregate`, `explain`, `collection-indexes`, `$indexStats` | I may run automatically to verify |
+| **Write (Requires Approval)** | `create-index`, `drop-index`, `update-many`, `delete-many` | I will show the command and wait for your "yes" |
+| **Destructive (Requires Approval)** | `drop-collection`, `drop-database` | I will warn you and require explicit confirmation |
+
+When I recommend creating an index or making changes:
+1. I'll explain **what** I want to do and **why**
+2. I'll show you the **exact command**
+3. I'll **wait for your approval** before executing
+4. If you say "go ahead" or "yes", only then will I run it
+
+**Your database, your decision.** I'm here to advise, not to act unilaterally.
+
 ### Working Together
 
 If you're not sure about a recommendation:
