@@ -16,7 +16,7 @@
 
 **Stop writing slow MongoDB code. Build AI that works.**
 
-*105 rules. Battle-tested patterns.*
+*109 rules. Battle-tested patterns.*
 *The difference between 10 seconds and 10 milliseconds.*
 *The bridge between AI assistants and MongoDB's latest features.*
 
@@ -79,7 +79,7 @@ db.logs.aggregate([{ $group: ... }])            // Memory exhaustion, no $match
 
 ```
 ┌─────────────────────────────────────┐
-│  42 RULES FOR QUERIES THAT FLY     │
+│  46 RULES FOR QUERIES THAT FLY     │
 │  COLLSCAN → IXSCAN                  │
 └─────────────────────────────────────┘
 ```

@@ -4,12 +4,12 @@ description: MongoDB query optimization and indexing strategies. Use when writin
 license: Apache-2.0
 metadata:
   author: mongodb
-  version: "2.2.0"
+  version: "2.3.0"
 ---
 
 # MongoDB Query and Index Optimization
 
-Query patterns and indexing strategies for MongoDB, maintained by MongoDB. Contains **42 rules across 5 categories**, prioritized by impact. Indexes are the primary tool for query performance—most slow queries are missing an appropriate index.
+Query patterns and indexing strategies for MongoDB, maintained by MongoDB. Contains **46 rules across 5 categories**, prioritized by impact. Includes MongoDB 8.0 features: `bulkWrite` command, `$queryStats`, Query Settings, and `updateOne` sort option. Indexes are the primary tool for query performance—most slow queries are missing an appropriate index.
 
 ## When to Apply
 
@@ -32,9 +32,9 @@ Reference these guidelines when:
 |----------|----------|--------|--------|-------|
 | 1 | Index Essentials | CRITICAL | `index-` | 9 |
 | 2 | Specialized Indexes | HIGH | `index-` | 11 |
-| 3 | Query Patterns | HIGH | `query-` | 8 |
+| 3 | Query Patterns | HIGH | `query-` | 10 |
 | 4 | Aggregation Optimization | HIGH | `agg-` | 8 |
-| 5 | Performance Diagnostics | MEDIUM | `perf-` | 5 |
+| 5 | Performance Diagnostics | MEDIUM | `perf-` | 8 |
 
 ## Quick Reference
 
@@ -64,7 +64,7 @@ Reference these guidelines when:
 - `index-clustered` - Ordered storage with clustered collections
 - `index-hidden` - Safely test index removals in production
 
-### 3. Query Patterns (HIGH) - 8 rules
+### 3. Query Patterns (HIGH) - 10 rules
 
 - `query-use-projection` - Fetch only needed fields
 - `query-avoid-ne-nin` - Use $in instead of negation operators
@@ -74,6 +74,8 @@ Reference these guidelines when:
 - `query-pagination` - Use range-based pagination, not skip
 - `query-exists-with-sparse` - Understand $exists behavior with sparse indexes
 - `query-sort-collation` - Match sort order and collation to indexes
+- `query-bulkwrite-command` - MongoDB 8.0 cross-collection atomic batch operations
+- `query-updateone-sort` - MongoDB 8.0 deterministic updates with sort option
 
 ### 4. Aggregation Optimization (HIGH) - 8 rules
 
@@ -86,7 +88,7 @@ Reference these guidelines when:
 - `agg-allowdiskuse` - Handle large aggregations exceeding 100MB
 - `agg-group-memory-limit` - Control $group memory and spills
 
-### 5. Performance Diagnostics (MEDIUM) - 6 rules
+### 5. Performance Diagnostics (MEDIUM) - 8 rules
 
 - `perf-explain-interpretation` - Read explain() output like a pro
 - `perf-slow-query-log` - Use profiler to find slow operations
@@ -94,6 +96,8 @@ Reference these guidelines when:
 - `perf-query-plan-cache` - Understand and manage query plan cache
 - `perf-use-hint` - Force a known-good index when the optimizer errs
 - `perf-atlas-performance-advisor` - Use Atlas suggestions for missing indexes
+- `perf-query-stats` - MongoDB 8.0 workload-based query analysis with $queryStats
+- `perf-query-settings` - MongoDB 8.0 persistent index hints with setQuerySettings
 
 ## Key Principle
 

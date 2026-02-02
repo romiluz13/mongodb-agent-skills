@@ -9,6 +9,8 @@ tags: schema, patterns, time-series, collections, bucketing, ttl, granularity, c
 
 **Time series collections are purpose-built for append-only measurements.** MongoDB automatically buckets, compresses, and indexes time series data so you get high ingest rates with far less storage and index overhead than a standard collection. Use them for IoT sensor data, application metrics, financial data, and event logs.
 
+**MongoDB 8.0 Performance:** Block processing introduced in MongoDB 8.0 delivers **200%+ throughput improvement** for time series queries by processing data in compressed blocks rather than document-by-document. This is automatic - no configuration needed.
+
 **Incorrect (regular collection for measurements):**
 
 ```javascript
