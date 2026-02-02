@@ -1,11 +1,13 @@
 ---
 title: Rule Title Here
 impact: CRITICAL|HIGH|MEDIUM
-impactDescription: Brief description of measurable impact
+impactDescription: Brief description of measurable impact (e.g., "10-100× improvement")
 tags: tag1, tag2, tag3
 ---
 
 ## Rule Title Here
+
+**Impact: CRITICAL|HIGH|MEDIUM (brief description of measurable impact)**
 
 Brief explanation of why this rule matters and what problem it solves.
 

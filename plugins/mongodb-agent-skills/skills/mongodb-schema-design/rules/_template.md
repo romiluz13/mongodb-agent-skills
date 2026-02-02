@@ -7,7 +7,9 @@ tags: tag1, tag2, tag3
 
 ## Rule Title Here
 
-**1-2 sentence explanation of WHY this matters with specific impact metrics.** Example: "This pattern prevents X which causes Y, improving performance by Z×."
+**Impact: CRITICAL|HIGH|MEDIUM (specific quantified impact)**
+
+Brief explanation of WHY this matters with specific impact metrics. Example: "This pattern prevents X which causes Y, improving performance by Z×."
 
 **Incorrect (description of the problem):**
 
