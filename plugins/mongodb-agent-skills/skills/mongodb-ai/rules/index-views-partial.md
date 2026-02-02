@@ -160,12 +160,22 @@ Source Collection (products)
             └── Vector Index: vector_index_archived
 ```
 
+**Allowed Stages in View Definition (MongoDB 8.1+):**
+
+| Stage | Support |
+|-------|---------|
+| `$match` | Always supported |
+| `$addFields` | MongoDB 8.1+ |
+| `$set` | MongoDB 8.1+ |
+| `$match` with `$expr` | MongoDB 8.1+ |
+
 **Important Notes:**
 
 1. Index uses View name, not source collection name
 2. Views must be on same database as source collection
 3. $vectorSearch on views requires MongoDB 8.0+
-4. View definition cannot include $vectorSearch stage
+4. View definition cannot include $vectorSearch stage itself
+5. MongoDB 8.1+ adds support for `$addFields`, `$set`, and `$match` with `$expr`
 
 **When NOT to use this pattern:**
 

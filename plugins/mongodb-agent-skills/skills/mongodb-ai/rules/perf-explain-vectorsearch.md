@@ -2,12 +2,14 @@
 title: Explain Vector Search Queries
 impact: HIGH
 impactDescription: Debug performance issues and understand query execution
-tags: explain, debug, performance, execution-stats, query-plan
+tags: explain, debug, performance, execution-stats, query-plan, MongoDB-8.1
 ---
 
 ## Explain Vector Search Queries
 
 Use `explain()` to analyze vector search query execution, identify bottlenecks, and verify index usage.
+
+**MongoDB 8.1+ Enhancement:** Explain results now include execution stats for `$search`, `$searchMeta`, and `$vectorSearch` stages.
 
 **Incorrect (guessing performance issues):**
 
