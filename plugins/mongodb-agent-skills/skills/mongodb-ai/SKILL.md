@@ -1,15 +1,15 @@
 ---
 name: mongodb-ai
-description: MongoDB Atlas Vector Search and AI integration. Use when creating vector indexes, writing $vectorSearch queries, building RAG applications, implementing hybrid search, or storing AI agent memory. Triggers on "vector search", "vector index", "$vectorSearch", "embedding", "semantic search", "RAG", "retrieval augmented generation", "numCandidates", "similarity search", "cosine similarity", "hybrid search", "$rankFusion", "AI agent", "LLM memory", "quantization", "multi-tenant", "Search Nodes", "explain vectorsearch", "HNSW", "automated embedding".
+description: MongoDB Atlas Vector Search and AI integration. Use when creating vector indexes, writing $vectorSearch queries, building RAG applications, implementing hybrid search, or storing AI agent memory. Triggers on "vector search", "vector index", "$vectorSearch", "embedding", "semantic search", "RAG", "retrieval augmented generation", "numCandidates", "similarity search", "cosine similarity", "hybrid search", "$rankFusion", "$scoreFusion", "AI agent", "LLM memory", "quantization", "multi-tenant", "Search Nodes", "explain vectorsearch", "HNSW", "automated embedding".
 license: Apache-2.0
 metadata:
   author: mongodb
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # MongoDB AI: Vector Search and AI Integration
 
-Vector Search patterns and AI integration strategies for MongoDB, maintained by MongoDB. Contains **31 rules across 6 categories**, prioritized by impact. This skill bridges the critical knowledge gap where AI assistants have outdated or incorrect information about MongoDB's AI capabilities.
+Vector Search patterns and AI integration strategies for MongoDB, maintained by MongoDB. Contains **32 rules across 6 categories**, prioritized by impact. This skill bridges the critical knowledge gap where AI assistants have outdated or incorrect information about MongoDB's AI capabilities.
 
 ## Critical Warning
 
@@ -39,7 +39,7 @@ Reference these guidelines when:
 | 2 | $vectorSearch Queries | CRITICAL | `query-` | 6 |
 | 3 | Performance Tuning | HIGH | `perf-` | 6 |
 | 4 | RAG Patterns | HIGH | `rag-` | 4 |
-| 5 | Hybrid Search | MEDIUM | `hybrid-` | 3 |
+| 5 | Hybrid Search | MEDIUM | `hybrid-` | 4 |
 | 6 | AI Agent Integration | MEDIUM | `agent-` | 3 |
 
 ## Quick Reference
@@ -81,9 +81,10 @@ Reference these guidelines when:
 - `rag-context-window` - Managing LLM context limits
 - `rag-metadata-filtering` - Filter by source, date, category
 
-### 5. Hybrid Search (MEDIUM) - 3 rules
+### 5. Hybrid Search (MEDIUM) - 4 rules
 
 - `hybrid-rankfusion` - Combining vector + text search (MongoDB 8.0+)
+- `hybrid-scorefusion` - Score-based hybrid search (MongoDB 8.2+)
 - `hybrid-weights` - Per-query weight tuning
 - `hybrid-limitations` - Stage restrictions in sub-pipelines
 
