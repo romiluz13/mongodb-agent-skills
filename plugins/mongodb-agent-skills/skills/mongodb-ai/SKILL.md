@@ -1,15 +1,15 @@
 ---
 name: mongodb-ai
-description: MongoDB Atlas Vector Search and AI integration. Use when creating vector indexes, writing $vectorSearch queries, building RAG applications, implementing hybrid search, or storing AI agent memory. Triggers on "vector search", "vector index", "$vectorSearch", "embedding", "semantic search", "RAG", "retrieval augmented generation", "numCandidates", "similarity search", "cosine similarity", "hybrid search", "$rankFusion", "$scoreFusion", "AI agent", "LLM memory", "quantization", "multi-tenant", "Search Nodes", "explain vectorsearch", "HNSW", "automated embedding".
+description: MongoDB Atlas Vector Search and AI integration. Use when creating vector indexes, writing $vectorSearch queries, building RAG applications, implementing hybrid search, or storing AI agent memory. Triggers on "vector search", "vector index", "$vectorSearch", "embedding", "semantic search", "RAG", "retrieval augmented generation", "numCandidates", "similarity search", "cosine similarity", "hybrid search", "$rankFusion", "$scoreFusion", "AI agent", "LLM memory", "quantization", "multi-tenant", "Search Nodes", "explain vectorsearch", "HNSW", "automated embedding", "lexical prefilter", "fuzzy search vector", "phrase filter".
 license: Apache-2.0
 metadata:
   author: mongodb
-  version: "1.2.0"
+  version: "1.3.0"
 ---
 
 # MongoDB AI: Vector Search and AI Integration
 
-Vector Search patterns and AI integration strategies for MongoDB, maintained by MongoDB. Contains **32 rules across 6 categories**, prioritized by impact. This skill bridges the critical knowledge gap where AI assistants have outdated or incorrect information about MongoDB's AI capabilities.
+Vector Search patterns and AI integration strategies for MongoDB, maintained by MongoDB. Contains **33 rules across 6 categories**, prioritized by impact. This skill bridges the critical knowledge gap where AI assistants have outdated or incorrect information about MongoDB's AI capabilities.
 
 ## Critical Warning
 
@@ -36,7 +36,7 @@ Reference these guidelines when:
 | Priority | Category | Impact | Prefix | Rules |
 |----------|----------|--------|--------|-------|
 | 1 | Vector Index Creation | CRITICAL | `index-` | 9 |
-| 2 | $vectorSearch Queries | CRITICAL | `query-` | 6 |
+| 2 | $vectorSearch Queries | CRITICAL | `query-` | 7 |
 | 3 | Performance Tuning | HIGH | `perf-` | 6 |
 | 4 | RAG Patterns | HIGH | `rag-` | 4 |
 | 5 | Hybrid Search | MEDIUM | `hybrid-` | 4 |
@@ -56,12 +56,13 @@ Reference these guidelines when:
 - `index-hnsw-options` - maxEdges/numEdgeCandidates tuning
 - `index-automated-embedding` - Server-side embedding with Voyage AI
 
-### 2. $vectorSearch Queries (CRITICAL) - 6 rules
+### 2. $vectorSearch Queries (CRITICAL) - 7 rules
 
 - `query-vectorsearch-first` - MUST be first stage in aggregation pipeline
 - `query-numcandidates-tuning` - The 20x rule for recall vs latency
 - `query-ann-vs-enn` - When to use exact: true
-- `query-prefiltering` - Filter before vector comparison
+- `query-prefiltering` - Filter before vector comparison ($exists, $ne, $not)
+- `query-lexical-prefilter` - Advanced text filters (fuzzy, phrase, geo) via $search.vectorSearch
 - `query-get-scores` - Using $meta: "vectorSearchScore"
 - `query-same-embedding-model` - Data and query embeddings must match
 

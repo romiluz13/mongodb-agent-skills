@@ -146,6 +146,54 @@ db.products.aggregate([
     }
   }
 ])
+
+// $exists filter (November 2025+)
+db.products.aggregate([
+  {
+    $vectorSearch: {
+      index: "vector_index",
+      path: "embedding",
+      queryVector: [...],
+      numCandidates: 200,
+      limit: 10,
+      filter: {
+        discount: { $exists: true }  // Only products with discounts
+      }
+    }
+  }
+])
+
+// $ne to null filter (September 2025+)
+db.products.aggregate([
+  {
+    $vectorSearch: {
+      index: "vector_index",
+      path: "embedding",
+      queryVector: [...],
+      numCandidates: 200,
+      limit: 10,
+      filter: {
+        description: { $ne: null }  // Exclude null descriptions
+      }
+    }
+  }
+])
+
+// $not filter (August 2024+)
+db.products.aggregate([
+  {
+    $vectorSearch: {
+      index: "vector_index",
+      path: "embedding",
+      queryVector: [...],
+      numCandidates: 200,
+      limit: 10,
+      filter: {
+        status: { $not: { $eq: "discontinued" } }
+      }
+    }
+  }
+])
 ```
 
 **When Post-filtering is Acceptable:**
