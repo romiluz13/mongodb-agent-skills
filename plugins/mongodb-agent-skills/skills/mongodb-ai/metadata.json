@@ -1,0 +1,17 @@
+{
+  "version": "1.1.0",
+  "organization": "MongoDB",
+  "date": "February 2026",
+  "abstract": "MongoDB Atlas Vector Search and AI integration patterns for AI agents and developers. Contains 31 rules across 6 categories: Vector Index Creation (CRITICAL - vector field definition, similarity functions, filter fields, quantization, dimension matching, multi-tenant architecture, Views for partial indexing, HNSW options, automated embedding), $vectorSearch Queries (CRITICAL - first-stage requirement, numCandidates tuning, ANN vs ENN search, pre-filtering, score retrieval, embedding model consistency), Performance Tuning (HIGH - quantization at scale, index memory requirements, numCandidates trade-offs, pre-filter optimization, explain for vector search, dedicated Search Nodes), RAG Patterns (HIGH - ingestion patterns, retrieval patterns, context window management, metadata filtering), Hybrid Search (MEDIUM - $rankFusion usage, weight tuning, sub-pipeline limitations), AI Agent Integration (MEDIUM - memory schema design, semantic memory retrieval, session context storage). Each rule includes incorrect/correct code examples with quantified impact metrics, 'When NOT to use' exceptions, and verification commands. This skill bridges the critical knowledge gap where AI assistants have outdated information about MongoDB Vector Search features.",
+  "references": [
+    "https://mongodb.com/docs/atlas/atlas-vector-search/",
+    "https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/",
+    "https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-stage/",
+    "https://mongodb.com/docs/atlas/atlas-vector-search/vector-quantization/",
+    "https://mongodb.com/docs/atlas/atlas-vector-search/hybrid-search/",
+    "https://mongodb.com/docs/atlas/atlas-vector-search/rag/",
+    "https://mongodb.com/docs/atlas/atlas-vector-search/ai-agents/",
+    "https://mongodb.com/docs/atlas/atlas-vector-search/improve-accuracy/",
+    "https://mongodb.com/docs/atlas/atlas-vector-search/troubleshooting/"
+  ]
+}

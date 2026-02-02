@@ -14,10 +14,11 @@
 
 <div align="center">
 
-**Stop writing slow MongoDB code.**
+**Stop writing slow MongoDB code. Build AI that works.**
 
-*72 rules. Battle-tested patterns.*
+*103 rules. Battle-tested patterns.*
 *The difference between 10 seconds and 10 milliseconds.*
+*The bridge between AI assistants and MongoDB's latest features.*
 
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-compatible-00ED64?style=for-the-badge)](https://agentskills.io/)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-00ED64?style=for-the-badge)](https://claude.ai)
@@ -99,6 +100,39 @@ db.logs.aggregate([{ $group: ... }])            // Memory exhaustion, no $match
 
 </td>
 </tr>
+<tr>
+<td colspan="2" valign="top">
+
+### `mongodb-ai`
+
+```
+┌───────────────────────────────────────────────────────────────────────────────────┐
+│  31 RULES FOR VECTOR SEARCH & AI                                                  │
+│  THE KNOWLEDGE AI ASSISTANTS DON'T HAVE                                           │
+└───────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Use when:**
+- Creating vector indexes
+- Writing $vectorSearch queries
+- Building RAG applications
+- Implementing hybrid search ($rankFusion)
+- Storing AI agent memory
+- Multi-tenant vector search
+
+| Category | Impact |
+|----------|--------|
+| Vector Index Creation | `CRITICAL` |
+| $vectorSearch Queries | `CRITICAL` |
+| Performance Tuning | `HIGH` |
+| RAG Patterns | `HIGH` |
+| Hybrid Search | `MEDIUM` |
+| AI Agent Integration | `MEDIUM` |
+
+> **Why this skill matters:** AI assistants have knowledge cutoffs and cannot correctly help with MongoDB Vector Search. This skill bridges that gap with the latest syntax for `$vectorSearch`, quantization, `$rankFusion`, and more.
+
+</td>
+</tr>
 </table>
 
 ---
@@ -154,6 +188,12 @@ Once installed, skills activate automatically. Just ask:
 │  > Should I embed order items or reference them?                             │
 │                                                                              │
 │  > Create indexes for this collection                                        │
+│                                                                              │
+│  > Create a vector index for semantic search                                 │
+│                                                                              │
+│  > Implement RAG with MongoDB                                                │
+│                                                                              │
+│  > How do I tune numCandidates for vector search?                            │
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
