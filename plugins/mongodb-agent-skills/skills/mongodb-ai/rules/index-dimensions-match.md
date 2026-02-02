@@ -9,6 +9,8 @@ tags: numDimensions, embedding-model, dimensions, vector-index
 
 The `numDimensions` in your index MUST exactly match the output dimensions of your embedding model. Mismatches cause silent failures.
 
+**Maximum supported dimensions: 8192** (increased from 4096 in March 2025).
+
 **Incorrect (wrong dimensions):**
 
 ```javascript
