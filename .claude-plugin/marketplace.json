@@ -12,7 +12,7 @@
   "plugins": [
     {
       "name": "mongodb-agent-skills",
-      "description": "MongoDB best practices for schema design, query optimization, and indexing strategies. Contains 27 rules from MongoDB Engineering covering anti-patterns, data modeling, index strategies, and aggregation optimization.",
+      "description": "MongoDB best practices with 109 rules across 3 skills: Schema Design (30 rules), Query & Index Optimization (46 rules), and Vector Search/AI (33 rules). Covers anti-patterns, data modeling, indexing, aggregation, vector search, RAG, and AI agent memory.",
       "version": "1.0.0",
       "author": {
         "name": "MongoDB",

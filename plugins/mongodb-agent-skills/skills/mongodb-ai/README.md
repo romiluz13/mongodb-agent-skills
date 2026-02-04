@@ -28,15 +28,15 @@ Add the skill to project knowledge or paste `SKILL.md` contents into the convers
 
 ## What's Included
 
-### 25 Rules Across 6 Categories
+### 33 Rules Across 6 Categories
 
 | Category | Impact | Rules |
 |----------|--------|-------|
-| Vector Index Creation | CRITICAL | 5 |
-| $vectorSearch Queries | CRITICAL | 6 |
-| Performance Tuning | HIGH | 4 |
+| Vector Index Creation | CRITICAL | 9 |
+| $vectorSearch Queries | CRITICAL | 7 |
+| Performance Tuning | HIGH | 6 |
 | RAG Patterns | HIGH | 4 |
-| Hybrid Search | MEDIUM | 3 |
+| Hybrid Search | MEDIUM | 4 |
 | AI Agent Integration | MEDIUM | 3 |
 
 ### Key Topics
