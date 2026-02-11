@@ -48,6 +48,8 @@
 39. `38-transactions-consistency-roadmap.md`
 40. `39-sprint-12-execution-log.md`
 41. `40-final-validation-sprint12.md`
+42. `41-sprint-13-release-readiness-log.md`
+43. `42-final-web-validation-release.md`
 
 ## Data Artifacts
 
@@ -85,6 +87,8 @@
 - `data/remediation_status_2026-02-11_sprint10.csv`
 - `data/web_sources_2026-02-11_sprint12.csv`
 - `data/transactions_docs_coverage_2026-02-11.csv`
+- `data/web_sources_2026-02-11_sprint13.csv`
+- `data/release_version_matrix_2026-02-11.csv`
 
 ## Severity Legend
 

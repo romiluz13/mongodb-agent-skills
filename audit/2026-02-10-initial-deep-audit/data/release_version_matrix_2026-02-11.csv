@@ -1,0 +1,9 @@
+component,file,old_version,new_version
+plugin_marketplace_metadata,.claude-plugin/marketplace.json,1.0.0,1.1.0
+plugin_marketplace_entry,.claude-plugin/marketplace.json,1.0.0,1.1.0
+plugin_manifest,plugins/mongodb-agent-skills/.claude-plugin/plugin.json,1.0.0,1.1.0
+build_tooling,packages/mongodb-skills-build/package.json,2.0.0,2.1.0
+mongodb_schema_skill,plugins/mongodb-agent-skills/skills/mongodb-schema-design/{SKILL.md,metadata.json,AGENTS.md},2.1.0,2.2.0
+mongodb_query_skill,plugins/mongodb-agent-skills/skills/mongodb-query-and-index-optimize/{SKILL.md,metadata.json,AGENTS.md},2.3.0,2.4.0
+mongodb_ai_skill,plugins/mongodb-agent-skills/skills/mongodb-ai/{SKILL.md,metadata.json,AGENTS.md},1.3.0,1.4.0
+mongodb_transactions_skill,plugins/mongodb-agent-skills/skills/mongodb-transactions-consistency/{SKILL.md,metadata.json,AGENTS.md},1.0.0,1.0.0

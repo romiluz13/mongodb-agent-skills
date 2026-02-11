@@ -24,6 +24,8 @@
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-00ED64?style=for-the-badge)](https://claude.ai)
 [![License](https://img.shields.io/badge/License-Apache%202.0-001E2B?style=for-the-badge)](LICENSE)
 
+**Current release: `v1.1.0`**
+
 </div>
 
 ---

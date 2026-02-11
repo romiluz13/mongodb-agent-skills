@@ -1,6 +1,6 @@
 # MongoDB Query & Index Optimization
 
-**Version 2.3.0**
+**Version 2.4.0**
 MongoDB
 February 2026
 

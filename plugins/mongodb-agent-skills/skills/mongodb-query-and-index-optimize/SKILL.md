@@ -4,7 +4,7 @@ description: MongoDB query optimization and indexing strategies. Use when writin
 license: Apache-2.0
 metadata:
   author: mongodb
-  version: "2.3.0"
+  version: "2.4.0"
 ---
 
 # MongoDB Query and Index Optimization

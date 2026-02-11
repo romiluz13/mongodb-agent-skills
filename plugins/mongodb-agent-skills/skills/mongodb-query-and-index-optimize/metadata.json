@@ -1,5 +1,5 @@
 {
-  "version": "2.3.0",
+  "version": "2.4.0",
   "organization": "MongoDB",
   "date": "February 2026",
   "abstract": "MongoDB query optimization and indexing strategies for AI agents and developers. Contains 46 rules across 5 categories: Index Essentials (CRITICAL - ESR rule, compound index usage, covered queries, prefix principle, index sizing), Specialized Indexes (HIGH - unique, partial, sparse, TTL, text search, wildcard, multikey, geospatial, hashed, clustered, hidden), Query Patterns (HIGH - projections, avoiding $ne/$nin, $or index requirements, anchored regex, batching, pagination, $exists behavior, sort/collation alignment, MongoDB 8.0 bulkWrite command for cross-collection atomic operations, MongoDB 8.0 updateOne/replaceOne sort option for deterministic updates), Aggregation Optimization (HIGH - $match/$project early, $sort+$limit coalescence, $lookup indexing, $graphLookup for recursive traversal, $unwind control, allowDiskUse, $group memory control), and Performance Diagnostics (MEDIUM - explain() interpretation, slow query profiler, $indexStats analysis, hint usage, Atlas Performance Advisor, MongoDB 8.0 $queryStats for workload analysis, MongoDB 8.0 Query Settings for persistent index hints). Each rule includes incorrect/correct code examples with quantified impact metrics, 'When NOT to use' exceptions, and verification diagnostics.",

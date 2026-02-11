@@ -1,6 +1,6 @@
 # MongoDB Schema Design Best Practices
 
-**Version 2.1.0**
+**Version 2.2.0**
 MongoDB
 January 2026
 
