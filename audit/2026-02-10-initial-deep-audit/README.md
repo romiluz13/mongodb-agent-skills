@@ -45,6 +45,8 @@
 36. `35-agent-installation-cli-parity-audit.md`
 37. `36-sprint-10-execution-log.md`
 38. `37-sprint-11-execution-log.md`
+39. `38-transactions-consistency-roadmap.md`
+40. `39-sprint-12-execution-log.md`
 
 ## Data Artifacts
 
@@ -80,6 +82,7 @@
 - `data/remediation_status_2026-02-10_sprint9.csv`
 - `data/web_sources_2026-02-11_sprint10.csv`
 - `data/remediation_status_2026-02-11_sprint10.csv`
+- `data/web_sources_2026-02-11_sprint12.csv`
 
 ## Severity Legend
 

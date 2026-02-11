@@ -31,6 +31,7 @@ function getSkillDisplayName(skillName: string): string {
     'mongodb-schema-design': 'MongoDB Schema Design Best Practices',
     'mongodb-query-and-index-optimize': 'MongoDB Query & Index Optimization',
     'mongodb-ai': 'MongoDB AI & Vector Search Best Practices',
+    'mongodb-transactions-consistency': 'MongoDB Transactions & Consistency',
   }
   return displayNames[skillName] || skillName
 }
@@ -57,7 +58,7 @@ function generateMarkdown(
   md += `${metadata.date}\n\n`
   md += `> **Note:**  \n`
   md += `> This document is mainly for agents and LLMs to follow when maintaining,  \n`
-  md += `> generating, or reviewing MongoDB schemas, queries, and AI search patterns. Humans may also  \n`
+  md += `> generating, or reviewing MongoDB schemas, queries, AI/search workflows, and transaction consistency patterns. Humans may also  \n`
   md += `> find it useful, but guidance here is optimized for automation and  \n`
   md += `> consistency by AI-assisted workflows.\n\n`
   md += `---\n\n`

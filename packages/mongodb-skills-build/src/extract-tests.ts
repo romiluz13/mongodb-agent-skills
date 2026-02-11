@@ -6,11 +6,13 @@
  *   npx tsx src/extract-tests.ts mongodb-schema-design
  *   npx tsx src/extract-tests.ts mongodb-query-and-index-optimize
  *   npx tsx src/extract-tests.ts mongodb-ai
+ *   npx tsx src/extract-tests.ts mongodb-transactions-consistency
  *
  * Or via npm scripts:
  *   pnpm extract-tests-schema
  *   pnpm extract-tests-query
  *   pnpm extract-tests-ai
+ *   pnpm extract-tests-transactions
  */
 
 import { readdir, writeFile } from 'fs/promises'

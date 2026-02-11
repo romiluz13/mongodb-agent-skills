@@ -36,6 +36,16 @@
       ]
     },
     {
+      "pathRegex": "^mongodb-transactions-consistency/rules/(?!_).+\\.md$",
+      "requirements": [
+        {
+          "pattern": "^## Verify with$",
+          "flags": "m",
+          "message": "Missing required \"## Verify with\" section in transactions rule"
+        }
+      ]
+    },
+    {
       "pathRegex": "^mongodb-ai/rules/hybrid-(rankfusion|scorefusion|limitations|weights)\\.md$",
       "requirements": [
         {
@@ -301,6 +311,34 @@
         {
           "pattern": "Lexical Prefilters - November 2025 Public Preview",
           "message": "query section summary must include lexical prefilter preview guidance"
+        }
+      ]
+    },
+    {
+      "file": "mongodb-transactions-consistency/rules/retry-upsert-duplicate-key-81.md",
+      "requirements": [
+        {
+          "pattern": "MongoDB 8\\.1",
+          "message": "must keep MongoDB 8.1 duplicate-key upsert guidance"
+        },
+        {
+          "pattern": "duplicate-key",
+          "flags": "i",
+          "message": "must keep duplicate-key conflict framing"
+        }
+      ]
+    },
+    {
+      "file": "mongodb-transactions-consistency/rules/retry-unknown-commit-result.md",
+      "requirements": [
+        {
+          "pattern": "UnknownTransactionCommitResult",
+          "message": "must keep unknown commit result retry label guidance"
+        },
+        {
+          "pattern": "commit",
+          "flags": "i",
+          "message": "must keep commit-retry guidance"
         }
       ]
     }

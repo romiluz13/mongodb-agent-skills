@@ -1,0 +1,9 @@
+source_id,url,topic,used_for,date_checked
+S12-001,https://www.mongodb.com/docs/manual/release-notes/8.2-changelog/,release-line,verify latest patch baseline 8.2.5,2026-02-11
+S12-002,https://www.mongodb.com/docs/manual/release-notes/8.2/,release-line-context,minor-line status framing,2026-02-11
+S12-003,https://www.mongodb.com/docs/manual/core/transactions/,transactions-core,ACID/concern semantics and transaction fundamentals,2026-02-11
+S12-004,https://www.mongodb.com/docs/manual/core/transactions-in-applications/,transactions-app,error labels retry behavior and API patterns,2026-02-11
+S12-005,https://www.mongodb.com/docs/manual/core/transactions-production-consideration/,transactions-ops,production limits and operational caveats,2026-02-11
+S12-006,https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency/,consistency-model,causal consistency and concern-level guidance,2026-02-11
+S12-007,https://www.mongodb.com/docs/manual/core/transactions-operations/,transactions-ops,supported/restricted operations in transactions,2026-02-11
+S12-008,https://www.mongodb.com/docs/manual/reference/parameters/#mongodb-parameter-param.maxTransactionLockRequestTimeoutMillis,operations-parameter,lock timeout tuning rule,2026-02-11

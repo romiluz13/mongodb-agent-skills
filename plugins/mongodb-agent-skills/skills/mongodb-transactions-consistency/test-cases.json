@@ -1,0 +1,331 @@
+{
+  "skill": "mongodb-transactions-consistency",
+  "generatedAt": "2026-02-11T10:32:30.535Z",
+  "totalTestCases": 40,
+  "summary": {
+    "badExamples": 20,
+    "goodExamples": 20
+  },
+  "testCases": [
+    {
+      "ruleId": "consistency-causal-majority-pairing",
+      "ruleTitle": "Pair Majority Read and Write Concerns for Causal Consistency",
+      "type": "bad",
+      "code": "await session.withTransaction(async () => {\n  await profiles.updateOne({ _id: userId }, { $set: { tier: \"gold\" } }, { session })\n  const p = await profiles.findOne({ _id: userId }, { session })\n}, {\n  readConcern: { level: \"local\" },\n  writeConcern: { w: 1 }\n})",
+      "language": "javascript",
+      "description": "mixed concerns for causally-sensitive workflow"
+    },
+    {
+      "ruleId": "consistency-causal-majority-pairing",
+      "ruleTitle": "Pair Majority Read and Write Concerns for Causal Consistency",
+      "type": "good",
+      "code": "await session.withTransaction(async () => {\n  await profiles.updateOne(\n    { _id: userId },\n    { $set: { tier: \"gold\", updatedAt: new Date() } },\n    { session }\n  )\n\n  const profile = await profiles.findOne({ _id: userId }, { session })\n  if (!profile) throw new Error(\"profile missing\")\n}, {\n  readPreference: \"primary\",\n  readConcern: { level: \"majority\" },\n  writeConcern: { w: \"majority\" }\n})",
+      "language": "javascript",
+      "description": "majority pairing for causal guarantees"
+    },
+    {
+      "ruleId": "consistency-read-concern-levels",
+      "ruleTitle": "Choose Read Concern by Business Guarantee, Not Habit",
+      "type": "bad",
+      "code": "await session.withTransaction(async () => {\n  // simple status read and update\n}, {\n  readConcern: { level: \"snapshot\" },\n  writeConcern: { w: \"majority\" }\n})",
+      "language": "javascript",
+      "description": "using snapshot everywhere without requirement"
+    },
+    {
+      "ruleId": "consistency-read-concern-levels",
+      "ruleTitle": "Choose Read Concern by Business Guarantee, Not Habit",
+      "type": "good",
+      "code": "// Example: choose majority when you need majority-committed visibility\nawait session.withTransaction(async () => {\n  const order = await orders.findOne({ _id: orderId }, { session })\n  if (!order) throw new Error(\"missing order\")\n  await orders.updateOne({ _id: orderId }, { $set: { status: \"paid\" } }, { session })\n}, {\n  readPreference: \"primary\",\n  readConcern: { level: \"majority\" },\n  writeConcern: { w: \"majority\" }\n})",
+      "language": "javascript",
+      "description": "choose concern intentionally"
+    },
+    {
+      "ruleId": "consistency-rollback-risk",
+      "ruleTitle": "Avoid Weak Concern Combinations for Critical Transactions",
+      "type": "bad",
+      "code": "await session.withTransaction(async () => {\n  await payments.insertOne({ _id: paymentId, status: \"captured\" }, { session })\n  await balances.updateOne({ accountId }, { $inc: { amount: -100 } }, { session })\n}, {\n  readConcern: { level: \"local\" },\n  writeConcern: { w: 1 }\n})",
+      "language": "javascript",
+      "description": "critical flow with weak concern"
+    },
+    {
+      "ruleId": "consistency-rollback-risk",
+      "ruleTitle": "Avoid Weak Concern Combinations for Critical Transactions",
+      "type": "good",
+      "code": "await session.withTransaction(async () => {\n  await payments.insertOne({ _id: paymentId, status: \"captured\" }, { session })\n  await balances.updateOne({ accountId }, { $inc: { amount: -100 } }, { session })\n}, {\n  readPreference: \"primary\",\n  readConcern: { level: \"majority\" },\n  writeConcern: { w: \"majority\", wtimeout: 5000 }\n})",
+      "language": "javascript",
+      "description": "critical flow with majority durability"
+    },
+    {
+      "ruleId": "consistency-snapshot-majority-coupling",
+      "ruleTitle": "Understand Snapshot Read Concern Requirements",
+      "type": "bad",
+      "code": "await session.withTransaction(async () => {\n  // business-critical reconciliation\n}, {\n  readConcern: { level: \"snapshot\" }\n})",
+      "language": "javascript",
+      "description": "assuming snapshot alone guarantees fully durable global view"
+    },
+    {
+      "ruleId": "consistency-snapshot-majority-coupling",
+      "ruleTitle": "Understand Snapshot Read Concern Requirements",
+      "type": "good",
+      "code": "await session.withTransaction(async () => {\n  const totals = await orders.aggregate([\n    { $match: { accountId } },\n    { $group: { _id: null, amount: { $sum: \"$amount\" } } }\n  ], { session }).toArray()\n\n  await accountSnapshots.updateOne(\n    { accountId },\n    { $set: { amount: totals[0]?.amount || 0, capturedAt: new Date() } },\n    { upsert: true, session }\n  )\n}, {\n  readPreference: \"primary\",\n  readConcern: { level: \"snapshot\" },\n  writeConcern: { w: \"majority\" }\n})",
+      "language": "javascript",
+      "description": "snapshot with explicit durability and primary preference"
+    },
+    {
+      "ruleId": "fundamental-commit-write-concern",
+      "ruleTitle": "Set Transaction Write Concern Intentionally",
+      "type": "bad",
+      "code": "await session.withTransaction(async () => {\n  await orders.updateOne({ _id: orderId }, { $set: { status: \"paid\" } }, { session })\n  await ledger.insertOne({ orderId, event: \"paid\" }, { session })\n})",
+      "language": "javascript",
+      "description": "implicit weak durability for critical payment flow"
+    },
+    {
+      "ruleId": "fundamental-commit-write-concern",
+      "ruleTitle": "Set Transaction Write Concern Intentionally",
+      "type": "good",
+      "code": "await session.withTransaction(\n  async () => {\n    await orders.updateOne({ _id: orderId }, { $set: { status: \"paid\" } }, { session })\n    await ledger.insertOne({ orderId, event: \"paid\", at: new Date() }, { session })\n  },\n  {\n    readPreference: \"primary\",\n    readConcern: { level: \"snapshot\" },\n    writeConcern: { w: \"majority\", wtimeout: 5000 }\n  }\n)",
+      "language": "javascript",
+      "description": "explicit majority durability"
+    },
+    {
+      "ruleId": "fundamental-one-transaction-per-session",
+      "ruleTitle": "Run One Active Transaction Per Session",
+      "type": "bad",
+      "code": "const session = client.startSession()\nsession.startTransaction()\n\nawait Promise.all([\n  dbA.collection(\"orders\").updateOne({ _id: 1 }, { $set: { status: \"paid\" } }, { session }),\n  dbA.collection(\"ledger\").insertOne({ orderId: 1, event: \"paid\" }, { session })\n])\n\nawait session.commitTransaction()",
+      "language": "javascript",
+      "description": "parallel writes on one session"
+    },
+    {
+      "ruleId": "fundamental-one-transaction-per-session",
+      "ruleTitle": "Run One Active Transaction Per Session",
+      "type": "good",
+      "code": "const session = client.startSession()\nsession.startTransaction()\n\nawait dbA.collection(\"orders\").updateOne(\n  { _id: 1 },\n  { $set: { status: \"paid\" } },\n  { session }\n)\n\nawait dbA.collection(\"ledger\").insertOne(\n  { orderId: 1, event: \"paid\", at: new Date() },\n  { session }\n)\n\nawait session.commitTransaction()",
+      "language": "javascript",
+      "description": "serialize operations in one transaction"
+    },
+    {
+      "ruleId": "fundamental-primary-read-preference",
+      "ruleTitle": "Use Primary Read Preference for Transactions",
+      "type": "bad",
+      "code": "const txOptions = {\n  readPreference: \"secondary\",\n  readConcern: { level: \"snapshot\" },\n  writeConcern: { w: \"majority\" }\n}\n\nawait session.withTransaction(async () => {\n  // transactional operations\n}, txOptions)",
+      "language": "javascript",
+      "description": "secondary read preference in transaction options"
+    },
+    {
+      "ruleId": "fundamental-primary-read-preference",
+      "ruleTitle": "Use Primary Read Preference for Transactions",
+      "type": "good",
+      "code": "const txOptions = {\n  readPreference: \"primary\",\n  readConcern: { level: \"snapshot\" },\n  writeConcern: { w: \"majority\" }\n}\n\nawait session.withTransaction(async () => {\n  // transactional operations\n}, txOptions)",
+      "language": "javascript",
+      "description": "primary read preference"
+    },
+    {
+      "ruleId": "fundamental-propagate-session",
+      "ruleTitle": "Pass the Same Session to Every Transaction Operation",
+      "type": "bad",
+      "code": "const session = client.startSession()\nawait session.withTransaction(async () => {\n  await orders.updateOne({ _id: orderId }, { $set: { status: \"paid\" } }, { session })\n\n  // Missing { session } means this write is outside the transaction.\n  await ledger.insertOne({ orderId, event: \"paid\" })\n})",
+      "language": "javascript",
+      "description": "one operation missing session"
+    },
+    {
+      "ruleId": "fundamental-propagate-session",
+      "ruleTitle": "Pass the Same Session to Every Transaction Operation",
+      "type": "good",
+      "code": "const session = client.startSession()\nawait session.withTransaction(async () => {\n  await orders.updateOne(\n    { _id: orderId },\n    { $set: { status: \"paid\" } },\n    { session }\n  )\n\n  await ledger.insertOne(\n    { orderId, event: \"paid\", at: new Date() },\n    { session }\n  )\n})",
+      "language": "javascript",
+      "description": "propagate session everywhere"
+    },
+    {
+      "ruleId": "fundamental-use-transactions-when-required",
+      "ruleTitle": "Use Transactions When You Need Multi-Document Atomicity",
+      "type": "bad",
+      "code": "const session = db.getMongo().startSession()\nsession.startTransaction()\n\nsession.getDatabase(\"app\").orders.updateOne(\n  { _id: orderId },\n  { $set: { status: \"paid\" } }\n)\n\nsession.commitTransaction()\nsession.endSession()",
+      "language": "javascript",
+      "description": "using a transaction for single-document write"
+    },
+    {
+      "ruleId": "fundamental-use-transactions-when-required",
+      "ruleTitle": "Use Transactions When You Need Multi-Document Atomicity",
+      "type": "good",
+      "code": "const session = db.getMongo().startSession()\nsession.startTransaction()\n\nconst sdb = session.getDatabase(\"app\")\n\nsdb.orders.updateOne(\n  { _id: orderId, status: \"pending\" },\n  { $set: { status: \"paid\" } }\n)\n\nsdb.inventory.updateOne(\n  { sku: \"A-100\", qty: { $gte: 1 } },\n  { $inc: { qty: -1 } }\n)\n\nsdb.ledger.insertOne({ orderId, event: \"charge_captured\", at: new Date() })\n\nsession.commitTransaction()\nsession.endSession()",
+      "language": "javascript",
+      "description": "transaction for cross-collection invariant"
+    },
+    {
+      "ruleId": "ops-lock-timeout-tuning",
+      "ruleTitle": "Tune maxTransactionLockRequestTimeoutMillis for Contention Profiles",
+      "type": "bad",
+      "code": "// Heavy transactional workload with frequent lock conflicts\n// No timeout strategy, repeated abort spikes in peak traffic\nawait session.withTransaction(async () => {\n  await accounts.updateOne({ _id: from }, { $inc: { balance: -100 } }, { session })\n  await accounts.updateOne({ _id: to }, { $inc: { balance: 100 } }, { session })\n})",
+      "language": "javascript",
+      "description": "ignore lock timeout behavior under contention"
+    },
+    {
+      "ruleId": "ops-lock-timeout-tuning",
+      "ruleTitle": "Tune maxTransactionLockRequestTimeoutMillis for Contention Profiles",
+      "type": "good",
+      "code": "// Administrative tuning (set at server/runtime scope as appropriate)\n// db.adminCommand({ setParameter: 1, maxTransactionLockRequestTimeoutMillis: 20 })\n\nawait session.withTransaction(async () => {\n  await accounts.updateOne({ _id: from }, { $inc: { balance: -100 } }, { session })\n  await accounts.updateOne({ _id: to }, { $inc: { balance: 100 } }, { session })\n}, {\n  writeConcern: { w: \"majority\" }\n})",
+      "language": "javascript",
+      "description": "explicit timeout policy with monitored retry behavior"
+    },
+    {
+      "ruleId": "ops-restricted-operations",
+      "ruleTitle": "Avoid Unsupported or Restricted Operations in Transactions",
+      "type": "bad",
+      "code": "await session.withTransaction(async () => {\n  await db.collection(\"orders\").updateOne({ _id: 1 }, { $set: { status: \"paid\" } }, { session })\n\n  // Unsupported/restricted in transaction scope\n  await db.command({ createIndexes: \"orders\", indexes: [{ key: { status: 1 }, name: \"status_1\" }] })\n})",
+      "language": "javascript",
+      "description": "running unsupported admin-style operation in transaction"
+    },
+    {
+      "ruleId": "ops-restricted-operations",
+      "ruleTitle": "Avoid Unsupported or Restricted Operations in Transactions",
+      "type": "good",
+      "code": "await session.withTransaction(async () => {\n  await db.collection(\"orders\").updateOne({ _id: 1 }, { $set: { status: \"paid\" } }, { session })\n  await db.collection(\"ledger\").insertOne({ orderId: 1, event: \"paid\" }, { session })\n})\n\n// Execute index/admin operations outside transaction windows\nawait db.command({ createIndexes: \"orders\", indexes: [{ key: { status: 1 }, name: \"status_1\" }] })",
+      "language": "javascript",
+      "description": "separate transactional DML from operational commands"
+    },
+    {
+      "ruleId": "ops-sharded-caveats",
+      "ruleTitle": "Apply Sharded-Cluster Transaction Caveats Explicitly",
+      "type": "bad",
+      "code": "await session.withTransaction(async () => {\n  // Potentially touches many shard key ranges\n  await orders.updateMany({ region: { $in: regions } }, { $set: { archived: true } }, { session })\n  await invoices.updateMany({ region: { $in: regions } }, { $set: { archived: true } }, { session })\n  await shipments.updateMany({ region: { $in: regions } }, { $set: { archived: true } }, { session })\n})",
+      "language": "javascript",
+      "description": "broad cross-shard transaction with unbounded scope"
+    },
+    {
+      "ruleId": "ops-sharded-caveats",
+      "ruleTitle": "Apply Sharded-Cluster Transaction Caveats Explicitly",
+      "type": "good",
+      "code": "for (const region of regions) {\n  await session.withTransaction(async () => {\n    await orders.updateMany({ region }, { $set: { archived: true } }, { session })\n    await invoices.updateMany({ region }, { $set: { archived: true } }, { session })\n  }, {\n    readPreference: \"primary\",\n    writeConcern: { w: \"majority\" }\n  })\n}",
+      "language": "javascript",
+      "description": "minimize shard fan-out and transaction scope"
+    },
+    {
+      "ruleId": "ops-transaction-runtime-limit",
+      "ruleTitle": "Keep Transactions Short and Within Lifetime Limits",
+      "type": "bad",
+      "code": "await session.withTransaction(async () => {\n  const docs = await db.collection(\"events\")\n    .find({ createdAt: { $lt: cutoff } }, { session })\n    .toArray()\n\n  for (const d of docs) {\n    await db.collection(\"archive\").insertOne(d, { session })\n    await db.collection(\"events\").deleteOne({ _id: d._id }, { session })\n  }\n})",
+      "language": "javascript",
+      "description": "long transaction doing broad scan + many writes"
+    },
+    {
+      "ruleId": "ops-transaction-runtime-limit",
+      "ruleTitle": "Keep Transactions Short and Within Lifetime Limits",
+      "type": "good",
+      "code": "while (true) {\n  const batch = await db.collection(\"events\")\n    .find({ createdAt: { $lt: cutoff } })\n    .limit(200)\n    .toArray()\n\n  if (batch.length === 0) break\n\n  await session.withTransaction(async () => {\n    for (const d of batch) {\n      await db.collection(\"archive\").insertOne(d, { session })\n      await db.collection(\"events\").deleteOne({ _id: d._id }, { session })\n    }\n  })\n}",
+      "language": "javascript",
+      "description": "chunked short transactions"
+    },
+    {
+      "ruleId": "pattern-idempotent-transaction-body",
+      "ruleTitle": "Make Transaction Bodies Idempotent Under Retries",
+      "type": "bad",
+      "code": "await session.withTransaction(async () => {\n  await orders.updateOne({ _id: orderId }, { $set: { status: \"paid\" } }, { session })\n\n  // Non-idempotent write: duplicate events if callback retries\n  await outbox.insertOne({ type: \"send-email\", orderId }, { session })\n})",
+      "language": "javascript",
+      "description": "non-idempotent side effect in transaction body"
+    },
+    {
+      "ruleId": "pattern-idempotent-transaction-body",
+      "ruleTitle": "Make Transaction Bodies Idempotent Under Retries",
+      "type": "good",
+      "code": "await session.withTransaction(async () => {\n  await orders.updateOne({ _id: orderId }, { $set: { status: \"paid\" } }, { session })\n\n  await outbox.updateOne(\n    { key: `order-paid:${orderId}` },\n    {\n      $setOnInsert: {\n        key: `order-paid:${orderId}`,\n        type: \"send-email\",\n        orderId,\n        createdAt: new Date()\n      }\n    },\n    { upsert: true, session }\n  )\n})",
+      "language": "javascript",
+      "description": "idempotency key / unique constraint pattern"
+    },
+    {
+      "ruleId": "pattern-observability",
+      "ruleTitle": "Instrument Transaction Outcomes, Retries, and Abort Causes",
+      "type": "bad",
+      "code": "await session.withTransaction(async () => {\n  await runBusinessOps(session)\n})\n\n// No tracking of retries, abort reasons, or unknown commit outcomes",
+      "language": "javascript",
+      "description": "no transaction-level metrics"
+    },
+    {
+      "ruleId": "pattern-observability",
+      "ruleTitle": "Instrument Transaction Outcomes, Retries, and Abort Causes",
+      "type": "good",
+      "code": "const startedAt = Date.now()\nlet retries = 0\n\nawait session.withTransaction(async () => {\n  await runBusinessOps(session)\n}, {\n  readPreference: \"primary\",\n  writeConcern: { w: \"majority\" }\n})\n\nmetrics.increment(\"tx.success\")\nmetrics.observe(\"tx.duration_ms\", Date.now() - startedAt)\nmetrics.observe(\"tx.retries\", retries)",
+      "language": "javascript",
+      "description": "capture outcome and retry metrics"
+    },
+    {
+      "ruleId": "pattern-withtransaction-vs-core-api",
+      "ruleTitle": "Choose withTransaction or Core API Deliberately",
+      "type": "bad",
+      "code": "session.startTransaction()\ntry {\n  await runBusinessOps(session)\n  await session.commitTransaction()\n} catch (e) {\n  // Incomplete handling for transient and unknown commit cases\n  await session.abortTransaction()\n  throw e\n}",
+      "language": "javascript",
+      "description": "reimplementing callback behavior poorly"
+    },
+    {
+      "ruleId": "pattern-withtransaction-vs-core-api",
+      "ruleTitle": "Choose withTransaction or Core API Deliberately",
+      "type": "good",
+      "code": "await session.withTransaction(async () => {\n  await runBusinessOps(session)\n}, {\n  readPreference: \"primary\",\n  readConcern: { level: \"snapshot\" },\n  writeConcern: { w: \"majority\" }\n})",
+      "language": "javascript",
+      "description": "callback API by default"
+    },
+    {
+      "ruleId": "retry-transaction-too-large-cache",
+      "ruleTitle": "Treat TransactionTooLargeForCache as a Redesign Signal",
+      "type": "bad",
+      "code": "for (let i = 0; i < 5; i++) {\n  try {\n    await runHugeTransaction(session)\n    break\n  } catch (e) {\n    if (e.codeName !== \"TransactionTooLargeForCache\") throw e\n    // Wrong: exact same oversized workload retried repeatedly\n  }\n}",
+      "language": "javascript",
+      "description": "blindly retrying same oversized transaction"
+    },
+    {
+      "ruleId": "retry-transaction-too-large-cache",
+      "ruleTitle": "Treat TransactionTooLargeForCache as a Redesign Signal",
+      "type": "good",
+      "code": "for (const chunk of chunked(items, 200)) {\n  await session.withTransaction(async () => {\n    for (const item of chunk) {\n      await orders.updateOne({ _id: item.id }, { $set: { status: \"processed\" } }, { session })\n    }\n    await jobAudit.insertOne({ chunkSize: chunk.length, at: new Date() }, { session })\n  })\n}",
+      "language": "javascript",
+      "description": "shrink batch size / split workflow"
+    },
+    {
+      "ruleId": "retry-transient-transaction-error",
+      "ruleTitle": "Retry the Entire Transaction on TransientTransactionError",
+      "type": "bad",
+      "code": "try {\n  await session.startTransaction()\n  await orders.updateOne({ _id: orderId }, { $set: { status: \"paid\" } }, { session })\n  await inventory.updateOne({ sku, qty: { $gte: 1 } }, { $inc: { qty: -1 } }, { session })\n  await session.commitTransaction()\n} catch (e) {\n  if (e.errorLabels?.includes(\"TransientTransactionError\")) {\n    // Wrong: only retrying one statement\n    await inventory.updateOne({ sku, qty: { $gte: 1 } }, { $inc: { qty: -1 } }, { session })\n  }\n}",
+      "language": "javascript",
+      "description": "retrying only one failed statement"
+    },
+    {
+      "ruleId": "retry-transient-transaction-error",
+      "ruleTitle": "Retry the Entire Transaction on TransientTransactionError",
+      "type": "good",
+      "code": "await session.withTransaction(async () => {\n  await orders.updateOne({ _id: orderId }, { $set: { status: \"paid\" } }, { session })\n  await inventory.updateOne({ sku, qty: { $gte: 1 } }, { $inc: { qty: -1 } }, { session })\n  await ledger.insertOne({ orderId, event: \"paid\" }, { session })\n}, {\n  readPreference: \"primary\",\n  readConcern: { level: \"snapshot\" },\n  writeConcern: { w: \"majority\" }\n})",
+      "language": "javascript",
+      "description": "retry full callback with withTransaction"
+    },
+    {
+      "ruleId": "retry-unknown-commit-result",
+      "ruleTitle": "Retry Commit on UnknownTransactionCommitResult",
+      "type": "bad",
+      "code": "try {\n  await session.commitTransaction()\n} catch (e) {\n  if (e.errorLabels?.includes(\"UnknownTransactionCommitResult\")) {\n    // Wrong: rerunning body can duplicate side effects\n    await runBusinessWorkflowAgain(session)\n  }\n}",
+      "language": "javascript",
+      "description": "rerunning body immediately after unknown commit result"
+    },
+    {
+      "ruleId": "retry-unknown-commit-result",
+      "ruleTitle": "Retry Commit on UnknownTransactionCommitResult",
+      "type": "good",
+      "code": "let committed = false\nwhile (!committed) {\n  try {\n    await session.commitTransaction()\n    committed = true\n  } catch (e) {\n    if (!e.errorLabels?.includes(\"UnknownTransactionCommitResult\")) {\n      throw e\n    }\n  }\n}",
+      "language": "javascript",
+      "description": "retry commit command"
+    },
+    {
+      "ruleId": "retry-upsert-duplicate-key-81",
+      "ruleTitle": "Handle Duplicate-Key Upsert Retry Behavior in MongoDB 8.1+",
+      "type": "bad",
+      "code": "await session.withTransaction(async () => {\n  await users.updateOne(\n    { email: \"a@company.com\" },\n    { $set: { name: \"A\" } },\n    { upsert: true, session }\n  )\n  // Assumes duplicate-key upsert conflict auto-retries\n})",
+      "language": "javascript",
+      "description": "assuming automatic retry will resolve duplicate key"
+    },
+    {
+      "ruleId": "retry-upsert-duplicate-key-81",
+      "ruleTitle": "Handle Duplicate-Key Upsert Retry Behavior in MongoDB 8.1+",
+      "type": "good",
+      "code": "await session.withTransaction(async () => {\n  try {\n    await users.updateOne(\n      { email: \"a@company.com\" },\n      { $set: { name: \"A\" } },\n      { upsert: true, session }\n    )\n  } catch (e) {\n    if (e.code === 11000) {\n      await users.updateOne(\n        { email: \"a@company.com\" },\n        { $set: { name: \"A\" } },\n        { session }\n      )\n      return\n    }\n    throw e\n  }\n})",
+      "language": "javascript",
+      "description": "explicit duplicate-key conflict handling"
+    }
+  ]
+}

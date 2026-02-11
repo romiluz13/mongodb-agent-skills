@@ -12,6 +12,7 @@ ALL_SKILLS=(
   "mongodb-ai"
   "mongodb-query-and-index-optimize"
   "mongodb-schema-design"
+  "mongodb-transactions-consistency"
 )
 
 DEFAULT_AGENTS=("claude-code" "codex" "cursor")
@@ -30,7 +31,7 @@ Agents:
   claude-code, codex, cursor
 
 Skills:
-  mongodb-ai, mongodb-query-and-index-optimize, mongodb-schema-design
+  mongodb-ai, mongodb-query-and-index-optimize, mongodb-schema-design, mongodb-transactions-consistency
 USAGE
 }
 

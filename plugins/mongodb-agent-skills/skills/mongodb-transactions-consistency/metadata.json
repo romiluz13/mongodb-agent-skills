@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0",
+  "organization": "MongoDB",
+  "date": "February 2026",
+  "abstract": "MongoDB transaction correctness and consistency guidance for AI agents and developers. Contains 20 rules across 5 categories: Transaction Fundamentals (CRITICAL), Consistency Semantics (HIGH), Retry and Error Handling (CRITICAL), Operational Constraints (HIGH), and Implementation Patterns (MEDIUM). Covers ACID guarantees, session propagation, readConcern/writeConcern trade-offs, causal consistency, commit uncertainty, transient retries, transaction runtime and lock limits, sharded transaction caveats, and idempotent application patterns. This skill avoids overlap with schema and query/index performance skills by focusing on multi-document correctness and failure-safe execution.",
+  "references": [
+    "https://www.mongodb.com/docs/manual/core/transactions/",
+    "https://www.mongodb.com/docs/manual/core/transactions-in-applications/",
+    "https://www.mongodb.com/docs/manual/core/transactions-production-consideration/",
+    "https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency/",
+    "https://www.mongodb.com/docs/manual/reference/parameters/#mongodb-parameter-param.maxTransactionLockRequestTimeoutMillis",
+    "https://www.mongodb.com/docs/manual/release-notes/8.2-changelog/"
+  ]
+}

@@ -4,7 +4,7 @@ This file provides guidance to AI coding agents (Claude Code, Cursor, Copilot, e
 
 ## Repository Overview
 
-A collection of skills for Claude.ai and Claude Code for MongoDB development. Skills are packaged instructions that extend Claude's capabilities for schema design, query optimization, and indexing strategies.
+A collection of skills for Claude.ai and Claude Code for MongoDB development. Skills are packaged instructions that extend Claude's capabilities for schema design, query/index optimization, AI/vector search, and transaction consistency.
 
 ## Creating a New Skill
 
@@ -23,7 +23,7 @@ skills/
 
 ### Naming Conventions
 
-- **Skill directory**: `kebab-case` (e.g., `mongodb-schema-design`, `mongodb-query-optimize`)
+- **Skill directory**: `kebab-case` (e.g., `mongodb-schema-design`, `mongodb-transactions-consistency`)
 - **SKILL.md**: Always uppercase, always this exact filename
 - **Rule files**: `{section-prefix}-{rule-name}.md` (e.g., `index-compound-field-order.md`)
 - **Zip file**: Must match directory name exactly: `{skill-name}.zip`

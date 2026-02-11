@@ -180,6 +180,56 @@
         "errorAndLog",
         "downgrade"
       ]
+    },
+    {
+      "file": "mongodb-transactions-consistency/rules/retry-unknown-commit-result.md",
+      "requiredPhrases": [
+        "UnknownTransactionCommitResult",
+        "Retrying commit resolves uncertainty"
+      ],
+      "exampleAssertions": [
+        {
+          "kind": "good",
+          "containsAll": [
+            "commitTransaction",
+            "UnknownTransactionCommitResult"
+          ],
+          "message": "Good example must include commit retry loop for unknown commit result"
+        }
+      ]
+    },
+    {
+      "file": "mongodb-transactions-consistency/rules/retry-upsert-duplicate-key-81.md",
+      "requiredPhrases": [
+        "MongoDB 8.1",
+        "duplicate-key"
+      ],
+      "exampleAssertions": [
+        {
+          "kind": "good",
+          "containsAll": [
+            "upsert: true",
+            "e.code === 11000"
+          ],
+          "message": "Good example must handle duplicate-key upsert conflicts explicitly"
+        }
+      ]
+    },
+    {
+      "file": "mongodb-transactions-consistency/rules/fundamental-primary-read-preference.md",
+      "requiredPhrases": [
+        "primary read preference",
+        "transaction-level read preference"
+      ],
+      "exampleAssertions": [
+        {
+          "kind": "good",
+          "containsAll": [
+            "readPreference: \"primary\""
+          ],
+          "message": "Good example must set primary read preference for transaction options"
+        }
+      ]
     }
   ]
 }

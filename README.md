@@ -16,7 +16,7 @@
 
 **Stop writing slow MongoDB code. Build AI that works.**
 
-*109 rules. Battle-tested patterns.*
+*129 rules. Battle-tested patterns.*
 *The difference between 10 seconds and 10 milliseconds.*
 *The bridge between AI assistants and MongoDB's latest features.*
 
@@ -172,6 +172,37 @@ db.logs.aggregate([{ $group: ... }])            // Memory exhaustion, no $match
 
 </td>
 </tr>
+<tr>
+<td colspan="2" valign="top">
+
+### `mongodb-transactions-consistency`
+
+```
+┌───────────────────────────────────────────────────────────────────────────────────┐
+│  20 RULES FOR ACID TRANSACTIONS & CONSISTENCY                                    │
+│  CORRECTNESS UNDER RETRIES, FAILOVER, AND CONTENTION                             │
+└───────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Use when:**
+- Implementing multi-document atomic writes
+- Choosing readConcern/writeConcern settings
+- Handling `TransientTransactionError` and `UnknownTransactionCommitResult`
+- Designing idempotent retry-safe workflows
+- Operating transactions in replica sets or sharded clusters
+
+| Category | Impact |
+|----------|--------|
+| Transaction Fundamentals | `CRITICAL` |
+| Consistency Semantics | `HIGH` |
+| Retry and Error Handling | `CRITICAL` |
+| Operational Constraints | `HIGH` |
+| Implementation Patterns | `MEDIUM` |
+
+> **Why this skill matters:** MongoDB supports ACID transactions, but teams still ship incorrect retry or concern-level logic. This skill closes that gap with production-safe transaction patterns.
+
+</td>
+</tr>
 </table>
 
 ---
@@ -198,6 +229,8 @@ Once installed, skills activate automatically. Just ask:
 │  > Implement RAG with MongoDB                                                │
 │                                                                              │
 │  > How do I tune numCandidates for vector search?                            │
+│                                                                              │
+│  > Implement retry-safe multi-document transactions with majority durability │
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```

@@ -212,6 +212,9 @@ async function main() {
     const registry = await loadRegistry()
     const ruleContents = await loadRuleFiles()
     const errors = validateVersionClaims(ruleContents, registry)
+    const skillCount = new Set(
+      Array.from(ruleContents.keys()).map((k) => k.split('/')[0])
+    ).size
 
     if (errors.length > 0) {
       console.error('\n✗ Version-claim checks failed:\n')
@@ -222,7 +225,7 @@ async function main() {
     }
 
     console.log(
-      `✓ Version-claim checks passed for ${ruleContents.size} markdown sources across 3 skills`
+      `✓ Version-claim checks passed for ${ruleContents.size} markdown sources across ${skillCount} skills`
     )
   } catch (error) {
     console.error('Version-claim checks failed:', error)

@@ -44,6 +44,13 @@ export const SECTION_MAPS: Record<string, Record<string, number>> = {
     hybrid: 5,        // Hybrid Search
     agent: 6,         // AI Agent Integration
   },
+  'mongodb-transactions-consistency': {
+    fundamental: 1,   // Transaction Fundamentals
+    consistency: 2,   // Consistency Semantics
+    retry: 3,         // Retry and Error Handling
+    ops: 4,           // Operational Constraints
+    pattern: 5,       // Implementation Patterns
+  },
 }
 
 // Index prefix subsection mapping (for separating essentials from specialized)

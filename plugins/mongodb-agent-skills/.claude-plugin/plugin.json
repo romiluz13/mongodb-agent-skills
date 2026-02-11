@@ -1,7 +1,7 @@
 {
   "name": "mongodb-agent-skills",
   "version": "1.0.0",
-  "description": "MongoDB best practices with 109 rules across 3 skills: Schema Design (30 rules), Query & Index Optimization (46 rules), and Vector Search/AI (33 rules). Covers anti-patterns, data modeling, indexing, aggregation, vector search, RAG, and AI agent memory.",
+  "description": "MongoDB best practices with 129 rules across 4 skills: Schema Design (30 rules), Query & Index Optimization (46 rules), Vector Search/AI (33 rules), and Transactions/Consistency (20 rules). Covers anti-patterns, data modeling, indexing, aggregation, vector search, RAG, transaction retries, and ACID consistency patterns.",
   "author": {
     "name": "MongoDB",
     "email": "rom.iluz@mongodb.com",
@@ -16,6 +16,9 @@
     "query-optimization",
     "indexing",
     "aggregation",
+    "transactions",
+    "acid",
+    "consistency",
     "data-modeling",
     "best-practices",
     "claude-code"

@@ -6,7 +6,7 @@ February 2026
 
 > **Note:**
 > This document is mainly for agents and LLMs to follow when maintaining,
-> generating, or reviewing MongoDB schemas, queries, and AI search patterns. Humans may also
+> generating, or reviewing MongoDB schemas, queries, AI/search workflows, and transaction consistency patterns. Humans may also
 > find it useful, but guidance here is optimized for automation and
 > consistency by AI-assisted workflows.
 
