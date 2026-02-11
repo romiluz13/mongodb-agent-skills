@@ -194,7 +194,7 @@ db.users.createIndex(
 - **Coverage queries**: If you need the field value for all docs, sparse won't help.
 - **Field usually exists**: If 90% of docs have the field, sparse saves little.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check sparse index behavior

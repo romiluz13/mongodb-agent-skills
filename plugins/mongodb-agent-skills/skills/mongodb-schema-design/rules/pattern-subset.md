@@ -140,7 +140,7 @@ db.movies.updateOne(
 - **Always need all data**: If 90% of requests need full reviews, separation hurts.
 - **Write-heavy cold data**: If reviews are written 100× more than read, keeping them embedded may simplify writes.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Find documents with hot/cold imbalance

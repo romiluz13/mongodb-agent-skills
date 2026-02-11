@@ -1,12 +1,12 @@
 # MongoDB Query & Index Optimization
 
-**Version 2.1.0**
+**Version 2.3.0**
 MongoDB
-January 2026
+February 2026
 
 > **Note:**
 > This document is mainly for agents and LLMs to follow when maintaining,
-> generating, or reviewing MongoDB schemas and queries. Humans may also
+> generating, or reviewing MongoDB schemas, queries, and AI search patterns. Humans may also
 > find it useful, but guidance here is optimized for automation and
 > consistency by AI-assisted workflows.
 
@@ -14,7 +14,7 @@ January 2026
 
 ## Abstract
 
-MongoDB query optimization and indexing strategies for AI agents and developers. Contains 39 rules across 5 categories: Index Essentials (CRITICAL - ESR rule, compound index usage, covered queries, prefix principle, index sizing), Specialized Indexes (HIGH - unique, partial, sparse, TTL, text search, wildcard, multikey, geospatial, hashed, clustered, hidden), Query Patterns (HIGH - projections, avoiding $ne/$nin, anchored regex, batching, pagination, $exists behavior, sort/collation alignment), Aggregation Optimization (HIGH - $match/$project early, $sort+$limit coalescence, $lookup indexing, $unwind control, allowDiskUse, $group memory control), and Performance Diagnostics (MEDIUM - explain() interpretation, slow query profiler, $indexStats analysis, hint usage, Atlas Performance Advisor). Each rule includes incorrect/correct code examples with quantified impact metrics, 'When NOT to use' exceptions, and verification diagnostics.
+MongoDB query optimization and indexing strategies for AI agents and developers. Contains 46 rules across 5 categories: Index Essentials (CRITICAL - ESR rule, compound index usage, covered queries, prefix principle, index sizing), Specialized Indexes (HIGH - unique, partial, sparse, TTL, text search, wildcard, multikey, geospatial, hashed, clustered, hidden), Query Patterns (HIGH - projections, avoiding $ne/$nin, $or index requirements, anchored regex, batching, pagination, $exists behavior, sort/collation alignment, MongoDB 8.0 bulkWrite command for cross-collection atomic operations, MongoDB 8.0 updateOne/replaceOne sort option for deterministic updates), Aggregation Optimization (HIGH - $match/$project early, $sort+$limit coalescence, $lookup indexing, $graphLookup for recursive traversal, $unwind control, allowDiskUse, $group memory control), and Performance Diagnostics (MEDIUM - explain() interpretation, slow query profiler, $indexStats analysis, hint usage, Atlas Performance Advisor, MongoDB 8.0 $queryStats for workload analysis, MongoDB 8.0 Query Settings for persistent index hints). Each rule includes incorrect/correct code examples with quantified impact metrics, 'When NOT to use' exceptions, and verification diagnostics.
 
 ---
 
@@ -45,24 +45,31 @@ MongoDB query optimization and indexing strategies for AI agents and developers.
    - 3.1 [Anchor Regex Patterns with ^](#31-anchor-regex-patterns-with-)
    - 3.2 [Avoid $ne and $nin Operators](#32-avoid-ne-and-nin-operators)
    - 3.3 [Batch Operations to Avoid N+1 Queries](#33-batch-operations-to-avoid-n1-queries)
-   - 3.4 [Match Sort and Collation to Indexes](#34-match-sort-and-collation-to-indexes)
-   - 3.5 [Understand $exists Behavior with Sparse Indexes](#35-understand-exists-behavior-with-sparse-indexes)
-   - 3.6 [Use Projections to Limit Fields](#36-use-projections-to-limit-fields)
-   - 3.7 [Use Range-Based Pagination Instead of skip()](#37-use-range-based-pagination-instead-of-skip)
+   - 3.4 [Index All $or Clauses for Index Usage](#34-index-all-or-clauses-for-index-usage)
+   - 3.5 [Match Sort and Collation to Indexes](#35-match-sort-and-collation-to-indexes)
+   - 3.6 [Understand $exists Behavior with Sparse Indexes](#36-understand-exists-behavior-with-sparse-indexes)
+   - 3.7 [Use bulkWrite for Cross-Collection Batch Operations](#37-use-bulkwrite-for-cross-collection-batch-operations)
+   - 3.8 [Use Projections to Limit Fields](#38-use-projections-to-limit-fields)
+   - 3.9 [Use Range-Based Pagination Instead of skip()](#39-use-range-based-pagination-instead-of-skip)
+   - 3.10 [Use sort Option in updateOne/replaceOne for Deterministic Updates](#310-use-sort-option-in-updateonereplaceone-for-deterministic-updates)
 4. [Aggregation Optimization](#4-aggregation-optimization) — **HIGH**
    - 4.1 [Avoid $unwind on Large Arrays](#41-avoid-unwind-on-large-arrays)
    - 4.2 [Combine $sort with $limit for Top-N Queries](#42-combine-sort-with-limit-for-top-n-queries)
    - 4.3 [Control $group Memory Usage](#43-control-group-memory-usage)
    - 4.4 [Index $lookup Foreign Fields](#44-index-lookup-foreign-fields)
    - 4.5 [Place $match at Pipeline Start](#45-place-match-at-pipeline-start)
-   - 4.6 [Use $project Early to Reduce Document Size](#46-use-project-early-to-reduce-document-size)
-   - 4.7 [Use allowDiskUse for Large Aggregations](#47-use-allowdiskuse-for-large-aggregations)
+   - 4.6 [Use $graphLookup for Recursive Graph Traversal](#46-use-graphlookup-for-recursive-graph-traversal)
+   - 4.7 [Use $project Early to Reduce Document Size](#47-use-project-early-to-reduce-document-size)
+   - 4.8 [Use allowDiskUse for Large Aggregations](#48-use-allowdiskuse-for-large-aggregations)
 5. [Performance Diagnostics](#5-performance-diagnostics) — **MEDIUM**
    - 5.1 [Interpret explain() Output for Query Optimization](#51-interpret-explain-output-for-query-optimization)
-   - 5.2 [Use $indexStats to Find Unused Indexes](#52-use-indexstats-to-find-unused-indexes)
-   - 5.3 [Use Atlas Performance Advisor for Index Recommendations](#53-use-atlas-performance-advisor-for-index-recommendations)
-   - 5.4 [Use hint() to Control Query Plans When Necessary](#54-use-hint-to-control-query-plans-when-necessary)
-   - 5.5 [Use Slow Query Log to Find Performance Issues](#55-use-slow-query-log-to-find-performance-issues)
+   - 5.2 [Understand and Manage Query Plan Cache](#52-understand-and-manage-query-plan-cache)
+   - 5.3 [Use $indexStats to Find Unused Indexes](#53-use-indexstats-to-find-unused-indexes)
+   - 5.4 [Use $queryStats to Analyze Query Patterns](#54-use-querystats-to-analyze-query-patterns)
+   - 5.5 [Use Atlas Performance Advisor for Index Recommendations](#55-use-atlas-performance-advisor-for-index-recommendations)
+   - 5.6 [Use hint() to Control Query Plans When Necessary](#56-use-hint-to-control-query-plans-when-necessary)
+   - 5.7 [Use Query Settings to Override Query Plans](#57-use-query-settings-to-override-query-plans)
+   - 5.8 [Use Slow Query Log to Find Performance Issues](#58-use-slow-query-log-to-find-performance-issues)
 
 ---
 
@@ -395,6 +402,12 @@ function indexSizeReport() {
 indexSizeReport()
 ```
 
+1. Run representative queries with `explain("executionStats")` before and after applying this rule.
+
+2. Compare latency and scan efficiency (`totalDocsExamined`, `totalKeysExamined`, `nReturned`).
+
+3. Confirm workload-level behavior using `$queryStats`, profiler, or Atlas Performance Advisor.
+
 Reference: [https://mongodb.com/docs/manual/reference/limits/#indexes](https://mongodb.com/docs/manual/reference/limits/#indexes)
 
 ### 1.2 Create Indexes in Background on Production
@@ -605,16 +618,6 @@ db.orders.createIndex(
 
 **When to avoid live index creation:**
 
-- **Very large collections (100M+ docs)**: Consider offline build during maintenance.
-
-- **Limited disk I/O**: SSD strongly recommended for index builds.
-
-- **Memory constrained**: Index build buffer competes with working set.
-
-- **Active OLTP workload**: High write throughput can slow builds significantly.
-
-**Verify with:**
-
 ```javascript
 // Pre-build assessment
 function assessIndexBuild(collection, indexSpec) {
@@ -662,6 +665,14 @@ function assessIndexBuild(collection, indexSpec) {
 // Usage
 assessIndexBuild("orders", { customerId: 1, createdAt: -1 })
 ```
+
+- **Very large collections (100M+ docs)**: Consider offline build during maintenance.
+
+- **Limited disk I/O**: SSD strongly recommended for index builds.
+
+- **Memory constrained**: Index build buffer competes with working set.
+
+- **Active OLTP workload**: High write throughput can slow builds significantly.
 
 Reference: [https://mongodb.com/docs/manual/core/index-creation/](https://mongodb.com/docs/manual/core/index-creation/)
 
@@ -836,16 +847,6 @@ db.orders.aggregate([
 
 **When NOT to design for covered queries:**
 
-- **Wide projections**: If you need 10+ fields, adding them all to index isn't worth it—index becomes huge.
-
-- **Frequently changing fields**: Adding volatile fields to index increases write overhead significantly.
-
-- **Detail views**: Single-document fetches for full detail are fine—overhead is minimal.
-
-- **Hot data**: If documents are already in WiredTiger cache, covered query benefit is reduced.
-
-**Verify with:**
-
 ```javascript
 // Check if query is covered
 function isCovered(query, projection) {
@@ -880,6 +881,14 @@ db.users.getIndexes().forEach(idx => {
   print(`Index ${idx.name} can cover projections on: ${fields.join(", ")}`)
 })
 ```
+
+- **Wide projections**: If you need 10+ fields, adding them all to index isn't worth it—index becomes huge.
+
+- **Frequently changing fields**: Adding volatile fields to index increases write overhead significantly.
+
+- **Detail views**: Single-document fetches for full detail are fine—overhead is minimal.
+
+- **Hot data**: If documents are already in WiredTiger cache, covered query benefit is reduced.
 
 Reference: [https://mongodb.com/docs/manual/core/query-optimization/#covered-query](https://mongodb.com/docs/manual/core/query-optimization/#covered-query)
 
@@ -1029,16 +1038,6 @@ db.system.profile.aggregate([
 
 **When NOT to expect index usage:**
 
-- **Tiny collections**: <1000 docs, COLLSCAN may be faster than index lookup overhead.
-
-- **Returning most documents**: If query matches >30% of collection, COLLSCAN can win.
-
-- **$where and $text without index**: These have special requirements.
-
-- **Negation operators alone**: `{ field: { $ne: value } }` rarely uses indexes well.
-
-**Verify with:**
-
 ```javascript
 // Quick check: Is my query using an index?
 function checkIndexUsage(query) {
@@ -1067,6 +1066,14 @@ function checkIndexUsage(query) {
 // Usage:
 checkIndexUsage(db.orders.find({ customerId: "cust123" }))
 ```
+
+- **Tiny collections**: <1000 docs, COLLSCAN may be faster than index lookup overhead.
+
+- **Returning most documents**: If query matches >30% of collection, COLLSCAN can win.
+
+- **$where and $text without index**: These have special requirements.
+
+- **Negation operators alone**: `{ field: { $ne: value } }` rarely uses indexes well.
 
 Reference: [https://mongodb.com/docs/manual/tutorial/analyze-query-plan/](https://mongodb.com/docs/manual/tutorial/analyze-query-plan/)
 
@@ -1229,6 +1236,12 @@ if (hasInMemorySort(stats)) {
 { date: -1 }  // Optimal: natural index order matches query
 ```
 
+1. Run representative queries with `explain("executionStats")` before and after applying this rule.
+
+2. Compare latency and scan efficiency (`totalDocsExamined`, `totalKeysExamined`, `nReturned`).
+
+3. Confirm workload-level behavior using `$queryStats`, profiler, or Atlas Performance Advisor.
+
 Reference: [https://mongodb.com/docs/manual/tutorial/equality-sort-range-rule/](https://mongodb.com/docs/manual/tutorial/equality-sort-range-rule/)
 
 ### 1.6 Put High-Cardinality Fields First in Equality Conditions
@@ -1364,16 +1377,6 @@ db.users.createIndex({ tenantId: 1, role: 1, status: 1 })
 
 **When NOT to put high cardinality first:**
 
-- **ESR rule takes precedence**: If you have Sort in query, ESR order (Equality→Sort→Range) beats pure cardinality optimization.
-
-- **Index reuse across queries**: If one query needs `{status}` alone and another needs `{status, customerId}`, putting status first serves both.
-
-- **Covered query requirements**: Projection fields may need specific index positions.
-
-- **Near-equal cardinality**: If fields have similar cardinality, prefer the one queried more often as leading field.
-
-**Verify with:**
-
 ```javascript
 // Compare index efficiency for different orderings
 function compareIndexOrder(collection, query, index1, index2) {
@@ -1412,6 +1415,14 @@ compareIndexOrder(
   { customerId: 1, status: 1 }     // High cardinality first
 )
 ```
+
+- **ESR rule takes precedence**: If you have Sort in query, ESR order (Equality→Sort→Range) beats pure cardinality optimization.
+
+- **Index reuse across queries**: If one query needs `{status}` alone and another needs `{status, customerId}`, putting status first serves both.
+
+- **Covered query requirements**: Projection fields may need specific index positions.
+
+- **Near-equal cardinality**: If fields have similar cardinality, prefer the one queried more often as leading field.
 
 Reference: [https://mongodb.com/docs/manual/tutorial/create-queries-that-ensure-selectivity/](https://mongodb.com/docs/manual/tutorial/create-queries-that-ensure-selectivity/)
 
@@ -1532,18 +1543,6 @@ db.products.dropIndex("category_1")       // Redundant with compound
 
 **When NOT to drop an index:**
 
-- **Infrequent but critical queries**: Monthly reports, audit queries—low ops but essential.
-
-- **Disaster recovery queries**: May have 0 ops but needed for incident response.
-
-- **Recently created**: Wait 30+ days to assess usage.
-
-- **Unique constraints**: Even if rarely queried, enforces data integrity.
-
-- **TTL indexes**: May show low ops but handle expiration automatically.
-
-**Verify with:**
-
 ```javascript
 // Complete index audit script
 function auditIndexes(collectionName) {
@@ -1588,6 +1587,16 @@ function auditIndexes(collectionName) {
 // Run audit
 auditIndexes("products")
 ```
+
+- **Infrequent but critical queries**: Monthly reports, audit queries—low ops but essential.
+
+- **Disaster recovery queries**: May have 0 ops but needed for incident response.
+
+- **Recently created**: Wait 30+ days to assess usage.
+
+- **Unique constraints**: Even if rarely queried, enforces data integrity.
+
+- **TTL indexes**: May show low ops but handle expiration automatically.
 
 Reference: [https://mongodb.com/docs/manual/tutorial/measure-index-use/](https://mongodb.com/docs/manual/tutorial/measure-index-use/)
 
@@ -1755,16 +1764,6 @@ db.orders.createIndex({ status: 1, date: -1, amount: 1 })
 
 **When to create non-prefix indexes:**
 
-- **Different leading field needed**: Queries filter on different fields first.
-
-- **Different sort orders**: Ascending vs descending sorts (can't flip multi-field sort).
-
-- **Covered query optimization**: Different projections need different field combinations.
-
-- **Cardinality considerations**: Sometimes a different leading field is more selective.
-
-**Verify with:**
-
 ```javascript
 // Find redundant indexes (covered by prefixes of other indexes)
 function findRedundantIndexes(collection) {
@@ -1813,6 +1812,14 @@ function findRedundantIndexes(collection) {
 // Usage
 findRedundantIndexes("orders")
 ```
+
+- **Different leading field needed**: Queries filter on different fields first.
+
+- **Different sort orders**: Ascending vs descending sorts (can't flip multi-field sort).
+
+- **Covered query optimization**: Different projections need different field combinations.
+
+- **Cardinality considerations**: Sometimes a different leading field is more selective.
 
 Reference: [https://mongodb.com/docs/manual/core/indexes/index-types/index-compound/](https://mongodb.com/docs/manual/core/indexes/index-types/index-compound/)
 
@@ -2016,16 +2023,6 @@ db.orders.find({
 
 **When NOT to use multikey indexes:**
 
-- **Huge arrays**: 1000+ element arrays create 1000+ index entries per document.
-
-- **Frequently updated arrays**: Each array change updates multiple index entries.
-
-- **$all with many terms**: Performance degrades with many required terms.
-
-- **Position-based queries**: `{ "arr.0": value }` can use index, but position queries are uncommon.
-
-**Verify with:**
-
 ```javascript
 // Analyze multikey index characteristics
 function analyzeMultikeyIndex(collection, indexName) {
@@ -2082,6 +2079,14 @@ function analyzeMultikeyIndex(collection, indexName) {
 analyzeMultikeyIndex("products", "tags_1")
 ```
 
+- **Huge arrays**: 1000+ element arrays create 1000+ index entries per document.
+
+- **Frequently updated arrays**: Each array change updates multiple index entries.
+
+- **$all with many terms**: Performance degrades with many required terms.
+
+- **Position-based queries**: `{ "arr.0": value }` can use index, but position queries are uncommon.
+
 Reference: [https://mongodb.com/docs/manual/core/indexes/index-types/index-multikey/](https://mongodb.com/docs/manual/core/indexes/index-types/index-multikey/)
 
 ### 1.10 Use Clustered Collections for Ordered Storage
@@ -2115,19 +2120,17 @@ db.events.find({ eventId: { $gte: 1000, $lt: 2000 } })
 
 **When NOT to use this pattern:**
 
-- **Access pattern does not use the clustered key**: No benefit.
-
-- **Frequent updates to the clustered key**: Requires document relocation.
-
-- **Existing collections**: Clustered indexes must be defined at creation time.
-
-**Verify with:**
-
 ```javascript
 // Inspect collection options for clusteredIndex
 
 db.getCollectionInfos({ name: "events" })
 ```
+
+- **Access pattern does not use the clustered key**: No benefit.
+
+- **Frequent updates to the clustered key**: Requires document relocation.
+
+- **Existing collections**: Clustered indexes must be defined at creation time.
 
 Reference: [https://mongodb.com/docs/manual/core/clustered-collections/](https://mongodb.com/docs/manual/core/clustered-collections/)
 
@@ -2164,12 +2167,6 @@ db.orders.find({ status: "shipped" }).sort({ createdAt: -1 })
 
 **When NOT to use this pattern:**
 
-- **Queries only filter on one field**: A single-field index may be enough.
-
-- **Write-heavy collections**: Extra indexes increase write cost.
-
-**Verify with:**
-
 ```javascript
 // Check for SORT stage in explain
 
@@ -2177,6 +2174,10 @@ db.orders.find({ status: "shipped" })
   .sort({ createdAt: -1 })
   .explain("executionStats")
 ```
+
+- **Queries only filter on one field**: A single-field index may be enough.
+
+- **Write-heavy collections**: Extra indexes increase write cost.
 
 Reference: [https://mongodb.com/docs/manual/core/indexes/index-types/index-compound/](https://mongodb.com/docs/manual/core/indexes/index-types/index-compound/)
 
@@ -2433,16 +2434,6 @@ db.stores.aggregate([
 
 **When NOT to use 2dsphere:**
 
-- **Non-geographic data**: Game coordinates, floor plans → use 2d index.
-
-- **Simple bounding box**: If just filtering by lat/long ranges, regular compound index may suffice.
-
-- **Text location**: If locations are addresses (not coordinates), you need geocoding first.
-
-- **Very high precision required**: Geospatial indexes have precision limits.
-
-**Verify with:**
-
 ```javascript
 // Analyze geospatial index and query
 function analyzeGeoQuery(collection, centerPoint, maxDistanceMeters) {
@@ -2500,6 +2491,14 @@ function analyzeGeoQuery(collection, centerPoint, maxDistanceMeters) {
 analyzeGeoQuery("stores", [-73.9857, 40.7580], 5000)
 ```
 
+- **Non-geographic data**: Game coordinates, floor plans → use 2d index.
+
+- **Simple bounding box**: If just filtering by lat/long ranges, regular compound index may suffice.
+
+- **Text location**: If locations are addresses (not coordinates), you need geocoding first.
+
+- **Very high precision required**: Geospatial indexes have precision limits.
+
 Reference: [https://mongodb.com/docs/manual/core/indexes/index-types/index-geospatial/](https://mongodb.com/docs/manual/core/indexes/index-types/index-geospatial/)
 
 ### 1.13 Use Hashed Indexes for Evenly Distributed Equality Lookups
@@ -2532,17 +2531,15 @@ db.users.find({ userId: 123456 })
 
 **When NOT to use this pattern:**
 
-- **Range queries or sorting**: Hashed indexes do not preserve order.
-
-- **Prefix searches**: Hashed values break prefix scans.
-
-**Verify with:**
-
 ```javascript
 // Confirm equality query uses IXSCAN
 
 db.users.find({ userId: 123456 }).explain("executionStats")
 ```
+
+- **Range queries or sorting**: Hashed indexes do not preserve order.
+
+- **Prefix searches**: Hashed values break prefix scans.
 
 Reference: [https://mongodb.com/docs/manual/core/indexes/index-types/index-hashed/](https://mongodb.com/docs/manual/core/indexes/index-types/index-hashed/)
 
@@ -2574,17 +2571,15 @@ db.orders.unhideIndex("status_1_createdAt_-1")
 
 **When NOT to use this pattern:**
 
-- **You need to reduce storage immediately**: Hidden indexes still consume disk.
-
-- **You are confident and have load-tested**: Dropping may be fine.
-
-**Verify with:**
-
 ```javascript
 // Check hidden flag in index definitions
 
 db.orders.getIndexes()
 ```
+
+- **You need to reduce storage immediately**: Hidden indexes still consume disk.
+
+- **You are confident and have load-tested**: Dropping may be fine.
 
 Reference: [https://mongodb.com/docs/manual/core/index-hidden/](https://mongodb.com/docs/manual/core/index-hidden/)
 
@@ -2805,16 +2800,6 @@ measurePartialIndexSavings(
 
 **When NOT to use partial indexes:**
 
-- **Query patterns vary**: If you query both included and excluded documents, you need both indexes.
-
-- **Filter expression changes**: The filter is fixed at creation; changing it requires recreating the index.
-
-- **Small percentage excluded**: If only 10% excluded, complexity may not be worth the savings.
-
-- **Date-based filters**: Static dates in partialFilterExpression don't auto-update.
-
-**Verify with:**
-
 ```javascript
 // Check if query uses partial index
 function checkPartialIndexUsage(collection, query) {
@@ -2849,6 +2834,14 @@ function checkPartialIndexUsage(collection, query) {
 // Test
 checkPartialIndexUsage("orders", { customerId: "x", status: "pending" })
 ```
+
+- **Query patterns vary**: If you query both included and excluded documents, you need both indexes.
+
+- **Filter expression changes**: The filter is fixed at creation; changing it requires recreating the index.
+
+- **Small percentage excluded**: If only 10% excluded, complexity may not be worth the savings.
+
+- **Date-based filters**: Static dates in partialFilterExpression don't auto-update.
 
 Reference: [https://mongodb.com/docs/manual/core/index-partial/](https://mongodb.com/docs/manual/core/index-partial/)
 
@@ -3012,16 +3005,6 @@ db.users.createIndex(
 
 **When NOT to use sparse indexes:**
 
-- **Sort operations on full collection**: Sparse index can't sort docs without the field.
-
-- **Queries for missing/null values**: `{ field: null }` or `{ field: { $exists: false } }` can't use sparse.
-
-- **Coverage queries**: If you need the field value for all docs, sparse won't help.
-
-- **Field usually exists**: If 90% of docs have the field, sparse saves little.
-
-**Verify with:**
-
 ```javascript
 // Check sparse index behavior
 function analyzeSparseIndex(collection, field) {
@@ -3060,6 +3043,14 @@ function analyzeSparseIndex(collection, field) {
 // Usage
 analyzeSparseIndex("users", "twitterHandle")
 ```
+
+- **Sort operations on full collection**: Sparse index can't sort docs without the field.
+
+- **Queries for missing/null values**: `{ field: null }` or `{ field: { $exists: false } }` can't use sparse.
+
+- **Coverage queries**: If you need the field value for all docs, sparse won't help.
+
+- **Field usually exists**: If 90% of docs have the field, sparse saves little.
 
 Reference: [https://mongodb.com/docs/manual/core/index-sparse/](https://mongodb.com/docs/manual/core/index-sparse/)
 
@@ -3278,18 +3269,6 @@ db.products.aggregate([
 
 **When NOT to use text indexes:**
 
-- **Prefix/autocomplete search**: Text indexes don't support partial word matching. Use Atlas Search or regex with anchored patterns.
-
-- **Numeric search**: Text indexes are for text. Use regular indexes for numeric ranges.
-
-- **Complex search requirements**: Facets, fuzzy matching, synonyms → Atlas Search.
-
-- **Single field exact match**: Regular index more efficient for exact string match.
-
-- **Memory constraints**: Text indexes can be large. Consider Atlas Search for scalability.
-
-**Verify with:**
-
 ```javascript
 // Check text index and search performance
 function analyzeTextSearch(collection, searchTerms) {
@@ -3339,6 +3318,16 @@ function analyzeTextSearch(collection, searchTerms) {
 // Usage
 analyzeTextSearch("articles", "mongodb database performance")
 ```
+
+- **Prefix/autocomplete search**: Text indexes don't support partial word matching. Use Atlas Search or regex with anchored patterns.
+
+- **Numeric search**: Text indexes are for text. Use regular indexes for numeric ranges.
+
+- **Complex search requirements**: Facets, fuzzy matching, synonyms → Atlas Search.
+
+- **Single field exact match**: Regular index more efficient for exact string match.
+
+- **Memory constraints**: Text indexes can be large. Consider Atlas Search for scalability.
 
 Reference: [https://mongodb.com/docs/manual/core/indexes/index-types/index-text/](https://mongodb.com/docs/manual/core/indexes/index-types/index-text/)
 
@@ -3562,18 +3551,6 @@ db.sessions.createIndex(
 
 **When NOT to use TTL indexes:**
 
-- **Compound index needed**: TTL only works on single-field indexes. Use cron for complex cleanup.
-
-- **Exact expiration time critical**: TTL has ~60 second delay; use application logic for precision.
-
-- **Audit requirements**: TTL deletes without logging. If you need audit trail, use soft delete + cron.
-
-- **Large batch deletes**: If millions expire simultaneously, TTL can cause load. Consider partitioning.
-
-- **Capped collections**: TTL indexes can't be created on capped collections.
-
-**Verify with:**
-
 ```javascript
 // Check TTL index configuration
 function checkTTLIndexes(collection) {
@@ -3625,6 +3602,16 @@ function checkTTLIndexes(collection) {
 checkTTLIndexes("sessions")
 ```
 
+- **Compound index needed**: TTL only works on single-field indexes. Use cron for complex cleanup.
+
+- **Exact expiration time critical**: TTL has ~60 second delay; use application logic for precision.
+
+- **Audit requirements**: TTL deletes without logging. If you need audit trail, use soft delete + cron.
+
+- **Large batch deletes**: If millions expire simultaneously, TTL can cause load. Consider partitioning.
+
+- **Capped collections**: TTL indexes can't be created on capped collections.
+
 Reference: [https://mongodb.com/docs/manual/core/index-ttl/](https://mongodb.com/docs/manual/core/index-ttl/)
 
 ### 1.19 Use Unique Indexes to Enforce Constraints
@@ -3658,12 +3645,6 @@ db.users.insertOne({ email: "ada@example.com" })
 
 **When NOT to use this pattern:**
 
-- **Duplicates are valid**: If the field is not a true identifier.
-
-- **Existing duplicates**: Clean up data before creating the index.
-
-**Verify with:**
-
 ```javascript
 // Find duplicates before adding the index
 
@@ -3672,6 +3653,10 @@ db.users.aggregate([
   { $match: { count: { $gt: 1 } } }
 ])
 ```
+
+- **Duplicates are valid**: If the field is not a true identifier.
+
+- **Existing duplicates**: Clean up data before creating the index.
 
 Reference: [https://mongodb.com/docs/manual/core/index-unique/](https://mongodb.com/docs/manual/core/index-unique/)
 
@@ -3853,18 +3838,6 @@ db.content.createIndex({ "metadata.$**": 1 })
 
 **When NOT to use wildcard indexes:**
 
-- **Known, stable schema**: Explicit indexes are faster and smaller.
-
-- **Sorting required**: Wildcard indexes don't support sort operations.
-
-- **Covered queries needed**: Wildcard indexes always require document fetch.
-
-- **High-cardinality paths**: If most paths have unique values, index becomes huge.
-
-- **Array elements**: Wildcard indexes can index arrays, but behavior is complex.
-
-**Verify with:**
-
 ```javascript
 // Analyze wildcard index usage
 function analyzeWildcardIndex(collection) {
@@ -3927,6 +3900,16 @@ function analyzeWildcardIndex(collection) {
 analyzeWildcardIndex("products")
 ```
 
+- **Known, stable schema**: Explicit indexes are faster and smaller.
+
+- **Sorting required**: Wildcard indexes don't support sort operations.
+
+- **Covered queries needed**: Wildcard indexes always require document fetch.
+
+- **High-cardinality paths**: If most paths have unique values, index becomes huge.
+
+- **Array elements**: Wildcard indexes can index arrays, but behavior is complex.
+
 Reference: [https://mongodb.com/docs/manual/core/indexes/index-types/index-wildcard/](https://mongodb.com/docs/manual/core/indexes/index-types/index-wildcard/)
 
 ---
@@ -3935,7 +3918,7 @@ Reference: [https://mongodb.com/docs/manual/core/indexes/index-types/index-wildc
 
 **Impact: HIGH**
 
-Even with perfect indexes, bad query patterns force collection scans. $ne and $nin cannot use indexes efficiently—they must scan everything to find "not equal" matches. Unanchored regex /pattern/ scans every document; anchored regex /^pattern/ uses the index. $exists:false forces scans because indexes don't contain missing values. The $in operator is optimized but has limits—1000+ values may be slower than multiple queries. Projections reduce network transfer and memory usage by 50-90% when you only need specific fields. These patterns determine whether your indexes actually get used or sit idle while MongoDB scans.
+Even with perfect indexes, bad query patterns force collection scans. $ne and $nin cannot use indexes efficiently—they must scan everything to find "not equal" matches. Unanchored regex /pattern/ scans every document; anchored regex /^pattern/ uses the index. $exists:false forces scans because indexes don't contain missing values. The $in operator is optimized but has limits—1000+ values may be slower than multiple queries. Projections reduce network transfer and memory usage by 50-90% when you only need specific fields. MongoDB 8.0 introduced the `bulkWrite` command for single-request cross-collection batch operations (use transactions when you need all-or-nothing atomicity), and added the `sort` option to updateOne/replaceOne for deterministic updates when multiple documents match. These patterns determine whether your indexes actually get used or sit idle while MongoDB scans.
 
 ### 3.1 Anchor Regex Patterns with ^
 
@@ -4091,16 +4074,6 @@ db.users.find({ nameSearch: /^john/ })  // Anchored on normalized field
 
 **When NOT to worry about anchored regex:**
 
-- **Small collections**: <10K documents, COLLSCAN is fast anyway.
-
-- **Rare queries**: Admin-only search run occasionally.
-
-- **Already filtered**: `{ tenantId: "x", name: /smith/ }` where tenantId reduces to small set first.
-
-- **Text/Atlas Search available**: Use proper search instead of regex.
-
-**Verify with:**
-
 ```javascript
 // Check if regex can use index
 function checkRegexIndexUse(collection, field, pattern) {
@@ -4128,6 +4101,14 @@ function checkRegexIndexUse(collection, field, pattern) {
 checkRegexIndexUse("users", "email", "gmail")      // No index
 checkRegexIndexUse("users", "email", "^alice")     // Uses index
 ```
+
+- **Small collections**: <10K documents, COLLSCAN is fast anyway.
+
+- **Rare queries**: Admin-only search run occasionally.
+
+- **Already filtered**: `{ tenantId: "x", name: /smith/ }` where tenantId reduces to small set first.
+
+- **Text/Atlas Search available**: Use proper search instead of regex.
 
 Reference: [https://mongodb.com/docs/manual/reference/operator/query/regex/](https://mongodb.com/docs/manual/reference/operator/query/regex/)
 
@@ -4267,16 +4248,6 @@ db.orders.find({ statusGroup: "active" })
 
 **When $ne/$nin is acceptable:**
 
-- **Tiny collections**: <10K documents where full scan is fast anyway.
-
-- **Excluding rare values**: If excluded value is <1% of data, overhead is minimal.
-
-- **No better alternative**: Complex polymorphic data where positive enumeration isn't practical.
-
-- **Combined with selective equality**: `{ tenantId: "x", type: { $ne: "system" } }` where tenantId reduces to small set first.
-
-**Verify with:**
-
 ```javascript
 // Compare negation vs positive matching
 async function compareNegationVsPositive(collection, field, excludeValue) {
@@ -4313,7 +4284,15 @@ async function compareNegationVsPositive(collection, field, excludeValue) {
 compareNegationVsPositive("users", "status", "deleted")
 ```
 
-Reference: [https://mongodb.com/docs/manual/reference/operator/query/](https://mongodb.com/docs/manual/reference/operator/query/)
+- **Tiny collections**: <10K documents where full scan is fast anyway.
+
+- **Excluding rare values**: If excluded value is <1% of data, overhead is minimal.
+
+- **No better alternative**: Complex polymorphic data where positive enumeration isn't practical.
+
+- **Combined with selective equality**: `{ tenantId: "x", type: { $ne: "system" } }` where tenantId reduces to small set first.
+
+Reference: [https://mongodb.com/docs/manual/reference/operator/query/ne/](https://mongodb.com/docs/manual/reference/operator/query/ne/), [https://mongodb.com/docs/manual/reference/operator/query/nin/](https://mongodb.com/docs/manual/reference/operator/query/nin/)
 
 ### 3.3 Batch Operations to Avoid N+1 Queries
 
@@ -4494,16 +4473,6 @@ async function getDashboardData(userId) {
 
 **When N+1 is acceptable:**
 
-- **N is always small**: Max 5-10 items, overhead is minimal.
-
-- **Lazy loading UI**: User clicks to expand details, single lookup is fine.
-
-- **Caching layer**: Related data is cached, no DB hit anyway.
-
-- **Different databases**: Can't $lookup across MongoDB instances, must query separately.
-
-**Verify with:**
-
 ```javascript
 // Detect N+1 patterns in slow query log
 db.setProfilingLevel(1, { slowms: 50 })
@@ -4525,9 +4494,213 @@ db.system.profile.aggregate([
 // High count + similar query shape = likely N+1
 ```
 
+- **N is always small**: Max 5-10 items, overhead is minimal.
+
+- **Lazy loading UI**: User clicks to expand details, single lookup is fine.
+
+- **Caching layer**: Related data is cached, no DB hit anyway.
+
+- **Different databases**: Can't $lookup across MongoDB instances, must query separately.
+
 Reference: [https://mongodb.com/docs/manual/core/query-optimization/](https://mongodb.com/docs/manual/core/query-optimization/)
 
-### 3.4 Match Sort and Collation to Indexes
+### 3.4 Index All $or Clauses for Index Usage
+
+**Impact: HIGH (Missing one index = full collection scan; all indexed = parallel index scans merged)**
+
+**If ANY clause in a `$or` query lacks an index, MongoDB performs a full collection scan.** Unlike `$and` where one indexed clause helps, `$or` requires ALL clauses to have indexes. With proper indexes, MongoDB performs parallel index scans and merges results efficiently. Without them, you're scanning every document.
+
+**Incorrect: one clause missing index—full collection scan**
+
+```javascript
+// Indexes: { status: 1 }, { category: 1 }
+// Missing: index on { priority: 1 }
+
+db.tasks.find({
+  $or: [
+    { status: "urgent" },      // Has index ✓
+    { category: "critical" },  // Has index ✓
+    { priority: { $gte: 9 } }  // NO INDEX ✗
+  ]
+})
+
+// What happens:
+// MongoDB cannot use partial indexes for $or
+// Falls back to COLLSCAN of entire collection
+// Even though 2 of 3 clauses have indexes!
+
+// explain() shows:
+{
+  "winningPlan": {
+    "stage": "COLLSCAN"  // Full collection scan!
+  },
+  "totalDocsExamined": 5000000,
+  "executionTimeMillis": 8500
+}
+```
+
+**Correct: all clauses indexed—parallel index scans**
+
+```javascript
+// Create index for the missing clause
+db.tasks.createIndex({ priority: 1 })
+
+// Now all three clauses have indexes:
+// { status: 1 }, { category: 1 }, { priority: 1 }
+
+db.tasks.find({
+  $or: [
+    { status: "urgent" },
+    { category: "critical" },
+    { priority: { $gte: 9 } }
+  ]
+})
+
+// What happens:
+// 1. Scan status index for "urgent" → 1,000 docs
+// 2. Scan category index for "critical" → 500 docs
+// 3. Scan priority index for >= 9 → 2,000 docs
+// 4. Merge and deduplicate results
+
+// explain() shows:
+{
+  "winningPlan": {
+    "stage": "SUBPLAN",
+    "inputStages": [
+      { "stage": "IXSCAN", "indexName": "status_1" },
+      { "stage": "IXSCAN", "indexName": "category_1" },
+      { "stage": "IXSCAN", "indexName": "priority_1" }
+    ]
+  },
+  "totalDocsExamined": 3500,  // Only matching docs
+  "executionTimeMillis": 45    // 190× faster!
+}
+```
+
+**Use `$in` instead of `$or` for same-field queries:**
+
+```javascript
+// BAD: $or on same field
+db.products.find({
+  $or: [
+    { status: "active" },
+    { status: "pending" },
+    { status: "review" }
+  ]
+})
+
+// GOOD: Use $in (more efficient, cleaner)
+db.products.find({
+  status: { $in: ["active", "pending", "review"] }
+})
+// Single index scan with multiple seeks
+// Much more efficient than $or with 3 clauses
+```
+
+**Combining `$or` with other conditions:**
+
+```javascript
+// $or within a larger query
+db.orders.find({
+  customerId: "cust123",          // Equality filter
+  $or: [
+    { status: "pending" },
+    { priority: "high" },
+    { dueDate: { $lt: tomorrow } }
+  ]
+})
+
+// Best indexing strategy: compound indexes starting with customerId
+db.orders.createIndex({ customerId: 1, status: 1 })
+db.orders.createIndex({ customerId: 1, priority: 1 })
+db.orders.createIndex({ customerId: 1, dueDate: 1 })
+
+// MongoDB will:
+// 1. Use customerId prefix on all three indexes
+// 2. Scan each for the $or clause
+// 3. Merge results
+```
+
+**Special cases with `$or`:**
+
+```javascript
+// 1. $or with $text requires ALL clauses to use text index
+// This is INVALID (text requires dedicated index):
+db.products.find({
+  $or: [
+    { $text: { $search: "laptop" } },
+    { category: "electronics" }    // Can't mix with $text in $or
+  ]
+})
+
+// 2. $or with $near is NOT allowed
+// $near must be the only geospatial clause
+// This is INVALID:
+db.places.find({
+  $or: [
+    { location: { $near: [40, -74] } },
+    { featured: true }
+  ]
+})
+
+// 3. Nested $or is allowed but complex
+db.items.find({
+  $or: [
+    { $or: [{ a: 1 }, { b: 2 }] },
+    { c: 3 }
+  ]
+})
+// Ensure ALL leaf clauses have indexes
+```
+
+**When NOT to worry about `$or` indexing:**
+
+```javascript
+// Check if $or query uses indexes
+function checkOrIndexUsage(collection, query) {
+  const explain = db[collection].find(query).explain("executionStats")
+  const plan = JSON.stringify(explain.queryPlanner.winningPlan)
+
+  const hasCOLLSCAN = plan.includes('"COLLSCAN"')
+  const hasOR = plan.includes('"OR"') || plan.includes('"SUBPLAN"')
+
+  print(`\n$or Query Analysis:`)
+  print(`  Uses indexes: ${!hasCOLLSCAN ? "YES ✓" : "NO ✗"}`)
+
+  if (hasCOLLSCAN) {
+    print(`\n⚠️  COLLSCAN detected!`)
+    print(`   At least one $or clause is missing an index.`)
+    print(`   Check each clause and create missing indexes.`)
+  } else if (hasOR) {
+    print(`   Multiple index scans merged (optimal)`)
+  }
+
+  print(`\n  Docs examined: ${explain.executionStats.totalDocsExamined}`)
+  print(`  Docs returned: ${explain.executionStats.nReturned}`)
+  print(`  Time: ${explain.executionStats.executionTimeMillis}ms`)
+
+  return !hasCOLLSCAN
+}
+
+// Test your $or query
+checkOrIndexUsage("tasks", {
+  $or: [
+    { status: "urgent" },
+    { category: "critical" },
+    { priority: { $gte: 9 } }
+  ]
+})
+```
+
+- **Small collections**: <10K documents where COLLSCAN is fast anyway.
+
+- **Already filtered by equality**: `{ tenantId: X, $or: [...] }` where compound indexes cover all cases.
+
+- **Rare queries**: One-time analytics where performance isn't critical.
+
+Reference: [https://mongodb.com/docs/manual/reference/operator/query/or/](https://mongodb.com/docs/manual/reference/operator/query/or/)
+
+### 3.5 Match Sort and Collation to Indexes
 
 **Impact: HIGH (Avoids in-memory sorts and ensures indexes are usable with collation)**
 
@@ -4567,12 +4740,6 @@ db.users.find({ status: "active" })
 
 **When NOT to use this pattern:**
 
-- **Small result sets**: In-memory sort cost is negligible.
-
-- **No collation requirements**: Default collation can be simpler.
-
-**Verify with:**
-
 ```javascript
 // Ensure no SORT stage in executionStats
 
@@ -4582,9 +4749,13 @@ db.users.find({ status: "active" })
   .explain("executionStats")
 ```
 
+- **Small result sets**: In-memory sort cost is negligible.
+
+- **No collation requirements**: Default collation can be simpler.
+
 Reference: [https://mongodb.com/docs/manual/tutorial/sort-results-with-indexes/](https://mongodb.com/docs/manual/tutorial/sort-results-with-indexes/), [https://mongodb.com/docs/manual/reference/collation/](https://mongodb.com/docs/manual/reference/collation/)
 
-### 3.5 Understand $exists Behavior with Sparse Indexes
+### 3.6 Understand $exists Behavior with Sparse Indexes
 
 **Impact: HIGH ({ field: { $exists: true } } may not use sparse index—understand the subtle interaction)**
 
@@ -4726,16 +4897,6 @@ db.users.createIndex(
 
 **When sparse + $exists does NOT work:**
 
-- **$exists: false**: Always COLLSCAN (docs not in index).
-
-- **{ field: null }**: Partial coverage (misses missing docs).
-
-- **Sort on sparse field**: Incomplete results.
-
-- **Covered queries for full collection**: Missing docs.
-
-**Verify with:**
-
 ```javascript
 // Check $exists query behavior with sparse indexes
 function checkExistsWithSparse(collection, field) {
@@ -4787,9 +4948,158 @@ function checkExistsWithSparse(collection, field) {
 checkExistsWithSparse("users", "twitterHandle")
 ```
 
+- **$exists: false**: Always COLLSCAN (docs not in index).
+
+- **{ field: null }**: Partial coverage (misses missing docs).
+
+- **Sort on sparse field**: Incomplete results.
+
+- **Covered queries for full collection**: Missing docs.
+
 Reference: [https://mongodb.com/docs/manual/core/index-sparse/](https://mongodb.com/docs/manual/core/index-sparse/)
 
-### 3.6 Use Projections to Limit Fields
+### 3.7 Use bulkWrite for Cross-Collection Batch Operations
+
+**Impact: HIGH (Single request for batched operations across multiple collections)**
+
+**MongoDB 8.0 introduced the `bulkWrite` command**, which performs batch inserts, updates, and deletes across multiple collections in a single request. Unlike `collection.bulkWrite()`, this is a database-level command that can target multiple namespaces through `nsInfo`.
+
+**Incorrect: multiple separate operations**
+
+```javascript
+// Multiple operations across collections - not atomic
+// If operation 2 fails, operation 1 already committed
+await db.orders.insertOne({ orderId: "123", status: "pending" })
+await db.inventory.updateOne(
+  { productId: "abc" },
+  { $inc: { quantity: -1 } }
+)
+await db.audit.insertOne({
+  action: "order_created",
+  orderId: "123",
+  timestamp: new Date()
+})
+// Risk: Partial failure leaves inconsistent state
+```
+
+**Correct: single-request cross-collection batch**
+
+```javascript
+// MongoDB 8.0+ bulkWrite command across multiple namespaces
+db.adminCommand({
+  bulkWrite: 1,
+  ops: [
+    {
+      insert: 0,  // Index into nsInfo array
+      document: { orderId: "123", status: "pending" }
+    },
+    {
+      update: 1,
+      filter: { productId: "abc" },
+      updateMods: { $inc: { quantity: -1 } }
+    },
+    {
+      insert: 2,
+      document: {
+        action: "order_created",
+        orderId: "123",
+        timestamp: new Date()
+      }
+    }
+  ],
+  nsInfo: [
+    { ns: "mydb.orders" },
+    { ns: "mydb.inventory" },
+    { ns: "mydb.audit" }
+  ],
+  ordered: true  // Stop on first error (default)
+})
+```
+
+**Need true all-or-nothing behavior? Use a transaction:**
+
+```javascript
+const session = db.getMongo().startSession()
+const orders = session.getDatabase("mydb").orders
+const inventory = session.getDatabase("mydb").inventory
+const audit = session.getDatabase("mydb").audit
+
+session.startTransaction()
+try {
+  orders.insertOne({ orderId: "123", status: "pending" })
+  inventory.updateOne({ productId: "abc" }, { $inc: { quantity: -1 } })
+  audit.insertOne({ action: "order_created", orderId: "123", timestamp: new Date() })
+  session.commitTransaction()
+} catch (e) {
+  session.abortTransaction()
+  throw e
+} finally {
+  session.endSession()
+}
+```
+
+**Unordered for parallel execution:**
+
+```javascript
+// Unordered execution - continues on errors, faster for independent ops
+db.adminCommand({
+  bulkWrite: 1,
+  ops: [
+    { insert: 0, document: { _id: 1, value: "a" } },
+    { insert: 0, document: { _id: 2, value: "b" } },
+    { insert: 1, document: { _id: 1, value: "c" } },
+    { update: 1, filter: { _id: 2 }, updateMods: { $set: { value: "d" } } }
+  ],
+  nsInfo: [
+    { ns: "mydb.collection1" },
+    { ns: "mydb.collection2" }
+  ],
+  ordered: false  // Continue even if some ops fail
+})
+```
+
+**Supported operations:**
+
+```javascript
+// Insert
+{ insert: <nsIndex>, document: <document> }
+
+// Update (single or multi)
+{
+  update: <nsIndex>,
+  filter: <query>,
+  updateMods: <update>,
+  multi: false,       // Default: update one
+  upsert: false       // Default: no upsert
+}
+
+// Delete (single or multi)
+{
+  delete: <nsIndex>,
+  filter: <query>,
+  multi: false        // Default: delete one
+}
+```
+
+**When NOT to use this pattern:**
+
+- **Single collection operations**: Use `collection.bulkWrite()` method instead - it's simpler.
+
+- **Need cross-collection atomicity**: Use a transaction for all-or-nothing guarantees.
+
+- **Pre-MongoDB 8.0**: This command doesn't exist in earlier versions.
+
+- **Need for result per operation**: Response is summarized, not per-document.
+
+1. Run representative queries with `explain("executionStats")` before and after applying this rule.
+
+2. Compare latency and scan efficiency (`totalDocsExamined`, `totalKeysExamined`, `nReturned`).
+
+3. Confirm workload-level behavior using `$queryStats`, profiler, or Atlas Performance Advisor.
+
+Reference: [https://mongodb.com/docs/manual/reference/command/bulkWrite/](https://mongodb.com/docs/manual/reference/command/bulkWrite/)
+
+### 3.8 Use Projections to Limit Fields
 
 **Impact: HIGH (50MB→200KB data transfer, 60× less bandwidth—only fetch what you display)**
 
@@ -4922,16 +5232,6 @@ db.users.find(
 
 **When NOT to use projections:**
 
-- **Need entire document**: Detail pages, edit forms—projection adds complexity with no benefit.
-
-- **Document already small**: <1KB documents, projection overhead may not be worth it.
-
-- **Frequent schema changes**: Projection breaks if fields are renamed; exclusion mode is safer.
-
-- **Covered query optimization**: You might need specific fields in index for coverage.
-
-**Verify with:**
-
 ```javascript
 // Compare response sizes
 async function measureProjectionImpact(collection, filter, projection) {
@@ -4962,9 +5262,17 @@ measureProjectionImpact(
 )
 ```
 
+- **Need entire document**: Detail pages, edit forms—projection adds complexity with no benefit.
+
+- **Document already small**: <1KB documents, projection overhead may not be worth it.
+
+- **Frequent schema changes**: Projection breaks if fields are renamed; exclusion mode is safer.
+
+- **Covered query optimization**: You might need specific fields in index for coverage.
+
 Reference: [https://mongodb.com/docs/manual/tutorial/project-fields-from-query-results/](https://mongodb.com/docs/manual/tutorial/project-fields-from-query-results/)
 
-### 3.7 Use Range-Based Pagination Instead of skip()
+### 3.9 Use Range-Based Pagination Instead of skip()
 
 **Impact: HIGH (Page 10,000: skip() takes 20 seconds, range-based takes 5ms—O(n) vs O(1))**
 
@@ -5158,14 +5466,6 @@ async function getPreviousPage(cursor, limit) {
 
 **When NOT to use range-based:**
 
-- **Frequent sort order changes**: If user switches between "newest" and "oldest", cursor is invalidated.
-
-- **Real-time data with high insert rate**: New items between pages may cause duplicates or gaps.
-
-- **Total count needed**: Range-based pagination makes counting total results expensive.
-
-**Verify with:**
-
 ```javascript
 // Compare pagination methods
 async function comparePaginationMethods(collection, pageNumber, pageSize) {
@@ -5206,7 +5506,131 @@ async function comparePaginationMethods(collection, pageNumber, pageSize) {
 })
 ```
 
+- **Frequent sort order changes**: If user switches between "newest" and "oldest", cursor is invalidated.
+
+- **Real-time data with high insert rate**: New items between pages may cause duplicates or gaps.
+
+- **Total count needed**: Range-based pagination makes counting total results expensive.
+
 Reference: [https://mongodb.com/docs/manual/reference/method/cursor.skip/](https://mongodb.com/docs/manual/reference/method/cursor.skip/)
+
+### 3.10 Use sort Option in updateOne/replaceOne for Deterministic Updates
+
+**Impact: MEDIUM (Deterministically select which document to update when multiple match)**
+
+**MongoDB 8.0 added the `sort` option to `updateOne()` and `replaceOne()`**, allowing you to deterministically select which document to update when multiple documents match the filter. This eliminates race conditions and ensures consistent behavior.
+
+**Incorrect: non-deterministic update**
+
+```javascript
+// Multiple documents match - which one gets updated?
+// Result depends on storage order, which is undefined
+db.tasks.updateOne(
+  { status: "pending", priority: "high" },
+  { $set: { status: "in_progress", assignee: "worker-1" } }
+)
+// Problem: Different runs may update different documents
+// Race condition when multiple workers process tasks
+```
+
+**Correct: deterministic update with sort**
+
+```javascript
+// MongoDB 8.0+: sort ensures we always get the oldest task
+db.tasks.updateOne(
+  { status: "pending", priority: "high" },
+  { $set: { status: "in_progress", assignee: "worker-1" } },
+  { sort: { createdAt: 1 } }  // Always update oldest first
+)
+// Deterministic: always updates the earliest created matching document
+```
+
+**Common use cases:**
+
+```javascript
+// FIFO queue processing - oldest first
+db.queue.updateOne(
+  { status: "pending" },
+  { $set: { status: "processing", startedAt: new Date() } },
+  { sort: { createdAt: 1 } }
+)
+
+// Priority queue - highest priority first, then oldest
+db.tasks.updateOne(
+  { status: "ready" },
+  { $set: { status: "running" } },
+  { sort: { priority: -1, createdAt: 1 } }
+)
+
+// Update most recent record
+db.sessions.updateOne(
+  { userId: "user123", active: true },
+  { $set: { lastSeen: new Date() } },
+  { sort: { createdAt: -1 } }  // Most recent session
+)
+```
+
+**replaceOne with sort:**
+
+```javascript
+// Replace the oldest matching document
+db.cache.replaceOne(
+  { type: "config", environment: "production" },
+  {
+    type: "config",
+    environment: "production",
+    settings: { maxConnections: 100 },
+    updatedAt: new Date()
+  },
+  { sort: { version: 1 } }  // Replace oldest version
+)
+```
+
+**Combine with upsert:**
+
+```javascript
+// Upsert with sort - sort applies only when updating, not inserting
+db.inventory.updateOne(
+  { productId: "SKU-123", warehouse: "east" },
+  { $inc: { quantity: 10 } },
+  {
+    sort: { lastUpdated: 1 },  // Update oldest record
+    upsert: true               // Insert if none exist
+  }
+)
+```
+
+**Index for efficient sorted updates:**
+
+```javascript
+// Create index that supports filter + sort
+db.tasks.createIndex({ status: 1, priority: -1, createdAt: 1 })
+
+// This updateOne uses the index efficiently
+db.tasks.updateOne(
+  { status: "pending" },
+  { $set: { status: "running" } },
+  { sort: { priority: -1, createdAt: 1 } }
+)
+```
+
+**When NOT to use this pattern:**
+
+- **Pre-MongoDB 8.0**: The sort option for updateOne/replaceOne doesn't exist.
+
+- **Only one document matches**: Sort is unnecessary overhead.
+
+- **findOneAndUpdate exists**: For returning the document, use findOneAndUpdate with sort.
+
+- **Bulk updates**: updateMany doesn't have sort - use aggregation pipeline or client-side logic.
+
+1. Run representative queries with `explain("executionStats")` before and after applying this rule.
+
+2. Compare latency and scan efficiency (`totalDocsExamined`, `totalKeysExamined`, `nReturned`).
+
+3. Confirm workload-level behavior using `$queryStats`, profiler, or Atlas Performance Advisor.
+
+Reference: [https://mongodb.com/docs/manual/reference/method/db.collection.updateOne/](https://mongodb.com/docs/manual/reference/method/db.collection.updateOne/)
 
 ---
 
@@ -5446,18 +5870,6 @@ calculateUnwindExplosion("posts", "comments", { featured: true })
 
 **When NOT to use $unwind:**
 
-- **Unbounded arrays**: User content (comments, events, logs) with no upper limit.
-
-- **Large arrays**: >100 elements average, even if bounded.
-
-- **Counting/aggregating arrays**: Use $size, $reduce instead.
-
-- **Extracting array subset**: Use $slice, $filter, $arrayElemAt.
-
-- **Production real-time queries**: Unpredictable memory usage = unpredictable latency.
-
-**Verify with:**
-
 ```javascript
 // Test if $unwind will cause problems
 function testUnwindImpact(collection, pipeline) {
@@ -5498,6 +5910,16 @@ testUnwindImpact("posts", [
   { $group: { _id: "$comments.author", count: { $sum: 1 } } }
 ])
 ```
+
+- **Unbounded arrays**: User content (comments, events, logs) with no upper limit.
+
+- **Large arrays**: >100 elements average, even if bounded.
+
+- **Counting/aggregating arrays**: Use $size, $reduce instead.
+
+- **Extracting array subset**: Use $slice, $filter, $arrayElemAt.
+
+- **Production real-time queries**: Unpredictable memory usage = unpredictable latency.
 
 Reference: [https://mongodb.com/docs/manual/reference/operator/aggregation/unwind/](https://mongodb.com/docs/manual/reference/operator/aggregation/unwind/)
 
@@ -5665,18 +6087,6 @@ db.products.createIndex({ category: 1, rating: -1, reviewCount: -1 })
 
 **When NOT to use $sort + $limit coalescence:**
 
-- **Need total count**: If you also need `count`, you must process all docs anyway.
-
-- **Multiple $sorts needed**: Complex aggregations may need intermediate full sorts.
-
-- **$facet pipelines**: Each facet runs independently; coalescence applies within each.
-
-- **Post-sort filtering**: If you need to filter after sorting (e.g., `$match` on computed rank), full sort required.
-
-- **Random sampling**: Use `$sample` instead for random selection (doesn't sort).
-
-**Verify with:**
-
 ```javascript
 // Check if coalescence is applied
 function checkSortLimitCoalescence(collection, pipeline) {
@@ -5731,6 +6141,16 @@ checkSortLimitCoalescence("scores", [
 ])
 ```
 
+- **Need total count**: If you also need `count`, you must process all docs anyway.
+
+- **Multiple $sorts needed**: Complex aggregations may need intermediate full sorts.
+
+- **$facet pipelines**: Each facet runs independently; coalescence applies within each.
+
+- **Post-sort filtering**: If you need to filter after sorting (e.g., `$match` on computed rank), full sort required.
+
+- **Random sampling**: Use `$sample` instead for random selection (doesn't sort).
+
 Reference: [https://mongodb.com/docs/manual/core/aggregation-pipeline-optimization/#sort-limit-coalescence](https://mongodb.com/docs/manual/core/aggregation-pipeline-optimization/#sort-limit-coalescence)
 
 ### 4.3 Control $group Memory Usage
@@ -5763,12 +6183,6 @@ db.orders.aggregate([
 
 **When NOT to use this pattern:**
 
-- **Small datasets**: Memory limits are unlikely to be hit.
-
-- **You actually need full documents**: Consider a $lookup after grouping.
-
-**Verify with:**
-
 ```javascript
 // Check if aggregation spills to disk
 
@@ -5776,6 +6190,10 @@ db.orders.explain("executionStats").aggregate([
   { $group: { _id: "$customerId", spend: { $sum: "$total" } } }
 ])
 ```
+
+- **Small datasets**: Memory limits are unlikely to be hit.
+
+- **You actually need full documents**: Consider a $lookup after grouping.
 
 Reference: [https://mongodb.com/docs/manual/core/aggregation-pipeline-limits/](https://mongodb.com/docs/manual/core/aggregation-pipeline-limits/)
 
@@ -5998,16 +6416,6 @@ db.users.aggregate([
 
 **When NOT to worry about $lookup index:**
 
-- **Tiny foreign collection**: <1,000 documents, collection scan is fast anyway.
-
-- **One-time analytics**: Batch job running at 3 AM where speed doesn't matter.
-
-- **Already joining on _id**: The _id index always exists.
-
-- **$graphLookup special case**: Uses different optimization strategies; still benefits from indexes.
-
-**Verify with:**
-
 ```javascript
 // Check if $lookup uses index on foreign collection
 function checkLookupIndex(collection, lookupStage) {
@@ -6054,6 +6462,14 @@ checkLookupIndex("orders", {
   }
 })
 ```
+
+- **Tiny foreign collection**: <1,000 documents, collection scan is fast anyway.
+
+- **One-time analytics**: Batch job running at 3 AM where speed doesn't matter.
+
+- **Already joining on _id**: The _id index always exists.
+
+- **$graphLookup special case**: Uses different optimization strategies; still benefits from indexes.
 
 Reference: [https://mongodb.com/docs/manual/reference/operator/aggregation/lookup/](https://mongodb.com/docs/manual/reference/operator/aggregation/lookup/)
 
@@ -6221,16 +6637,6 @@ db.orders.aggregate([
 
 **When NOT to split $match:**
 
-- **Simple pipelines**: If you only have $match + $project, MongoDB optimizes automatically.
-
-- **No expensive stages**: Without $lookup, $group, or $unwind, order matters less.
-
-- **Filtering on computed fields**: `$match: { computedField: x }` must come after the stage that creates it.
-
-- **$graphLookup**: Graph traversal can't be pre-filtered in the same way.
-
-**Verify with:**
-
 ```javascript
 // Check if $match uses index
 function checkMatchOptimization(aggregation) {
@@ -6267,9 +6673,296 @@ checkMatchOptimization([
 ])
 ```
 
+- **Simple pipelines**: If you only have $match + $project, MongoDB optimizes automatically.
+
+- **No expensive stages**: Without $lookup, $group, or $unwind, order matters less.
+
+- **Filtering on computed fields**: `$match: { computedField: x }` must come after the stage that creates it.
+
+- **$graphLookup**: Graph traversal can't be pre-filtered in the same way.
+
 Reference: [https://mongodb.com/docs/manual/core/aggregation-pipeline-optimization/](https://mongodb.com/docs/manual/core/aggregation-pipeline-optimization/)
 
-### 4.6 Use $project Early to Reduce Document Size
+### 4.6 Use $graphLookup for Recursive Graph Traversal
+
+**Impact: HIGH (Single query replaces N recursive queries; index on connectToField is critical for performance)**
+
+**`$graphLookup` performs recursive searches in a single query, replacing multiple round-trips.** Use it to traverse hierarchies (org charts, categories), find connected nodes (social networks, dependencies), or explore graph-like data with variable depth. Without it, you'd need N queries for N-level depth. Critical: always index the `connectToField` for performance.
+
+**Incorrect: recursive application queries—N round-trips**
+
+```javascript
+// Finding all reports in an org chart recursively
+// Each level requires a separate query
+async function getAllReports(managerId) {
+  const directReports = await db.employees.find({
+    reportsTo: managerId
+  }).toArray()
+
+  let allReports = [...directReports]
+
+  for (const report of directReports) {
+    // Recursive call = another database round-trip
+    const subordinates = await getAllReports(report._id)
+    allReports = allReports.concat(subordinates)
+  }
+
+  return allReports
+}
+
+// For a 5-level hierarchy with 100 employees:
+// ~20+ database round-trips
+// Network latency × 20 = seconds of delay
+```
+
+**Correct: $graphLookup—single query**
+
+```javascript
+// Index the field used for matching
+db.employees.createIndex({ name: 1 })
+
+// Single query traverses entire hierarchy
+db.employees.aggregate([
+  { $match: { name: "Dev" } },  // Start from this person
+  {
+    $graphLookup: {
+      from: "employees",           // Collection to search
+      startWith: "$name",          // Starting value(s)
+      connectFromField: "name",    // Field in matched docs to recurse from
+      connectToField: "reportsTo", // Field to match against (INDEX THIS!)
+      as: "allReports",            // Output array name
+      maxDepth: 10,                // Optional: limit recursion depth
+      depthField: "level"          // Optional: track depth in results
+    }
+  }
+])
+
+// Result: Single round-trip returns entire hierarchy
+{
+  _id: 1,
+  name: "Dev",
+  allReports: [
+    { _id: 2, name: "Eliot", reportsTo: "Dev", level: 0 },
+    { _id: 3, name: "Ron", reportsTo: "Eliot", level: 1 },
+    { _id: 4, name: "Andrew", reportsTo: "Eliot", level: 1 },
+    { _id: 5, name: "Asya", reportsTo: "Ron", level: 2 },
+    { _id: 6, name: "Dan", reportsTo: "Andrew", level: 2 }
+  ]
+}
+```
+
+**Index requirement for `$graphLookup`:**
+
+```javascript
+// CRITICAL: Index the connectToField
+// Without index: collection scan at EACH recursion level
+// With index: O(log n) lookup at each level
+
+// If connectToField is "reportsTo":
+db.employees.createIndex({ reportsTo: 1 })
+
+// If connectToField is "parentId":
+db.categories.createIndex({ parentId: 1 })
+
+// If connectToField is an array (e.g., "connections"):
+db.users.createIndex({ connections: 1 })  // Multikey index
+```
+
+**Common `$graphLookup` use cases:**
+
+```javascript
+// 1. ORG CHART: Find all subordinates
+db.employees.aggregate([
+  { $match: { name: "CEO" } },
+  {
+    $graphLookup: {
+      from: "employees",
+      startWith: "$name",
+      connectFromField: "name",
+      connectToField: "reportsTo",
+      as: "organization"
+    }
+  }
+])
+
+// 2. CATEGORY TREE: Find all subcategories
+db.categories.aggregate([
+  { $match: { _id: "electronics" } },
+  {
+    $graphLookup: {
+      from: "categories",
+      startWith: "$_id",
+      connectFromField: "_id",
+      connectToField: "parentId",
+      as: "allSubcategories",
+      depthField: "depth"
+    }
+  }
+])
+
+// 3. SOCIAL NETWORK: Find friends of friends
+db.users.aggregate([
+  { $match: { _id: "user123" } },
+  {
+    $graphLookup: {
+      from: "users",
+      startWith: "$friends",        // Array of friend IDs
+      connectFromField: "friends",  // Each friend's friends
+      connectToField: "_id",
+      as: "network",
+      maxDepth: 2                   // Friends of friends of friends
+    }
+  }
+])
+
+// 4. DEPENDENCY GRAPH: Find all dependencies
+db.packages.aggregate([
+  { $match: { name: "my-app" } },
+  {
+    $graphLookup: {
+      from: "packages",
+      startWith: "$dependencies",   // Array of package names
+      connectFromField: "dependencies",
+      connectToField: "name",
+      as: "allDependencies"
+    }
+  }
+])
+```
+
+**Filtering during traversal with `restrictSearchWithMatch`:**
+
+```javascript
+// Only include active employees in hierarchy
+db.employees.aggregate([
+  { $match: { name: "Dev" } },
+  {
+    $graphLookup: {
+      from: "employees",
+      startWith: "$name",
+      connectFromField: "name",
+      connectToField: "reportsTo",
+      as: "activeReports",
+      restrictSearchWithMatch: {
+        status: "active"            // Only traverse active employees
+      }
+    }
+  }
+])
+
+// For the filter to be efficient, create compound index:
+db.employees.createIndex({ reportsTo: 1, status: 1 })
+```
+
+**Memory considerations:**
+
+```javascript
+// $graphLookup has memory limits (100MB default for aggregation)
+// Large graphs may exceed this limit
+
+// Options for large graphs:
+
+// 1. Limit depth
+{
+  $graphLookup: {
+    // ...
+    maxDepth: 5  // Prevent infinite recursion, limit memory
+  }
+}
+
+// 2. Use allowDiskUse for very large results
+db.collection.aggregate([
+  { $graphLookup: { ... } }
+], { allowDiskUse: true })
+
+// 3. Filter during traversal to reduce results
+{
+  $graphLookup: {
+    // ...
+    restrictSearchWithMatch: { type: "important" }
+  }
+}
+
+// 4. Process in batches for massive graphs
+// Start from multiple root nodes separately
+```
+
+**`$graphLookup` vs tree patterns in schema:**
+
+```javascript
+// Use $graphLookup when:
+// - Graph structure (multiple parents possible)
+// - Variable/unknown depth
+// - Need to traverse at query time
+// - Data changes frequently
+
+// Use materialized paths/nested sets when:
+// - Strict tree structure (single parent)
+// - Fixed/known depth
+// - Mostly read operations
+// - Path/ancestor queries are primary use case
+
+// Example: Categories might use materialized paths
+// BUT social connections need $graphLookup
+```
+
+**When NOT to use `$graphLookup`:**
+
+```javascript
+// Test $graphLookup performance
+function analyzeGraphLookup(pipeline, collection) {
+  const explain = db[collection].explain("executionStats").aggregate(pipeline)
+
+  print("\n$graphLookup Analysis:")
+
+  // Check for COLLSCAN in the graphLookup stage
+  const stages = JSON.stringify(explain)
+  if (stages.includes("COLLSCAN")) {
+    print("⚠️  WARNING: COLLSCAN detected!")
+    print("   Create index on connectToField for better performance")
+  } else {
+    print("✓ Using index for traversal")
+  }
+
+  print(`\nExecution time: ${explain.executionStats?.executionTimeMillis || 'N/A'}ms`)
+
+  // Check memory usage
+  if (explain.stages) {
+    const graphStage = explain.stages.find(s => s.$graphLookup)
+    if (graphStage) {
+      print(`Documents in result: ${graphStage.nReturned || 'N/A'}`)
+    }
+  }
+}
+
+// Test
+const pipeline = [
+  { $match: { name: "Dev" } },
+  {
+    $graphLookup: {
+      from: "employees",
+      startWith: "$name",
+      connectFromField: "name",
+      connectToField: "reportsTo",
+      as: "allReports"
+    }
+  }
+]
+
+analyzeGraphLookup(pipeline, "employees")
+```
+
+- **Simple parent lookup**: Just need immediate parent? Use regular `$lookup`.
+
+- **Known fixed depth**: Always exactly 3 levels? Multiple `$lookup` stages may be clearer.
+
+- **Huge graphs without limits**: Millions of connected nodes without `maxDepth` = memory explosion.
+
+- **Strict trees**: For hierarchies with single parent, materialized paths or nested sets are more efficient for common operations.
+
+Reference: [https://mongodb.com/docs/manual/reference/operator/aggregation/graphLookup/](https://mongodb.com/docs/manual/reference/operator/aggregation/graphLookup/)
+
+### 4.7 Use $project Early to Reduce Document Size
 
 **Impact: HIGH (500KB docs → 500 bytes: 1000× less memory, avoids 100MB limit and disk spills)**
 
@@ -6471,18 +7164,6 @@ estimatePipelineMemory(10000, 500, 500)
 
 **When NOT to use early $project:**
 
-- **Document already small**: <1KB documents, projection overhead isn't worth it.
-
-- **Need most fields later**: If you're projecting 80% of fields, $unset the 20% instead.
-
-- **Covered query possible**: Sometimes keeping all fields in projection allows index-only queries.
-
-- **$facet pipelines**: Each facet starts fresh from input documents; project in each facet.
-
-- **Dynamic field access**: If later stages use `$objectToArray` or dynamic paths, project can break them.
-
-**Verify with:**
-
 ```javascript
 // Check pipeline memory usage
 function analyzePipelineMemory(collection, pipeline) {
@@ -6523,9 +7204,19 @@ analyzePipelineMemory("articles", [
 ])
 ```
 
+- **Document already small**: <1KB documents, projection overhead isn't worth it.
+
+- **Need most fields later**: If you're projecting 80% of fields, $unset the 20% instead.
+
+- **Covered query possible**: Sometimes keeping all fields in projection allows index-only queries.
+
+- **$facet pipelines**: Each facet starts fresh from input documents; project in each facet.
+
+- **Dynamic field access**: If later stages use `$objectToArray` or dynamic paths, project can break them.
+
 Reference: [https://mongodb.com/docs/manual/core/aggregation-pipeline-limits/](https://mongodb.com/docs/manual/core/aggregation-pipeline-limits/)
 
-### 4.7 Use allowDiskUse for Large Aggregations
+### 4.8 Use allowDiskUse for Large Aggregations
 
 **Impact: MEDIUM (Aggregations exceeding 100MB limit: allowDiskUse prevents failure but is 10-100× slower than in-memory)**
 
@@ -6668,16 +7359,6 @@ db.collection.aggregate(pipeline, { allowDiskUse: true })
 
 **When allowDiskUse IS appropriate:**
 
-- **Batch analytics**: Nightly reports, data exports.
-
-- **One-time data processing**: Migrations, backfills.
-
-- **Ad-hoc queries**: Exploratory analytics by data team.
-
-- **Large aggregations with no optimization path**: When you genuinely need all the data.
-
-**Verify with:**
-
 ```javascript
 // Check if aggregation needs allowDiskUse
 function analyzeAggregationMemory(collection, pipeline) {
@@ -6730,6 +7411,14 @@ analyzeAggregationMemory("orders", [
 ])
 ```
 
+- **Batch analytics**: Nightly reports, data exports.
+
+- **One-time data processing**: Migrations, backfills.
+
+- **Ad-hoc queries**: Exploratory analytics by data team.
+
+- **Large aggregations with no optimization path**: When you genuinely need all the data.
+
 Reference: [https://mongodb.com/docs/manual/core/aggregation-pipeline-limits/](https://mongodb.com/docs/manual/core/aggregation-pipeline-limits/)
 
 ---
@@ -6738,7 +7427,7 @@ Reference: [https://mongodb.com/docs/manual/core/aggregation-pipeline-limits/](h
 
 **Impact: MEDIUM**
 
-You can't optimize what you can't measure. explain("executionStats") reveals exactly what MongoDB did: COLLSCAN means no index was used, IXSCAN means indexed lookup, totalDocsExamined vs. nReturned shows scan efficiency (10000 examined for 10 returned = 99.9% wasted work). $indexStats shows which indexes are actually being used—unused indexes waste disk space and slow down writes. The slow query log captures queries exceeding a threshold. MongoDB Profiler records all operations with timing. Atlas Performance Advisor suggests missing indexes from real workloads. When needed, hint() lets you force a known-good plan. These tools turn "it's slow" into "this specific query scans 10M documents because it's missing an index on {userId, createdAt}".
+You can't optimize what you can't measure. explain("executionStats") reveals exactly what MongoDB did: COLLSCAN means no index was used, IXSCAN means indexed lookup, totalDocsExamined vs. nReturned shows scan efficiency (10000 examined for 10 returned = 99.9% wasted work). $indexStats shows which indexes are actually being used—unused indexes waste disk space and slow down writes. The slow query log captures queries exceeding a threshold. MongoDB Profiler records all operations with timing. Atlas Performance Advisor suggests missing indexes from real workloads. `$queryStats` is available in Atlas M10+ and has important release-line differences (8.1 adds count/distinct coverage; 8.2 adds delinquency and CPU metrics), while Query Settings (`setQuerySettings`/`removeQuerySettings`) provide persistent index guidance without app code changes. When needed, hint() lets you force a known-good plan. These tools turn "it's slow" into "this specific query scans 10M documents because it's missing an index on {userId, createdAt}".
 
 ### 5.1 Interpret explain() Output for Query Optimization
 
@@ -7028,9 +7717,285 @@ function analyzeQuery(collection, query, options = {}) {
 analyzeQuery("orders", { status: "pending", customerId: "x" }, { sort: { createdAt: -1 } })
 ```
 
+1. Run representative queries with `explain("executionStats")` before and after applying this rule.
+
+2. Compare latency and scan efficiency (`totalDocsExamined`, `totalKeysExamined`, `nReturned`).
+
+3. Confirm workload-level behavior using `$queryStats`, profiler, or Atlas Performance Advisor.
+
 Reference: [https://mongodb.com/docs/manual/reference/explain-results/](https://mongodb.com/docs/manual/reference/explain-results/)
 
-### 5.2 Use $indexStats to Find Unused Indexes
+### 5.2 Understand and Manage Query Plan Cache
+
+**Impact: HIGH (Avoid unnecessary plan re-evaluation; understand when cached plans become stale)**
+
+**MongoDB caches query plans to avoid re-evaluating indexes for every query.** The query planner evaluates candidate plans during a trial period, selects the most efficient one, and caches it for subsequent queries with the same shape. Understanding cache behavior helps you diagnose unexpected plan changes and performance regressions.
+
+**Incorrect: blindly clearing cache and forcing replanning**
+
+```javascript
+// Clearing entire cache on every deploy or incident
+db.orders.getPlanCache().clear()
+// Problem: forces expensive replanning for all query shapes
+// and can create avoidable latency spikes
+```
+
+**Correct: inspect first, then clear only when justified**
+
+```javascript
+// 1) Inspect current cached state for this collection
+db.orders.aggregate([{ $planCacheStats: {} }])
+
+// 2) Verify actual winning plan for the problem query
+db.orders.find({ status: "pending" })
+  .sort({ createdAt: -1 })
+  .explain("executionStats")
+
+// 3) If needed, clear only the affected query shape
+db.orders.getPlanCache().clearPlansByQuery(
+  { status: "pending" },
+  { createdAt: -1 },
+  { _id: 1, status: 1, total: 1 }
+)
+```
+
+**How the plan cache works:**
+
+```javascript
+// Plan cache has three states:
+// 1. Missing  - No entry exists, planner evaluates all candidates
+// 2. Inactive - Placeholder entry, still evaluates candidates
+// 3. Active   - Cached plan used directly for queries
+
+// Query shape = combination of query filter, sort, and projection
+// Same shape → same cached plan (if Active)
+
+// Example: These queries have the SAME shape
+db.orders.find({ status: "pending" }).sort({ createdAt: -1 })
+db.orders.find({ status: "shipped" }).sort({ createdAt: -1 })
+// Both use cached plan for: { status: <val> } + sort { createdAt: -1 }
+
+// These have DIFFERENT shapes
+db.orders.find({ status: "pending" })
+db.orders.find({ status: "pending", priority: "high" })
+// Different filter structure = different cache entries
+```
+
+**View plan cache contents:**
+
+```javascript
+// Use $planCacheStats to see all cached plans
+db.orders.aggregate([{ $planCacheStats: {} }])
+
+// Returns for each cached query shape:
+// - planCacheKey: unique identifier
+// - isActive: true if plan is being used
+// - works: cost metric (lower = better)
+// - cachedPlan: the actual execution plan
+// - estimatedSizeBytes: memory used by this entry
+
+// Example output:
+{
+  planCacheKey: "ABC123...",
+  isActive: true,
+  works: 156,
+  cachedPlan: {
+    stage: "FETCH",
+    inputStage: {
+      stage: "IXSCAN",
+      indexName: "status_1_createdAt_1"
+    }
+  }
+}
+```
+
+**When plan cache is invalidated:**
+
+```javascript
+// The plan cache is cleared when:
+// 1. mongod restarts (cache is in-memory only)
+// 2. Index changes (create, drop, hide, unhide)
+// 3. Collection changes (drop, rename)
+// 4. LRU eviction when cache exceeds limits
+
+// After dropping an index:
+db.orders.dropIndex("status_1_createdAt_1")
+// ALL plan cache entries for this collection are cleared
+// Next queries will re-evaluate available indexes
+
+// IMPORTANT: Plan cache does NOT persist across restarts
+// After restart, first queries will be slower (plan evaluation)
+```
+
+**Manually clear the plan cache:**
+
+```javascript
+// Clear entire cache for a collection
+db.orders.getPlanCache().clear()
+
+// Clear cache for specific query shape
+db.orders.getPlanCache().clearPlansByQuery(
+  { status: "pending" },           // query
+  { createdAt: -1 },               // sort
+  { _id: 1, status: 1, total: 1 }  // projection
+)
+
+// When to manually clear:
+// - After adding indexes that should be used
+// - When explain() shows suboptimal plan being cached
+// - During performance testing to ensure fresh evaluation
+```
+
+**Diagnose plan cache issues:**
+
+```javascript
+// Problem: Query suddenly slower after working fine
+// Diagnosis: Check if plan changed
+
+// Step 1: Run explain to see current plan
+const explain = db.orders.find({ status: "pending" })
+  .sort({ createdAt: -1 })
+  .explain("executionStats")
+
+// Check these fields:
+print("Plan cache key:", explain.queryPlanner.planCacheKey)
+print("Winning plan:", explain.queryPlanner.winningPlan.stage)
+print("Docs examined:", explain.executionStats.totalDocsExamined)
+print("Time:", explain.executionStats.executionTimeMillis, "ms")
+
+// Step 2: Check if index filter is forcing a plan
+print("Index filter set:", explain.queryPlanner.indexFilterSet)
+// If true, an index filter overrides normal plan selection
+
+// Step 3: Compare with $planCacheStats
+db.orders.aggregate([
+  { $planCacheStats: {} },
+  { $match: { planCacheKey: explain.queryPlanner.planCacheKey } }
+])
+```
+
+**Plan cache size limits:**
+
+```javascript
+// Plan cache has size limits to prevent memory issues
+// When cumulative size > 0.5 GB:
+// - New entries stored WITHOUT debug info
+// - Missing: createdFromQuery, cachedPlan, creationExecStats
+
+// Check cache memory usage:
+db.orders.aggregate([
+  { $planCacheStats: {} },
+  { $group: {
+      _id: null,
+      totalEntries: { $sum: 1 },
+      totalBytes: { $sum: "$estimatedSizeBytes" }
+    }
+  }
+])
+
+// If cache is large, consider:
+// - Reducing query shape variations
+// - Using parameterized queries (same shape, different values)
+```
+
+**Index filters: force specific indexes**
+
+```javascript
+// Index filters override plan cache for specific query shapes
+// Use sparingly - they bypass the optimizer
+
+// Set an index filter
+db.runCommand({
+  planCacheSetFilter: "orders",
+  query: { status: { $exists: true } },
+  sort: { createdAt: -1 },
+  indexes: ["status_1_createdAt_1"]  // Force this index
+})
+
+// List active filters
+db.runCommand({ planCacheListFilters: "orders" })
+
+// Clear filters
+db.runCommand({ planCacheClearFilters: "orders" })
+
+// WARNING: Index filters persist until cleared or server restart
+// They can hide problems - use hint() for one-off queries instead
+```
+
+**Best practices:**
+
+```javascript
+// 1. Use consistent query shapes
+// BAD: Dynamic field selection creates many cache entries
+const fields = user.isAdmin ? { all: 1 } : { public: 1 }
+db.data.find(query, fields)
+
+// GOOD: Consistent projection, filter in application
+db.data.find(query, { all: 1, public: 1 })
+
+// 2. After adding indexes, verify they're used
+db.orders.createIndex({ status: 1, createdAt: -1 })
+// Clear cache to force re-evaluation
+db.orders.getPlanCache().clear()
+// Verify with explain
+db.orders.find({ status: "pending" }).sort({ createdAt: -1 }).explain()
+
+// 3. Monitor plan cache in production
+// High cache churn may indicate too many query variations
+```
+
+**When NOT to worry about plan cache:**
+
+```javascript
+// Comprehensive plan cache analysis
+function analyzePlanCache(collectionName) {
+  const coll = db[collectionName]
+
+  // Get cache stats
+  const stats = coll.aggregate([{ $planCacheStats: {} }]).toArray()
+
+  print(`\n=== Plan Cache for ${collectionName} ===`)
+  print(`Total entries: ${stats.length}`)
+
+  const totalBytes = stats.reduce((sum, s) => sum + (s.estimatedSizeBytes || 0), 0)
+  print(`Total size: ${(totalBytes / 1024).toFixed(2)} KB`)
+
+  const activeCount = stats.filter(s => s.isActive).length
+  print(`Active plans: ${activeCount}`)
+  print(`Inactive plans: ${stats.length - activeCount}`)
+
+  // Show top 5 by size
+  print(`\nTop 5 entries by size:`)
+  stats
+    .sort((a, b) => (b.estimatedSizeBytes || 0) - (a.estimatedSizeBytes || 0))
+    .slice(0, 5)
+    .forEach((s, i) => {
+      print(`  ${i + 1}. ${s.isActive ? "ACTIVE" : "inactive"} - ${s.estimatedSizeBytes} bytes`)
+      if (s.cachedPlan) {
+        print(`     Plan: ${s.cachedPlan.stage}`)
+      }
+    })
+
+  // Check for index filters
+  const filters = db.runCommand({ planCacheListFilters: collectionName })
+  if (filters.filters && filters.filters.length > 0) {
+    print(`\nWARNING: ${filters.filters.length} index filter(s) active`)
+  }
+}
+
+// Usage
+analyzePlanCache("orders")
+```
+
+- **Development/testing**: Cache behavior matters less with small data.
+
+- **Infrequent queries**: One-off queries don't benefit from caching.
+
+- **After intentional index changes**: Cache invalidation is expected.
+
+Reference: [https://mongodb.com/docs/manual/core/query-plans/](https://mongodb.com/docs/manual/core/query-plans/)
+
+### 5.3 Use $indexStats to Find Unused Indexes
 
 **Impact: HIGH ($indexStats shows access counts—indexes with 0 ops are wasting RAM and slowing writes)**
 
@@ -7343,9 +8308,270 @@ function safeToDropIndex(collection, indexName) {
 safeToDropIndex("orders", "old_unused_index_1")
 ```
 
+1. Run representative queries with `explain("executionStats")` before and after applying this rule.
+
+2. Compare latency and scan efficiency (`totalDocsExamined`, `totalKeysExamined`, `nReturned`).
+
+3. Confirm workload-level behavior using `$queryStats`, profiler, or Atlas Performance Advisor.
+
 Reference: [https://mongodb.com/docs/manual/reference/operator/aggregation/indexStats/](https://mongodb.com/docs/manual/reference/operator/aggregation/indexStats/)
 
-### 5.3 Use Atlas Performance Advisor for Index Recommendations
+### 5.4 Use $queryStats to Analyze Query Patterns
+
+**Impact: MEDIUM (Identify slow queries and missing indexes from real workload data)**
+
+**`$queryStats` provides workload-level query telemetry** to identify slow query shapes, poor index usage, and optimization opportunities from real traffic. It is available on Atlas M10+ (introduced in MongoDB 6.0.7) and includes additional metrics in newer versions (for example, new fields added in 8.2).
+
+**Version-specific coverage to account for in analysis:**
+
+- **MongoDB 8.1+**: query stats are reported for `count` and `distinct` commands in addition to `find`/`aggregate`.
+
+- **MongoDB 8.2+**: additional ticket-delinquency metrics and `cpuNanos` metrics are available (`cpuNanos` on Linux only).
+
+- **Stability caveat**: treat `$queryStats` output as release-sensitive diagnostics data and avoid hard-coding brittle parsers against a fixed field contract.
+
+**Incorrect: guessing which queries need optimization**
+
+```javascript
+// Manually checking individual queries without workload data
+db.orders.explain("executionStats").find({ status: "pending" })
+// Problem: Don't know which queries are actually frequent or slow
+// Could optimize a query that runs once a day instead of one running 1000x/minute
+```
+
+**Correct: data-driven query analysis**
+
+```javascript
+// Get query statistics from the cluster
+// Requires queryStatsRead privilege (clusterMonitor includes it)
+db.adminCommand({
+  aggregate: 1,
+  pipeline: [
+    { $queryStats: {} },
+    {
+      $group: {
+        _id: "$key.queryShape",
+        namespace: { $first: "$key.queryShape.cmdNs" },
+        totalExecutions: { $sum: "$metrics.execCount" },
+        totalDurationMicros: { $sum: "$metrics.totalExecMicros.sum" },
+        docsExaminedTotal: { $sum: "$metrics.docsExamined.sum" },
+        keysExaminedTotal: { $sum: "$metrics.keysExamined.sum" }
+      }
+    },
+    {
+      $project: {
+        namespace: 1,
+        totalExecutions: 1,
+        totalDurationMicros: 1,
+        docsExaminedTotal: 1,
+        keysExaminedTotal: 1,
+        avgDurationMs: {
+          $cond: {
+            if: { $gt: ["$totalExecutions", 0] },
+            then: {
+              $divide: [
+                "$totalDurationMicros",
+                { $multiply: ["$totalExecutions", 1000] }
+              ]
+            },
+            else: null
+          }
+        }
+      }
+    },
+    { $sort: { totalDurationMicros: -1 } },
+    { $limit: 10 }
+  ],
+  cursor: {}
+})
+// Returns top 10 query shapes by total time spent
+```
+
+**Find queries with poor index usage:**
+
+```javascript
+// Queries examining many documents relative to results
+db.adminCommand({
+  aggregate: 1,
+  pipeline: [
+    { $queryStats: {} },
+    {
+      $match: {
+        "metrics.execCount": { $gt: 100 }  // Frequently executed
+      }
+    },
+    {
+      $project: {
+        namespace: "$key.queryShape.cmdNs",
+        queryShape: "$key.queryShape",
+        execCount: "$metrics.execCount",
+        avgDocsExamined: {
+          $divide: ["$metrics.docsExamined.sum", "$metrics.execCount"]
+        },
+        avgDocsReturned: {
+          $divide: ["$metrics.docsReturned.sum", "$metrics.execCount"]
+        },
+        scanRatio: {
+          $cond: {
+            if: { $eq: ["$metrics.docsReturned.sum", 0] },
+            then: null,
+            else: {
+              $divide: [
+                "$metrics.docsExamined.sum",
+                "$metrics.docsReturned.sum"
+              ]
+            }
+          }
+        }
+      }
+    },
+    { $match: { scanRatio: { $gt: 100 } } },  // Examining 100x more than returning
+    { $sort: { scanRatio: -1 } },
+    { $limit: 20 }
+  ],
+  cursor: {}
+})
+// High scanRatio = likely missing index
+```
+
+**Check command coverage: including `count` and `distinct` on 8.1+**
+
+```javascript
+db.adminCommand({
+  aggregate: 1,
+  pipeline: [
+    { $queryStats: {} },
+    {
+      $group: {
+        _id: "$key.queryShape.command",
+        shapes: { $sum: 1 },
+        executions: { $sum: "$metrics.execCount" }
+      }
+    },
+    { $sort: { executions: -1 } }
+  ],
+  cursor: {}
+})
+// Expect find/aggregate and, on 8.1+, distinct/count shapes as well
+```
+
+**Monitor latency outliers and recent regressions:**
+
+```javascript
+// Focus on high-latency query shapes and when they were last seen
+db.adminCommand({
+  aggregate: 1,
+  pipeline: [
+    { $queryStats: {} },
+    {
+      $project: {
+        namespace: "$key.queryShape.cmdNs",
+        command: "$key.queryShape.command",
+        execCount: "$metrics.execCount",
+        avgExecMs: {
+          $cond: {
+            if: { $gt: ["$metrics.execCount", 0] },
+            then: {
+              $divide: [
+                "$metrics.totalExecMicros.sum",
+                { $multiply: ["$metrics.execCount", 1000] }
+              ]
+            },
+            else: null
+          }
+        },
+        maxExecMs: { $divide: ["$metrics.totalExecMicros.max", 1000] },
+        latestSeen: "$metrics.latestSeenTimestamp"
+      }
+    },
+    { $match: { maxExecMs: { $gt: 100 } } },  // Slow outliers
+    { $sort: { maxExecMs: -1 } }
+  ],
+  cursor: {}
+})
+```
+
+**Use 8.2+ ticket/CPU metrics for deeper diagnosis:**
+
+```javascript
+db.adminCommand({
+  aggregate: 1,
+  pipeline: [
+    { $queryStats: {} },
+    {
+      $project: {
+        namespace: "$key.queryShape.cmdNs",
+        command: "$key.queryShape.command",
+        execCount: "$metrics.execCount",
+        delinquentAcquisitions: "$metrics.delinquentAcquisitions",
+        totalAcqDelinquencyMs: "$metrics.totalAcquisitionDelinquencyMillis",
+        maxAcqDelinquencyMs: "$metrics.maxAcquisitionDelinquencyMillis",
+        totalCpuMs: {
+          $cond: {
+            if: { $ifNull: ["$metrics.cpuNanos.sum", false] },
+            then: { $divide: ["$metrics.cpuNanos.sum", 1000000] },
+            else: null
+          }
+        }
+      }
+    },
+    {
+      $match: {
+        $or: [
+          { delinquentAcquisitions: { $gt: 0 } },
+          { maxAcqDelinquencyMs: { $gt: 50 } }
+        ]
+      }
+    },
+    { $sort: { maxAcqDelinquencyMs: -1 } }
+  ],
+  cursor: {}
+})
+```
+
+**Build a fresh analysis window: without resetting server state**
+
+```javascript
+const analysisStart = new Date()
+
+// Run workload...
+
+db.adminCommand({
+  aggregate: 1,
+  pipeline: [
+    { $queryStats: {} },
+    {
+      $match: {
+        "metrics.latestSeenTimestamp": { $gte: analysisStart }
+      }
+    }
+  ],
+  cursor: {}
+})
+// Use latestSeenTimestamp / firstSeenTimestamp to scope the period you care about
+```
+
+**When NOT to use this pattern:**
+
+- **Unsupported deployments**: Requires Atlas M10+ (available since MongoDB 6.0.7).
+
+- **Immediate debugging**: Use explain() for single query analysis.
+
+- **Need hard-reset semantics**: Use bounded time windows for analysis; there is no documented `$queryStats` reset command.
+
+- **Relying on 8.2-only metrics in older versions**: Gate use of `cpuNanos`/delinquency fields by server version.
+
+- **Strict schema-contract telemetry needs**: Prefer more stable observability exports when parser stability is mandatory.
+
+1. Run representative queries with `explain("executionStats")` before and after applying this rule.
+
+2. Compare latency and scan efficiency (`totalDocsExamined`, `totalKeysExamined`, `nReturned`).
+
+3. Confirm workload-level behavior using `$queryStats`, profiler, or Atlas Performance Advisor.
+
+Reference: [https://mongodb.com/docs/manual/reference/operator/aggregation/queryStats/](https://mongodb.com/docs/manual/reference/operator/aggregation/queryStats/)
+
+### 5.5 Use Atlas Performance Advisor for Index Recommendations
 
 **Impact: MEDIUM (Finds high-impact missing indexes from real production workloads)**
 
@@ -7372,21 +8598,19 @@ db.orders.find({ status: "pending", createdAt: { $gte: ISODate("2025-01-01") } }
 
 **When NOT to use this pattern:**
 
-- **Not on Atlas**: Use profiler and explain() instead.
-
-- **Synthetic workloads only**: Advisor needs real traffic to be effective.
-
-**Verify with:**
-
 ```javascript
 // After creating suggested index, confirm plan improves
 
 db.orders.find({ status: "pending" }).explain("executionStats")
 ```
 
+- **Not on Atlas**: Use profiler and explain() instead.
+
+- **Synthetic workloads only**: Advisor needs real traffic to be effective.
+
 Reference: [https://mongodb.com/docs/atlas/performance-advisor/](https://mongodb.com/docs/atlas/performance-advisor/)
 
-### 5.4 Use hint() to Control Query Plans When Necessary
+### 5.6 Use hint() to Control Query Plans When Necessary
 
 **Impact: MEDIUM (Forces the intended index when the optimizer picks poorly)**
 
@@ -7414,12 +8638,6 @@ db.orders.find({
 
 **When NOT to use this pattern:**
 
-- **Unknown query patterns**: Hints can lock in a bad plan.
-
-- **Rapidly changing indexes**: Hints break if the index is removed.
-
-**Verify with:**
-
 ```javascript
 // Compare plans with and without hint
 
@@ -7428,9 +8646,196 @@ db.orders.find({ status: "shipped" })
   .explain("executionStats")
 ```
 
+- **Unknown query patterns**: Hints can lock in a bad plan.
+
+- **Rapidly changing indexes**: Hints break if the index is removed.
+
 Reference: [https://mongodb.com/docs/manual/reference/method/cursor.hint/](https://mongodb.com/docs/manual/reference/method/cursor.hint/)
 
-### 5.5 Use Slow Query Log to Find Performance Issues
+### 5.7 Use Query Settings to Override Query Plans
+
+**Impact: MEDIUM (Persistently force index usage without application code changes)**
+
+**MongoDB 8.0 introduced Query Settings**, a way to persistently associate index hints and other settings with query shapes. Unlike `hint()` which requires application code changes, query settings apply automatically to matching queries cluster-wide.
+
+Starting in MongoDB 8.0, query settings are the preferred replacement for deprecated index filters.
+
+**Incorrect: hardcoding hints in application**
+
+```javascript
+// Application code must be modified for every hint
+// Hint is lost if query is written differently
+db.orders.find({ status: "pending", region: "us-east" })
+  .hint({ status: 1, region: 1, createdAt: -1 })
+
+// Problem: Every query location needs updating
+// Different query variations may not get the hint
+```
+
+**Correct: persistent query settings**
+
+```javascript
+// Set index hint for a query shape - applies cluster-wide
+db.adminCommand({
+  setQuerySettings: {
+    find: "orders",
+    filter: { status: { $eq: {} }, region: { $eq: {} } },
+    $db: "mydb"
+  },
+  settings: {
+    indexHints: {
+      ns: { db: "mydb", coll: "orders" },
+      allowedIndexes: [{ status: 1, region: 1, createdAt: -1 }]
+    },
+    comment: "force compound index for regional order-status query shape"
+  }
+})
+
+// Now ANY query matching this shape uses the specified index
+db.orders.find({ status: "pending", region: "us-east" })  // Uses hint
+db.orders.find({ status: "shipped", region: "eu-west" })   // Uses hint
+// No application code changes needed
+```
+
+**Version note for `settings.comment`:**
+
+```javascript
+// `settings.comment` is available starting in MongoDB 8.1
+// and in MongoDB 8.0.4+ patch releases
+db.adminCommand({
+  setQuerySettings: {
+    find: "orders",
+    filter: { status: { $eq: {} } },
+    $db: "mydb"
+  },
+  settings: {
+    reject: false,
+    comment: { reason: "temporary routing during index rollout", owner: "db-team" }
+  }
+})
+```
+
+**Migrate from index filters to query settings:**
+
+```javascript
+// Legacy (deprecated in MongoDB 8.0): plan cache index filters
+db.runCommand({
+  planCacheSetFilter: "orders",
+  query: { status: { $exists: true } },
+  sort: { createdAt: -1 },
+  indexes: ["status_1_createdAt_-1"]
+})
+
+// Preferred: persistent, cluster-scoped query settings
+db.adminCommand({
+  setQuerySettings: {
+    find: "orders",
+    filter: { status: { $eq: {} } },
+    sort: { createdAt: -1 },
+    $db: "mydb"
+  },
+  settings: {
+    indexHints: {
+      ns: { db: "mydb", coll: "orders" },
+      allowedIndexes: ["status_1_createdAt_-1"]
+    }
+  }
+})
+```
+
+**Query shapes use placeholders:**
+
+```javascript
+// The query shape abstracts literal values
+// This setQuerySettings:
+{
+  find: "users",
+  filter: { status: { $eq: {} }, age: { $gte: {} } },
+  $db: "mydb"
+}
+
+// Matches all of these queries:
+db.users.find({ status: "active", age: { $gte: 18 } })
+db.users.find({ status: "inactive", age: { $gte: 65 } })
+db.users.find({ status: "pending", age: { $gte: 0 } })
+// All will use the configured index
+```
+
+**View current query settings:**
+
+```javascript
+// List all query settings
+db.adminCommand({ aggregate: 1, pipeline: [{ $querySettings: {} }], cursor: {} })
+
+// Get settings for a specific query shape
+db.adminCommand({
+  aggregate: 1,
+  pipeline: [
+    { $querySettings: {} },
+    { $match: { "representativeQuery.find": "orders" } }
+  ],
+  cursor: {}
+})
+```
+
+**Remove query settings:**
+
+```javascript
+// Remove settings by query shape hash
+db.adminCommand({
+  removeQuerySettings: {
+    find: "orders",
+    filter: { status: { $eq: {} }, region: { $eq: {} } },
+    $db: "mydb"
+  }
+})
+
+// Or use the queryShapeHash from $querySettings output
+db.adminCommand({
+  removeQuerySettings: "<queryShapeHash>"
+})
+```
+
+**Reject problematic queries:**
+
+```javascript
+// Block a query shape entirely (returns error)
+db.adminCommand({
+  setQuerySettings: {
+    find: "logs",
+    filter: {},  // Unfiltered query on large collection
+    $db: "mydb"
+  },
+  settings: {
+    reject: true
+  }
+})
+
+// Any query matching this shape now fails with error
+db.logs.find({})  // Error: query rejected by query settings
+```
+
+**When NOT to use this pattern:**
+
+- **Pre-MongoDB 8.0**: Query settings don't exist in earlier versions.
+
+- **Temporary testing**: Use `hint()` for one-time testing instead.
+
+- **Dynamic query patterns**: Query shapes must be predictable.
+
+- **Instead of proper indexing**: Fix the index strategy first; settings are a workaround.
+
+- **Using legacy index filters by default**: Prefer query settings (index filters are deprecated).
+
+1. Run representative queries with `explain("executionStats")` before and after applying this rule.
+
+2. Compare latency and scan efficiency (`totalDocsExamined`, `totalKeysExamined`, `nReturned`).
+
+3. Confirm workload-level behavior using `$queryStats`, profiler, or Atlas Performance Advisor.
+
+Reference: [https://mongodb.com/docs/manual/reference/command/setQuerySettings/](https://mongodb.com/docs/manual/reference/command/setQuerySettings/)
+
+### 5.8 Use Slow Query Log to Find Performance Issues
 
 **Impact: HIGH (System profiler captures queries exceeding threshold—find the 20% of queries causing 80% of load)**
 
@@ -7744,6 +9149,12 @@ function analyzeSlowQueries(thresholdMs = 100, minutes = 60) {
 analyzeSlowQueries(100, 60)  // Queries >100ms in last hour
 ```
 
+1. Run representative queries with `explain("executionStats")` before and after applying this rule.
+
+2. Compare latency and scan efficiency (`totalDocsExamined`, `totalKeysExamined`, `nReturned`).
+
+3. Confirm workload-level behavior using `$queryStats`, profiler, or Atlas Performance Advisor.
+
 Reference: [https://mongodb.com/docs/manual/tutorial/manage-the-database-profiler/](https://mongodb.com/docs/manual/tutorial/manage-the-database-profiler/)
 
 ---
@@ -7767,3 +9178,9 @@ Reference: [https://mongodb.com/docs/manual/tutorial/manage-the-database-profile
 15. [https://mongodb.com/docs/manual/tutorial/sort-results-with-indexes/](https://mongodb.com/docs/manual/tutorial/sort-results-with-indexes/)
 16. [https://mongodb.com/docs/manual/reference/collation/](https://mongodb.com/docs/manual/reference/collation/)
 17. [https://mongodb.com/docs/manual/reference/method/cursor.hint/](https://mongodb.com/docs/manual/reference/method/cursor.hint/)
+18. [https://mongodb.com/docs/manual/reference/operator/query/or/](https://mongodb.com/docs/manual/reference/operator/query/or/)
+19. [https://mongodb.com/docs/manual/reference/operator/aggregation/graphLookup/](https://mongodb.com/docs/manual/reference/operator/aggregation/graphLookup/)
+20. [https://mongodb.com/docs/manual/reference/command/bulkWrite/](https://mongodb.com/docs/manual/reference/command/bulkWrite/)
+21. [https://mongodb.com/docs/manual/reference/operator/aggregation/queryStats/](https://mongodb.com/docs/manual/reference/operator/aggregation/queryStats/)
+22. [https://mongodb.com/docs/manual/reference/command/setQuerySettings/](https://mongodb.com/docs/manual/reference/command/setQuerySettings/)
+23. [https://mongodb.com/docs/manual/reference/method/db.collection.updateOne/](https://mongodb.com/docs/manual/reference/method/db.collection.updateOne/)

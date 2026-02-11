@@ -1,0 +1,6 @@
+task_id,status,completed_at,evidence_file,evidence_note
+FIX-040,DONE,2026-02-10,32-sprint-8-execution-log.md,Added Verify-with sections to all MongoDB.AI rule files
+FIX-041,DONE,2026-02-10,32-sprint-8-execution-log.md,Added registry path-rule enforcement for MongoDB.AI Verify-with sections
+FIX-042,DONE,2026-02-10,32-sprint-8-execution-log.md,Corrected automated embedding rule for Community 8.2+ autoEmbed and Atlas private-preview split
+FIX-043,DONE,2026-02-10,32-sprint-8-execution-log.md,Added registry file-rule checks for automated embedding boundary assertions
+FIX-044,DONE,2026-02-10,32-sprint-8-execution-log.md,Added sprint-8 web evidence and reconciliation audit artifacts

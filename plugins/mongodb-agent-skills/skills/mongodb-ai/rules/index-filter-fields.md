@@ -133,4 +133,10 @@ db.products.getSearchIndexes().forEach(idx => {
 - Filtering on nested objects (flatten to top-level fields)
 - Text search filtering (use $search in hybrid search instead)
 
+## Verify with
+
+1. Run the "Correct" index or query example on a staging dataset.
+2. Validate expected behavior and performance using explain and Atlas metrics.
+3. Confirm version-gated behavior on your target MongoDB release before production rollout.
+
 Reference: [MongoDB Vector Search Pre-Filtering](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/#std-label-avs-types-filter)

@@ -1,0 +1,5 @@
+task_id,status,completed_at,evidence_file,evidence_note
+FIX-045,DONE,2026-02-10,34-sprint-9-execution-log.md,Added semantic invariant registry and rule-aware checker for high-risk content
+FIX-046,DONE,2026-02-10,34-sprint-9-execution-log.md,Integrated semantic invariant gate into package scripts and CI workflow
+FIX-047,DONE,2026-02-10,34-sprint-9-execution-log.md,Added MongoDB 8.2.5 capability matrix files (md+csv)
+FIX-048,DONE,2026-02-10,34-sprint-9-execution-log.md,Refreshed sprint-9 web evidence and updated governance artifacts

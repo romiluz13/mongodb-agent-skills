@@ -11,6 +11,20 @@ A structured repository for creating and maintaining MongoDB Query and Index Opt
 - __`AGENTS.md`__ - Compiled output (generated)
 - __`test-cases.json`__ - Test cases for LLM evaluation (generated)
 
+## Installation (End Users)
+
+### Agent Skills CLI (recommended)
+```bash
+npx skills add romiluz13/mongodb-agent-skills --skill mongodb-query-and-index-optimize -a claude-code -a codex -a cursor
+```
+
+### Manual fallback
+```bash
+cp -r mongodb-query-and-index-optimize ~/.claude/skills/
+cp -r mongodb-query-and-index-optimize ~/.codex/skills/
+cp -r mongodb-query-and-index-optimize ~/.cursor/skills/
+```
+
 ## Getting Started
 
 1. Install dependencies:

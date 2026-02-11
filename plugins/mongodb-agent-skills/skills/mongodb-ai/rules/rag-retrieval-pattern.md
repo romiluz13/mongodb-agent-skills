@@ -200,4 +200,10 @@ async function multiQueryRetrieval(userQuery) {
 - Real-time chat without knowledge base
 - When entire document needed (not chunk-based)
 
+## Verify with
+
+1. Run the "Correct" index or query example on a staging dataset.
+2. Validate expected behavior and performance using explain and Atlas metrics.
+3. Confirm version-gated behavior on your target MongoDB release before production rollout.
+
 Reference: [MongoDB RAG Implementation](https://mongodb.com/docs/atlas/atlas-vector-search/rag/)

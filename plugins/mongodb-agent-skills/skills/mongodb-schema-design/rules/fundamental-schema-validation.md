@@ -119,7 +119,7 @@ db.runCommand({
 - **Schema-per-document designs**: Some collections intentionally store varied document shapes.
 - **Log/event collections**: High-write collections where validation overhead matters.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check if validation exists on collection

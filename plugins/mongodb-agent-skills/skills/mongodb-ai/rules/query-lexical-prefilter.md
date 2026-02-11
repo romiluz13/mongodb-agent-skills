@@ -202,4 +202,10 @@ db.products.aggregate([
 - Not using Atlas Search features
 - Need stable GA features (this is Preview)
 
+## Verify with
+
+1. Run the "Correct" index or query example on a staging dataset.
+2. Validate expected behavior and performance using explain and Atlas metrics.
+3. Confirm version-gated behavior on your target MongoDB release before production rollout.
+
 Reference: [MongoDB vectorSearch Operator](https://mongodb.com/docs/atlas/atlas-search/operators-collectors/vectorSearch/)

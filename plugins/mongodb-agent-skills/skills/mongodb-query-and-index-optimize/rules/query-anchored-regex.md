@@ -154,7 +154,7 @@ db.users.find({ nameSearch: /^john/ })  // Anchored on normalized field
 - **Already filtered**: `{ tenantId: "x", name: /smith/ }` where tenantId reduces to small set first.
 - **Text/Atlas Search available**: Use proper search instead of regex.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check if regex can use index

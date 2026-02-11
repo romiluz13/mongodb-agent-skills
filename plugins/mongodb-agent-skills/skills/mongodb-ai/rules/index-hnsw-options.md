@@ -7,7 +7,7 @@ tags: HNSW, maxEdges, numEdgeCandidates, graph, tuning
 
 ## HNSW Index Options Tuning
 
-HNSW (Hierarchical Navigable Small World) graph parameters control index build quality and search accuracy. Tune for your specific workload.
+HNSW (Hierarchical Navigable Small World) graph parameters control index build quality and search accuracy. Tune for your workload only after baseline testing with defaults.
 
 **Incorrect (ignoring HNSW options):**
 
@@ -37,7 +37,7 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
     similarity: "cosine",
     hnswOptions: {
       maxEdges: 64,           // More connections per node
-      numEdgeCandidates: 200  // More candidates during build
+      numEdgeCandidates: 400  // More candidates during build
     }
   }]
 })
@@ -51,7 +51,7 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
     similarity: "cosine",
     hnswOptions: {
       maxEdges: 16,           // Fewer connections
-      numEdgeCandidates: 50   // Fewer candidates
+      numEdgeCandidates: 100  // Minimum valid value
     }
   }]
 })
@@ -61,8 +61,8 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
 
 | Parameter | Default | Range | Effect |
 |-----------|---------|-------|--------|
-| `maxEdges` | 32 | 4-100 | Connections per node in graph |
-| `numEdgeCandidates` | 100 | 4-1000 | Candidates evaluated during build |
+| `maxEdges` | 16 | 16-64 | Connections per node in graph |
+| `numEdgeCandidates` | 100 | 100-3200 | Candidates evaluated during build |
 
 **Trade-offs:**
 
@@ -86,10 +86,10 @@ Lower maxEdges / numEdgeCandidates:
 
 | Use Case | maxEdges | numEdgeCandidates | Notes |
 |----------|----------|-------------------|-------|
-| Default | 32 | 100 | Good balance |
-| High precision | 64 | 200 | Legal, medical, critical search |
-| Large scale | 16-32 | 50-100 | Millions of vectors |
-| Rapid prototyping | 16 | 50 | Fastest build time |
+| Default | 16 | 100 | Good baseline before tuning |
+| High precision | 32-64 | 400-800 | Higher recall, higher resource cost |
+| Large scale | 16-32 | 100-300 | Control index cost at scale |
+| Rapid prototyping | 16 | 100 | Fastest valid build profile |
 
 **When to Adjust:**
 
@@ -97,19 +97,19 @@ Lower maxEdges / numEdgeCandidates:
 // Scenario 1: Low recall despite high numCandidates in queries
 // Solution: Increase maxEdges for better graph connectivity
 {
-  hnswOptions: { maxEdges: 48, numEdgeCandidates: 150 }
+  hnswOptions: { maxEdges: 32, numEdgeCandidates: 400 }
 }
 
 // Scenario 2: Index build taking too long
 // Solution: Reduce numEdgeCandidates
 {
-  hnswOptions: { maxEdges: 32, numEdgeCandidates: 64 }
+  hnswOptions: { maxEdges: 16, numEdgeCandidates: 150 }
 }
 
 // Scenario 3: Index too large for available RAM
 // Solution: Reduce both parameters
 {
-  hnswOptions: { maxEdges: 24, numEdgeCandidates: 80 }
+  hnswOptions: { maxEdges: 16, numEdgeCandidates: 120 }
 }
 ```
 
@@ -148,5 +148,12 @@ db.products.getSearchIndexes().forEach(idx => {
 - Default settings work well for most cases
 - Small datasets (< 100K vectors) - minimal impact
 - Using quantization (already optimizes memory)
+- Teams without reproducible benchmark data for recall/latency trade-offs
+
+## Verify with
+
+1. Run the "Correct" index or query example on a staging dataset.
+2. Validate expected behavior and performance using explain and Atlas metrics.
+3. Confirm version-gated behavior on your target MongoDB release before production rollout.
 
 Reference: [MongoDB Vector Index Definition](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/)

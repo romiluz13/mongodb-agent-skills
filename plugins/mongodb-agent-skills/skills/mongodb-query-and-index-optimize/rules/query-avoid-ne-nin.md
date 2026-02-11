@@ -144,7 +144,7 @@ db.orders.find({ statusGroup: "active" })
 - **No better alternative**: Complex polymorphic data where positive enumeration isn't practical.
 - **Combined with selective equality**: `{ tenantId: "x", type: { $ne: "system" } }` where tenantId reduces to small set first.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Compare negation vs positive matching
@@ -182,4 +182,4 @@ async function compareNegationVsPositive(collection, field, excludeValue) {
 compareNegationVsPositive("users", "status", "deleted")
 ```
 
-Reference: [Query Operators](https://mongodb.com/docs/manual/reference/operator/query/)
+Reference: [\$ne Operator](https://mongodb.com/docs/manual/reference/operator/query/ne/), [\$nin Operator](https://mongodb.com/docs/manual/reference/operator/query/nin/)

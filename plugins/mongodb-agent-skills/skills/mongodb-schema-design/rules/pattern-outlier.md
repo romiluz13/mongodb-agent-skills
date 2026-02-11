@@ -147,7 +147,7 @@ db.book_customers_extra.createIndex({ customers: 1 })
 - **Write-heavy outliers**: Complex update logic may not be worth the read optimization.
 - **Small outliers**: If outliers are 200 vs typical 50, just use larger threshold.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Find outlier documents

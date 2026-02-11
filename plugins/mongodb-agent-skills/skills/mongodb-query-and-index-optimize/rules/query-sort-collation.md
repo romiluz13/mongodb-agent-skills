@@ -46,7 +46,7 @@ db.users.find({ status: "active" })
 - **Small result sets**: In-memory sort cost is negligible.
 - **No collation requirements**: Default collation can be simpler.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Ensure no SORT stage in executionStats

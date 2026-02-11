@@ -128,4 +128,10 @@ GET /api/atlas/v1.0/groups/{groupId}/processes/{processId}/measurements
 - Serverless instances (auto-scaling)
 - Development/testing with small datasets
 
-Reference: [MongoDB Atlas Cluster Tiers](https://mongodb.com/docs/atlas/cluster-tier-overview/)
+## Verify with
+
+1. Run the "Correct" index or query example on a staging dataset.
+2. Validate expected behavior and performance using explain and Atlas metrics.
+3. Confirm version-gated behavior on your target MongoDB release before production rollout.
+
+Reference: [MongoDB Atlas Cluster Tier Selection](https://mongodb.com/docs/atlas/sizing-tier-selection/)

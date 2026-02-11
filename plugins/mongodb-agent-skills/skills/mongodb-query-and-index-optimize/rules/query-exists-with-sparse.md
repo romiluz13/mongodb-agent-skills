@@ -187,7 +187,7 @@ db.users.createIndex(
 - **Sort on sparse field**: Incomplete results.
 - **Covered queries for full collection**: Missing docs.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check $exists query behavior with sparse indexes

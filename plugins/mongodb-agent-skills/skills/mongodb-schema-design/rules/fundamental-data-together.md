@@ -101,7 +101,7 @@ const article = await db.articles.findOne({ _id: articleId })
 - **Different update frequencies**: If author avatar changes daily but articles never change, embedding creates update overhead.
 - **Unbounded growth**: Don't embed all 10,000 comments in a popular post.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Profile your actual queries

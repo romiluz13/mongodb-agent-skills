@@ -116,7 +116,7 @@ db.users.updateOne(
 - **Independent access**: If you ever query child without parent, reference.
 - **Different lifecycles**: If child data is archived/deleted separately.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check document sizes for embedded collections

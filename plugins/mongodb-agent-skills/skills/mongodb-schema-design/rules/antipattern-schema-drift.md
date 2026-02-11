@@ -171,7 +171,7 @@ db.users.find({
 - **Early prototyping**: Skip validation during exploration, add before production.
 - **User-defined fields**: Some applications allow custom metadata fields.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check if validation exists

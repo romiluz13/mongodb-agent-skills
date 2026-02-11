@@ -205,7 +205,7 @@ db.categories.find({ _id: { $in: breadcrumb } }).sort({ depth: 1 })
 - **Flat structure**: If depth is always 1-2, simple parent reference is sufficient.
 - **Extremely deep trees**: 100+ levels may need specialized approaches.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check tree consistency (no orphans)

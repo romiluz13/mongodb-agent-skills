@@ -96,7 +96,7 @@ db.users.deleteOne({ _id: "user123" })
 - **Extreme size difference**: If embedded doc is >10KB and parent is <1KB, consider separation.
 - **Different update frequencies**: If profile changes hourly but auth rarely, separate may reduce write amplification.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Find collections that look like 1:1 splits

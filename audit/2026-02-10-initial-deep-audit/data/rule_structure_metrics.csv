@@ -1,0 +1,4 @@
+skill,total_rules,has_incorrect,has_correct,has_when_not_to_use,has_verify_with
+mongodb-schema-design,30,28,30,28,30
+mongodb-query-and-index-optimize,46,43,43,29,38
+mongodb-ai,33,33,33,33,0

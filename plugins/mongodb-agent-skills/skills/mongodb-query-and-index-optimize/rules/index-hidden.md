@@ -34,7 +34,7 @@ db.orders.unhideIndex("status_1_createdAt_-1")
 - **You need to reduce storage immediately**: Hidden indexes still consume disk.
 - **You are confident and have load-tested**: Dropping may be fine.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check hidden flag in index definitions

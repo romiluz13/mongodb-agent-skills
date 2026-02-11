@@ -172,7 +172,7 @@ db.orders.createIndex({ status: 1, date: -1, amount: 1 })
 - **Covered query optimization**: Different projections need different field combinations.
 - **Cardinality considerations**: Sometimes a different leading field is more selective.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Find redundant indexes (covered by prefixes of other indexes)

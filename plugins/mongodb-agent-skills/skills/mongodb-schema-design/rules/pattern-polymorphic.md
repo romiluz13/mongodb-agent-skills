@@ -269,7 +269,7 @@ db.products.createIndex(
 - **Vastly different document sizes**: If one type has 100-byte docs and another has 100KB docs, working set suffers.
 - **Type-specific sharding needs**: Different types may need different shard keys.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Analyze polymorphic collection health

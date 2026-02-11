@@ -1,0 +1,5 @@
+task_id,status,completed_at,evidence_file,evidence_note
+FIX-032,DONE,2026-02-10,28-sprint-6-execution-log.md,Added machine-readable version-claim registry JSON
+FIX-033,DONE,2026-02-10,28-sprint-6-execution-log.md,Refactored check-version-claims to registry-driven validation
+FIX-034,DONE,2026-02-10,28-sprint-6-execution-log.md,Added automated guards for Verify-with and section-summary drift
+FIX-035,DONE,2026-02-10,28-sprint-6-execution-log.md,Pulled latest refs and recorded updated repo head snapshot addendum

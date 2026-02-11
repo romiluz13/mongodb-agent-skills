@@ -323,4 +323,11 @@ function indexSizeReport() {
 indexSizeReport()
 ```
 
+
+## Verify with
+
+1. Run representative queries with `explain("executionStats")` before and after applying this rule.
+2. Compare latency and scan efficiency (`totalDocsExamined`, `totalKeysExamined`, `nReturned`).
+3. Confirm workload-level behavior using `$queryStats`, profiler, or Atlas Performance Advisor.
+
 Reference: [Index Limitations](https://mongodb.com/docs/manual/reference/limits/#indexes)

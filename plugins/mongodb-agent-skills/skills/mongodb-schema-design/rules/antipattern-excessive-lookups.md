@@ -121,7 +121,7 @@ db.products.aggregate([
 - **Many-to-many with high cardinality**: Products with 1000+ categories shouldn't embed all category data.
 - **Analytics queries**: Batch jobs can afford $lookup latency; real-time queries cannot.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Find pipelines with multiple $lookup stages

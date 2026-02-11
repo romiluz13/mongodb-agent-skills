@@ -110,4 +110,11 @@ db.tasks.updateOne(
 - **findOneAndUpdate exists**: For returning the document, use findOneAndUpdate with sort.
 - **Bulk updates**: updateMany doesn't have sort - use aggregation pipeline or client-side logic.
 
+
+## Verify with
+
+1. Run representative queries with `explain("executionStats")` before and after applying this rule.
+2. Compare latency and scan efficiency (`totalDocsExamined`, `totalKeysExamined`, `nReturned`).
+3. Confirm workload-level behavior using `$queryStats`, profiler, or Atlas Performance Advisor.
+
 Reference: [updateOne](https://mongodb.com/docs/manual/reference/method/db.collection.updateOne/)

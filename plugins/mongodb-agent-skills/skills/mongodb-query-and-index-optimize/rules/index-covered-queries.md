@@ -179,7 +179,7 @@ db.orders.aggregate([
 - **Detail views**: Single-document fetches for full detail are fine—overhead is minimal.
 - **Hot data**: If documents are already in WiredTiger cache, covered query benefit is reduced.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check if query is covered

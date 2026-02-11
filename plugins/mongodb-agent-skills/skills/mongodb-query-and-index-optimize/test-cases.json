@@ -1,0 +1,747 @@
+{
+  "skill": "mongodb-query-and-index-optimize",
+  "generatedAt": "2026-02-10T23:28:58.721Z",
+  "totalTestCases": 92,
+  "summary": {
+    "badExamples": 46,
+    "goodExamples": 46
+  },
+  "testCases": [
+    {
+      "ruleId": "agg-allowdiskuse",
+      "ruleTitle": "Use allowDiskUse for Large Aggregations",
+      "type": "bad",
+      "code": "// Sorting 1M large documents\ndb.orders.aggregate([\n  { $match: { year: 2024 } },      // 1M orders\n  { $sort: { totalAmount: -1 } }   // Sort ALL of them\n])\n\n// ERROR: Sort exceeded memory limit of 104857600 bytes\n\n// Why 100MB isn't enough:\n// 1M docs × ~200 bytes each = 200MB for sort buffer\n// Exceeds 100MB limit → operation fails\n\n// Same problem with $group on high-cardinality field:\ndb.events.aggregate([\n  { $group: { _id: \"$sessionId\", count: { $sum: 1 } } }\n])\n// 5M unique sessions = 5M group keys = exceeds memory",
+      "language": "javascript",
+      "description": "large aggregation fails without allowDiskUse"
+    },
+    {
+      "ruleId": "agg-allowdiskuse",
+      "ruleTitle": "Use allowDiskUse for Large Aggregations",
+      "type": "good",
+      "code": "// Enable disk spilling for large aggregations\ndb.orders.aggregate(\n  [\n    { $match: { year: 2024 } },\n    { $sort: { totalAmount: -1 } }\n  ],\n  { allowDiskUse: true }  // Allow disk spill\n)\n\n// Now works, but:\n// - Uses temporary files on disk\n// - 10-100× slower than in-memory\n// - Consumes disk I/O bandwidth\n// - Appropriate for batch jobs, not real-time queries",
+      "language": "javascript",
+      "description": "allowDiskUse for large operations"
+    },
+    {
+      "ruleId": "agg-avoid-large-unwind",
+      "ruleTitle": "Avoid $unwind on Large Arrays",
+      "type": "bad",
+      "code": "// Document: Popular post with 10,000 comments\n{\n  _id: \"post123\",\n  title: \"Viral Post\",\n  content: \"...\",\n  comments: [\n    { author: \"user1\", text: \"Great!\", date: ISODate(\"...\") },\n    { author: \"user2\", text: \"Thanks!\", date: ISODate(\"...\") },\n    // ... 9,998 more comments\n  ]\n}\n\n// \"Count comments per author across posts\"\ndb.posts.aggregate([\n  { $match: { featured: true } },\n  // Returns: 100 featured posts\n\n  { $unwind: \"$comments\" },\n  // EXPLOSION: 100 posts × 10K comments = 1,000,000 documents!\n  // Each doc: post data + 1 comment\n  // Memory: 1M × 1KB = 1GB (exceeds 100MB limit)\n  // Result: Disk spill, 10+ minute execution\n\n  { $group: {\n      _id: \"$comments.author\",\n      commentCount: { $sum: 1 }\n  }}\n])\n\n// Even worse: nested $unwind\ndb.posts.aggregate([\n  { $unwind: \"$comments\" },      // 100 → 1M docs\n  { $unwind: \"$comments.replies\" } // 1M → 100M docs!\n  // Memory: Explosion beyond any reasonable limit\n])",
+      "language": "javascript",
+      "description": "$unwind on large arrays—document explosion"
+    },
+    {
+      "ruleId": "agg-avoid-large-unwind",
+      "ruleTitle": "Avoid $unwind on Large Arrays",
+      "type": "good",
+      "code": "// Option 1: Use array operators instead of $unwind\ndb.posts.aggregate([\n  { $match: { featured: true } },\n  // Returns: 100 posts (stays 100 throughout)\n\n  {\n    $project: {\n      title: 1,\n      // Count without unwinding\n      commentCount: { $size: \"$comments\" },\n\n      // Get unique authors without unwinding\n      uniqueAuthors: {\n        $reduce: {\n          input: \"$comments.author\",\n          initialValue: [],\n          in: { $setUnion: [\"$$value\", [\"$$this\"]] }\n        }\n      },\n\n      // Get recent comments without unwinding\n      recentComments: { $slice: [\"$comments\", -5] },\n\n      // Filter specific comments without unwinding\n      approvedComments: {\n        $filter: {\n          input: \"$comments\",\n          cond: { $eq: [\"$$this.approved\", true] }\n        }\n      }\n    }\n  }\n])\n// Memory: 100 docs × 10KB = 1MB (not 1GB)",
+      "language": "javascript",
+      "description": "array operators—no document explosion"
+    },
+    {
+      "ruleId": "agg-graphlookup",
+      "ruleTitle": "Use $graphLookup for Recursive Graph Traversal",
+      "type": "bad",
+      "code": "// Finding all reports in an org chart recursively\n// Each level requires a separate query\nasync function getAllReports(managerId) {\n  const directReports = await db.employees.find({\n    reportsTo: managerId\n  }).toArray()\n\n  let allReports = [...directReports]\n\n  for (const report of directReports) {\n    // Recursive call = another database round-trip\n    const subordinates = await getAllReports(report._id)\n    allReports = allReports.concat(subordinates)\n  }\n\n  return allReports\n}\n\n// For a 5-level hierarchy with 100 employees:\n// ~20+ database round-trips\n// Network latency × 20 = seconds of delay",
+      "language": "javascript",
+      "description": "recursive application queries—N round-trips"
+    },
+    {
+      "ruleId": "agg-graphlookup",
+      "ruleTitle": "Use $graphLookup for Recursive Graph Traversal",
+      "type": "good",
+      "code": "// Index the field used for matching\ndb.employees.createIndex({ name: 1 })\n\n// Single query traverses entire hierarchy\ndb.employees.aggregate([\n  { $match: { name: \"Dev\" } },  // Start from this person\n  {\n    $graphLookup: {\n      from: \"employees\",           // Collection to search\n      startWith: \"$name\",          // Starting value(s)\n      connectFromField: \"name\",    // Field in matched docs to recurse from\n      connectToField: \"reportsTo\", // Field to match against (INDEX THIS!)\n      as: \"allReports\",            // Output array name\n      maxDepth: 10,                // Optional: limit recursion depth\n      depthField: \"level\"          // Optional: track depth in results\n    }\n  }\n])\n\n// Result: Single round-trip returns entire hierarchy\n{\n  _id: 1,\n  name: \"Dev\",\n  allReports: [\n    { _id: 2, name: \"Eliot\", reportsTo: \"Dev\", level: 0 },\n    { _id: 3, name: \"Ron\", reportsTo: \"Eliot\", level: 1 },\n    { _id: 4, name: \"Andrew\", reportsTo: \"Eliot\", level: 1 },\n    { _id: 5, name: \"Asya\", reportsTo: \"Ron\", level: 2 },\n    { _id: 6, name: \"Dan\", reportsTo: \"Andrew\", level: 2 }\n  ]\n}",
+      "language": "javascript",
+      "description": "$graphLookup—single query"
+    },
+    {
+      "ruleId": "agg-group-memory-limit",
+      "ruleTitle": "Control $group Memory Usage",
+      "type": "bad",
+      "code": "// Collecting full documents explodes memory\n\ndb.orders.aggregate([\n  { $group: { _id: \"$customerId\", orders: { $push: \"$$ROOT\" } } }\n])\n// Risk: 100MB limit exceeded",
+      "language": "javascript",
+      "description": "grouping full documents into arrays"
+    },
+    {
+      "ruleId": "agg-group-memory-limit",
+      "ruleTitle": "Control $group Memory Usage",
+      "type": "good",
+      "code": "// Keep only required fields and use scalar accumulators\n\ndb.orders.aggregate([\n  { $project: { customerId: 1, total: 1 } },\n  { $group: { _id: \"$customerId\", spend: { $sum: \"$total\" } } }\n], { allowDiskUse: true })",
+      "language": "javascript",
+      "description": "project only needed fields + aggregate scalars"
+    },
+    {
+      "ruleId": "agg-lookup-index",
+      "ruleTitle": "Index $lookup Foreign Fields",
+      "type": "bad",
+      "code": "// Orders collection: 10,000 documents\n// Products collection: 100,000 documents (unindexed sku field)\n\ndb.orders.aggregate([\n  { $match: { status: \"pending\" } },\n  // Returns: 10,000 pending orders\n\n  {\n    $lookup: {\n      from: \"products\",\n      localField: \"sku\",        // orders.sku\n      foreignField: \"sku\",      // products.sku - NO INDEX!\n      as: \"product\"\n    }\n  }\n])\n\n// What happens internally:\n// For EACH of 10,000 orders:\n//   Scan ALL 100,000 products looking for matching sku\n//   Total comparisons: 10,000 × 100,000 = 1,000,000,000\n\n// explain() shows:\n{\n  \"$lookup\": {\n    \"from\": \"products\",\n    \"foreignField\": \"sku\",\n    \"as\": \"product\",\n    \"unwinding\": { \"preserveNullAndEmptyArrays\": false }\n  },\n  \"totalDocsExamined\": 1000000000,  // 1 BILLION\n  \"executionTimeMillis\": 180000      // 3 MINUTES\n}",
+      "language": "javascript",
+      "description": "unindexed foreignField—nested collection scans"
+    },
+    {
+      "ruleId": "agg-lookup-index",
+      "ruleTitle": "Index $lookup Foreign Fields",
+      "type": "good",
+      "code": "// Step 1: Create index on the foreign collection's join field\ndb.products.createIndex({ sku: 1 })\n\n// Step 2: Same $lookup now uses index\ndb.orders.aggregate([\n  { $match: { status: \"pending\" } },\n  {\n    $lookup: {\n      from: \"products\",\n      localField: \"sku\",\n      foreignField: \"sku\",      // NOW INDEXED ✓\n      as: \"product\"\n    }\n  }\n])\n\n// What happens internally:\n// For EACH of 10,000 orders:\n//   Binary search index for matching sku: O(log 100,000) ≈ 17 comparisons\n//   Total comparisons: 10,000 × 17 = 170,000\n\n// explain() shows:\n{\n  \"$lookup\": {\n    \"from\": \"products\",\n    \"foreignField\": \"sku\",\n    \"as\": \"product\"\n  },\n  \"totalDocsExamined\": 10000,      // Just the matched products\n  \"executionTimeMillis\": 150        // 150ms (1200× faster)\n}",
+      "language": "javascript",
+      "description": "Correct (indexed foreignField—O(log n) lookups) example for Index $lookup Foreign Fields"
+    },
+    {
+      "ruleId": "agg-match-early",
+      "ruleTitle": "Place $match at Pipeline Start",
+      "type": "bad",
+      "code": "// \"Get completed orders with customer details\"\ndb.orders.aggregate([\n  // Step 1: Lookup customers for ALL 10M orders\n  {\n    $lookup: {\n      from: \"customers\",\n      localField: \"customerId\",\n      foreignField: \"_id\",\n      as: \"customer\"\n    }\n  },\n  // Cost: 10M index lookups on customers collection\n  // Memory: 10M documents × (order + customer data)\n  // Time: ~45 seconds\n\n  { $unwind: \"$customer\" },  // Still processing 10M docs\n\n  // Step 2: NOW filter - after all the work is done\n  { $match: { status: \"completed\", \"customer.tier\": \"premium\" } }\n  // Returns: 500 documents\n  // Wasted: 99.995% of the work\n])\n\n// What happened:\n// - 10M $lookups executed (only needed 10K)\n// - 10M $unwinds executed (only needed 10K)\n// - 10M documents filtered down to 500",
+      "language": "javascript",
+      "description": "$match after expensive operations—processes everything"
+    },
+    {
+      "ruleId": "agg-match-early",
+      "ruleTitle": "Place $match at Pipeline Start",
+      "type": "good",
+      "code": "// Split $match: source filters before $lookup, joined filters after\ndb.orders.aggregate([\n  // Step 1: Filter source collection FIRST\n  { $match: { status: \"completed\" } },\n  // Uses index on { status: 1 }\n  // 10M orders → 10K completed orders\n  // Cost: 1 index scan\n  // Time: 5ms\n\n  // Step 2: $lookup only the filtered set\n  {\n    $lookup: {\n      from: \"customers\",\n      localField: \"customerId\",\n      foreignField: \"_id\",\n      as: \"customer\"\n    }\n  },\n  // Cost: 10K index lookups (not 10M!)\n  // Time: ~100ms\n\n  { $unwind: \"$customer\" },\n\n  // Step 3: Filter on joined data (must be after $lookup)\n  { $match: { \"customer.tier\": \"premium\" } }\n  // Returns: 500 documents\n])\n\n// Result: 100ms instead of 45 seconds (450× faster)",
+      "language": "javascript",
+      "description": "$match first—filters before expensive operations"
+    },
+    {
+      "ruleId": "agg-project-early",
+      "ruleTitle": "Use $project Early to Reduce Document Size",
+      "type": "bad",
+      "code": "// Document structure: 500KB each\n// {\n//   _id, title, authorId, publishedAt,  // 200 bytes (what we need)\n//   content: \"...\",                      // 100KB (HTML article body)\n//   rawMarkdown: \"...\",                  // 80KB (source markdown)\n//   revisionHistory: [...],              // 200KB (50 revisions)\n//   metadata: {...},                     // 50KB (SEO, analytics)\n//   comments: [...]                      // 70KB (embedded comments)\n// }\n\ndb.articles.aggregate([\n  { $match: { status: \"published\" } },\n  // 10,000 published articles × 500KB = 5GB flowing through\n\n  {\n    $lookup: {\n      from: \"authors\",\n      localField: \"authorId\",\n      foreignField: \"_id\",\n      as: \"author\"\n    }\n  },\n  // Still 5GB + author data per doc\n\n  { $unwind: \"$author\" },\n  // 5GB in memory for $unwind\n\n  { $sort: { publishedAt: -1 } },\n  // 5GB SORT OPERATION\n  // Exceeds 100MB limit → spills to disk\n  // Disk sort: 10-100× slower than in-memory\n\n  { $limit: 10 },\n\n  // Project LAST - after all the damage is done\n  { $project: { title: 1, \"author.name\": 1, publishedAt: 1 } }\n])\n\n// Pipeline stats:\n// - Memory used: 5GB+ (100MB limit exceeded)\n// - Disk spills: Yes, multiple times\n// - Time: 45 seconds",
+      "language": "javascript",
+      "description": "carrying full documents through pipeline"
+    },
+    {
+      "ruleId": "agg-project-early",
+      "ruleTitle": "Use $project Early to Reduce Document Size",
+      "type": "good",
+      "code": "db.articles.aggregate([\n  { $match: { status: \"published\" } },\n  // 10,000 docs enter pipeline\n\n  // IMMEDIATELY reduce to needed fields\n  {\n    $project: {\n      title: 1,\n      authorId: 1,       // Need for $lookup\n      publishedAt: 1     // Need for $sort\n      // Dropped: content, rawMarkdown, revisionHistory, metadata, comments\n      // 500KB → 200 bytes per doc\n    }\n  },\n  // Now: 10,000 × 200 bytes = 2MB (not 5GB!)\n\n  {\n    $lookup: {\n      from: \"authors\",\n      localField: \"authorId\",\n      foreignField: \"_id\",\n      as: \"author\",\n      // Project INSIDE $lookup too\n      pipeline: [\n        { $project: { name: 1, avatar: 1 } }  // Only needed author fields\n      ]\n    }\n  },\n  // 2MB + 100 bytes per author = still ~2MB\n\n  { $unwind: \"$author\" },\n  // 2MB\n\n  { $sort: { publishedAt: -1 } },\n  // 2MB sort - fits in memory easily\n\n  { $limit: 10 }\n])\n\n// Pipeline stats:\n// - Memory used: ~2MB (well under 100MB)\n// - Disk spills: None\n// - Time: 200ms (225× faster)",
+      "language": "javascript",
+      "description": "$project immediately after $match"
+    },
+    {
+      "ruleId": "agg-sort-limit",
+      "ruleTitle": "Combine $sort with $limit for Top-N Queries",
+      "type": "bad",
+      "code": "// Pattern 1: $sort without $limit (sorts EVERYTHING)\ndb.scores.aggregate([\n  { $match: { gameId: \"game123\" } },\n  { $sort: { score: -1 } }\n  // Returns ALL 1M documents, sorted\n  // Memory: 100MB+ (spills to disk)\n  // Time: 30+ seconds\n])\n\n// Pattern 2: Stages between $sort and $limit (breaks optimization)\ndb.scores.aggregate([\n  { $match: { gameId: \"game123\" } },\n  { $sort: { score: -1 } },\n  // Full sort happens here (1M docs)\n\n  { $addFields: { rank: { $literal: \"calculating...\" } } },\n  // This stage BREAKS coalescence!\n  // MongoDB doesn't know $limit is coming\n\n  { $limit: 10 }\n  // Too late - full sort already done\n])\n\n// Pattern 3: $project between (also breaks optimization)\ndb.scores.aggregate([\n  { $match: { gameId: \"game123\" } },\n  { $sort: { score: -1 } },\n  { $project: { score: 1, player: 1 } },  // Breaks coalescence\n  { $limit: 10 }\n])",
+      "language": "javascript",
+      "description": "$sort without $limit or with stages between"
+    },
+    {
+      "ruleId": "agg-sort-limit",
+      "ruleTitle": "Combine $sort with $limit for Top-N Queries",
+      "type": "good",
+      "code": "// Top 10 scores - optimal pattern\ndb.scores.aggregate([\n  { $match: { gameId: \"game123\" } },\n  { $sort: { score: -1 } },\n  { $limit: 10 }\n  // COALESCED: MongoDB maintains 10-element heap\n  // Memory: ~10KB (not 100MB)\n  // Time: <100ms (not 30s)\n])\n\n// explain() shows:\n{\n  \"sortLimitCoalesced\": true  // ← Optimization applied!\n}\n\n// Add transformations AFTER $limit\ndb.scores.aggregate([\n  { $match: { gameId: \"game123\" } },\n  { $sort: { score: -1 } },\n  { $limit: 10 },\n  // Coalescence happened ✓\n\n  // Now safe to add fields (only 10 docs)\n  { $addFields: { rank: { $indexOfArray: [/* */] } } },\n  { $project: { player: 1, score: 1, rank: 1 } }\n])",
+      "language": "javascript",
+      "description": "$limit immediately after $sort"
+    },
+    {
+      "ruleId": "index-clustered",
+      "ruleTitle": "Use Clustered Collections for Ordered Storage",
+      "type": "bad",
+      "code": "// Default collection stores documents out of order\n// Range queries rely entirely on secondary indexes\n\ndb.events.find({ eventId: { $gte: 1000, $lt: 2000 } })",
+      "language": "javascript",
+      "description": "range queries on unclustered collections"
+    },
+    {
+      "ruleId": "index-clustered",
+      "ruleTitle": "Use Clustered Collections for Ordered Storage",
+      "type": "good",
+      "code": "// Create a clustered collection at creation time\n\ndb.createCollection(\"events\", {\n  clusteredIndex: { key: { eventId: 1 }, unique: true }\n})\n\n// Range queries benefit from ordered storage\n\ndb.events.find({ eventId: { $gte: 1000, $lt: 2000 } })",
+      "language": "javascript",
+      "description": "clustered collection on the range key"
+    },
+    {
+      "ruleId": "index-compound-field-order",
+      "ruleTitle": "Order Compound Index Fields Correctly (ESR Rule)",
+      "type": "bad",
+      "code": "// Query: Find active users, sorted by name, in age range\ndb.users.find({\n  status: \"active\",              // Equality: exact match\n  age: { $gte: 21, $lte: 65 }   // Range: bounds\n}).sort({ name: 1 })             // Sort: ordering\n\n// WRONG: Range before Sort\ndb.users.createIndex({ status: 1, age: 1, name: 1 })\n//                      E          R        S (wrong!)\n\n// What happens:\n// 1. Jump to status=\"active\" (good - equality works)\n// 2. Scan ALL ages 21-65 in index order (bad - millions of entries)\n// 3. Collect results, THEN sort in memory (terrible - 100MB+ RAM)\n// Result: \"SORT_KEY_GENERATOR\" stage, memory limits hit, query killed",
+      "language": "javascript",
+      "description": "range field before sort—kills performance"
+    },
+    {
+      "ruleId": "index-compound-field-order",
+      "ruleTitle": "Order Compound Index Fields Correctly (ESR Rule)",
+      "type": "good",
+      "code": "// Same query, ESR-compliant index\ndb.users.createIndex({ status: 1, name: 1, age: 1 })\n//                      E          S        R (correct!)\n\n// What happens:\n// 1. Jump to status=\"active\" (equality narrows to subset)\n// 2. Walk index in name order (sort is FREE - index already ordered)\n// 3. For each entry, check if age in range (filter inline)\n// Result: No in-memory sort, streaming results, 10ms response",
+      "language": "javascript",
+      "description": "Equality → Sort → Range"
+    },
+    {
+      "ruleId": "index-compound-multi-field",
+      "ruleTitle": "Use Compound Indexes for Multi-Field Queries",
+      "type": "bad",
+      "code": "// Two single-field indexes\n\ndb.orders.createIndex({ status: 1 })\ndb.orders.createIndex({ createdAt: -1 })\n\n// Query filters and sorts on both fields\n// MongoDB still has to filter or sort in memory\n\ndb.orders.find({ status: \"shipped\" }).sort({ createdAt: -1 })",
+      "language": "javascript",
+      "description": "separate single-field indexes"
+    },
+    {
+      "ruleId": "index-compound-multi-field",
+      "ruleTitle": "Use Compound Indexes for Multi-Field Queries",
+      "type": "good",
+      "code": "// Compound index supports filter + sort\n\ndb.orders.createIndex({ status: 1, createdAt: -1 })\n\ndb.orders.find({ status: \"shipped\" }).sort({ createdAt: -1 })\n// Uses IXSCAN with no in-memory sort",
+      "language": "javascript",
+      "description": "compound index matches the query"
+    },
+    {
+      "ruleId": "index-covered-queries",
+      "ruleTitle": "Design Indexes for Covered Queries",
+      "type": "bad",
+      "code": "// Index only on query field\ndb.users.createIndex({ email: 1 })\n\n// Query needs fields not in index\ndb.users.find(\n  { email: \"alice@example.com\" },\n  { name: 1, email: 1, _id: 0 }\n)\n\n// explain() shows:\n{\n  \"executionStats\": {\n    \"totalKeysExamined\": 1,     // Found 1 index entry\n    \"totalDocsExamined\": 1,     // HAD TO FETCH DOCUMENT\n    \"nReturned\": 1\n  },\n  \"queryPlanner\": {\n    \"winningPlan\": {\n      \"stage\": \"PROJECTION_SIMPLE\",\n      \"inputStage\": {\n        \"stage\": \"FETCH\",        // FETCH = disk I/O\n        \"inputStage\": {\n          \"stage\": \"IXSCAN\"      // Index found the match\n        }\n      }\n    }\n  }\n}\n\n// Flow: Index → Disk → Return\n// The FETCH stage reads the full 4KB document just to get \"name\"",
+      "language": "javascript",
+      "description": "query fetches documents—disk I/O"
+    },
+    {
+      "ruleId": "index-covered-queries",
+      "ruleTitle": "Design Indexes for Covered Queries",
+      "type": "good",
+      "code": "// Index includes ALL projected fields\ndb.users.createIndex({ email: 1, name: 1 })\n\n// Same query, now covered\ndb.users.find(\n  { email: \"alice@example.com\" },\n  { name: 1, email: 1, _id: 0 }  // CRITICAL: Must exclude _id\n)\n\n// explain() shows:\n{\n  \"executionStats\": {\n    \"totalKeysExamined\": 1,     // Found 1 index entry\n    \"totalDocsExamined\": 0,     // ZERO DOCUMENTS FETCHED!\n    \"nReturned\": 1\n  },\n  \"queryPlanner\": {\n    \"winningPlan\": {\n      \"stage\": \"PROJECTION_COVERED\",  // Covered!\n      \"inputStage\": {\n        \"stage\": \"IXSCAN\"             // No FETCH stage\n      }\n    }\n  }\n}\n\n// Flow: Index → Return\n// All data came from index, no document fetch needed",
+      "language": "javascript",
+      "description": "covered query—no disk I/O"
+    },
+    {
+      "ruleId": "index-creation-background",
+      "ruleTitle": "Create Indexes in Background on Production",
+      "type": "bad",
+      "code": "// Pre-MongoDB 4.2: Foreground build blocked everything\ndb.orders.createIndex({ customerId: 1 })  // Blocks collection!\n// All reads and writes to 'orders' blocked until complete\n// On 100M docs: Could take 30+ minutes of complete downtime\n\n// Even in 4.2+, index builds can impact performance\n// Large collection + insufficient resources = slow build + degraded ops\n\n// Creating index during peak traffic:\n// - Index build competes for CPU, RAM, disk I/O\n// - Write operations slow down (index maintained during build)\n// - Replica set members may lag",
+      "language": "javascript",
+      "description": "blocking index creation on production"
+    },
+    {
+      "ruleId": "index-creation-background",
+      "ruleTitle": "Create Indexes in Background on Production",
+      "type": "good",
+      "code": "// MongoDB 4.2+: Background by default (hybrid build)\n// But still plan for resource impact\n\n// Step 1: Estimate index size and build time\nconst stats = db.orders.stats()\nconst docCount = stats.count\nconst avgDocSize = stats.avgObjSize\nconst estimatedIndexSizeBytes = docCount * 50  // ~50 bytes per entry estimate\n\nprint(`Documents: ${docCount.toLocaleString()}`)\nprint(`Est. index size: ${(estimatedIndexSizeBytes/1024/1024).toFixed(0)}MB`)\nprint(`Build time: Varies by disk speed (minutes to hours)`)\n\n// Step 2: Create during low-traffic window\ndb.orders.createIndex(\n  { customerId: 1, createdAt: -1 },\n  { name: \"customer_created_idx\" }\n)\n\n// Step 3: Monitor build progress\ndb.currentOp({ \"command.createIndexes\": { $exists: true } })",
+      "language": "javascript",
+      "description": "plan index creation for production"
+    },
+    {
+      "ruleId": "index-creation-background",
+      "ruleTitle": "Create Indexes in Background on Production",
+      "type": "bad",
+      "code": "// Pre-build assessment\nfunction assessIndexBuild(collection, indexSpec) {\n  const stats = db[collection].stats()\n  const docCount = stats.count\n  const collSizeGB = stats.size / 1024 / 1024 / 1024\n\n  print(`Index build assessment for ${collection}:`)\n  print(`  Documents: ${docCount.toLocaleString()}`)\n  print(`  Collection size: ${collSizeGB.toFixed(2)} GB`)\n\n  // Check existing similar indexes\n  const indexes = db[collection].getIndexes()\n  const similar = indexes.filter(idx => {\n    const specKeys = Object.keys(indexSpec)\n    const idxKeys = Object.keys(idx.key)\n    return specKeys.some(k => idxKeys.includes(k))\n  })\n\n  if (similar.length > 0) {\n    print(`\\n⚠️  Similar indexes exist:`)\n    similar.forEach(idx => print(`    ${idx.name}: ${JSON.stringify(idx.key)}`))\n  }\n\n  // Estimate time\n  const estimatedMinutes = Math.ceil(docCount / 1000000) * 5  // Rough: 5 min per 1M docs\n  print(`\\n  Estimated build time: ${estimatedMinutes}-${estimatedMinutes*2} minutes`)\n  print(`  (Varies widely based on hardware and load)`)\n\n  // Check memory\n  const memStatus = db.serverStatus().mem\n  print(`\\n  Server memory:`)\n  print(`    Resident: ${memStatus.resident}MB`)\n  print(`    Virtual: ${memStatus.virtual}MB`)\n\n  print(`\\n  Recommendation:`)\n  if (docCount > 10000000) {\n    print(`    Schedule during low-traffic window`)\n    print(`    Monitor with: db.currentOp({ msg: /Index Build/ })`)\n  } else {\n    print(`    Safe to create during normal operations`)\n  }\n}\n\n// Usage\nassessIndexBuild(\"orders\", { customerId: 1, createdAt: -1 })",
+      "language": "javascript",
+      "description": "When to avoid live index creation example for Create Indexes in Background on Production"
+    },
+    {
+      "ruleId": "index-ensure-usage",
+      "ruleTitle": "Ensure Queries Use Indexes",
+      "type": "bad",
+      "code": "// Query on field without index\ndb.orders.find({ customerId: \"cust123\" })\n\n// explain(\"executionStats\") reveals the horror:\n{\n  \"executionStats\": {\n    \"executionSuccess\": true,\n    \"nReturned\": 47,                    // Only wanted 47 docs\n    \"executionTimeMillis\": 45000,       // 45 SECONDS\n    \"totalKeysExamined\": 0,             // No index used\n    \"totalDocsExamined\": 10000000       // Read ALL 10M documents\n  },\n  \"queryPlanner\": {\n    \"winningPlan\": {\n      \"stage\": \"COLLSCAN\",              // FULL COLLECTION SCAN\n      \"direction\": \"forward\"\n    }\n  }\n}\n\n// Why this kills your app:\n// - 45 seconds per query = timeout errors\n// - Reads 10M docs from disk = saturates I/O\n// - Holds locks = blocks other operations\n// - Under load = cascading failures",
+      "language": "javascript",
+      "description": "no index—COLLSCAN death spiral"
+    },
+    {
+      "ruleId": "index-ensure-usage",
+      "ruleTitle": "Ensure Queries Use Indexes",
+      "type": "good",
+      "code": "// Create the index\ndb.orders.createIndex({ customerId: 1 })\n// Build time: ~1 min for 10M docs (one-time cost)\n\n// Same query, now indexed\ndb.orders.find({ customerId: \"cust123\" })\n\n// explain(\"executionStats\") shows:\n{\n  \"executionStats\": {\n    \"executionSuccess\": true,\n    \"nReturned\": 47,                    // Same 47 docs\n    \"executionTimeMillis\": 2,           // 2 MILLISECONDS (22,000× faster)\n    \"totalKeysExamined\": 47,            // Examined only matching keys\n    \"totalDocsExamined\": 47             // Fetched only matching docs\n  },\n  \"queryPlanner\": {\n    \"winningPlan\": {\n      \"stage\": \"FETCH\",\n      \"inputStage\": {\n        \"stage\": \"IXSCAN\",              // INDEX SCAN\n        \"indexName\": \"customerId_1\",\n        \"indexBounds\": {\n          \"customerId\": [\"[\\\"cust123\\\", \\\"cust123\\\"]\"]\n        }\n      }\n    }\n  }\n}",
+      "language": "javascript",
+      "description": "indexed query—IXSCAN"
+    },
+    {
+      "ruleId": "index-geospatial",
+      "ruleTitle": "Use Geospatial Indexes for Location Queries",
+      "type": "bad",
+      "code": "// Stores with location\n{\n  _id: \"store1\",\n  name: \"Downtown Store\",\n  location: {\n    type: \"Point\",\n    coordinates: [-73.9857, 40.7484]  // [longitude, latitude]\n  }\n}\n\n// Without geospatial index, can't efficiently query by location\n// Would need to calculate distance for EVERY store\ndb.stores.find({\n  // Can't even express \"nearby\" query without $near\n  // $near REQUIRES geospatial index\n})\n\n// Manual distance calculation for every document:\n// O(n) complexity, slow on large datasets",
+      "language": "javascript",
+      "description": "no geospatial index—COLLSCAN"
+    },
+    {
+      "ruleId": "index-geospatial",
+      "ruleTitle": "Use Geospatial Indexes for Location Queries",
+      "type": "good",
+      "code": "// Create 2dsphere index on GeoJSON field\ndb.stores.createIndex({ location: \"2dsphere\" })\n\n// Now efficient geospatial queries work:\n\n// Find stores within 5km of a point\ndb.stores.find({\n  location: {\n    $near: {\n      $geometry: {\n        type: \"Point\",\n        coordinates: [-73.9857, 40.7484]  // User's location\n      },\n      $maxDistance: 5000  // 5km in meters\n    }\n  }\n})\n// Returns stores sorted by distance, nearest first\n// Uses spatial index for efficient candidate selection\n\n// Find stores within a polygon (delivery zone)\ndb.stores.find({\n  location: {\n    $geoWithin: {\n      $geometry: {\n        type: \"Polygon\",\n        coordinates: [[\n          [-74.0, 40.7],\n          [-73.9, 40.7],\n          [-73.9, 40.8],\n          [-74.0, 40.8],\n          [-74.0, 40.7]  // Close the polygon\n        ]]\n      }\n    }\n  }\n})",
+      "language": "javascript",
+      "description": "2dsphere index for geospatial queries"
+    },
+    {
+      "ruleId": "index-hashed",
+      "ruleTitle": "Use Hashed Indexes for Evenly Distributed Equality Lookups",
+      "type": "bad",
+      "code": "// Hashed index cannot support range queries or sorting\n\ndb.users.createIndex({ userId: \"hashed\" })\n\ndb.users.find({ userId: { $gt: 1000 } }).sort({ userId: 1 })\n// Range + sort cannot use the hashed index",
+      "language": "javascript",
+      "description": "expecting range/sort on hashed index"
+    },
+    {
+      "ruleId": "index-hashed",
+      "ruleTitle": "Use Hashed Indexes for Evenly Distributed Equality Lookups",
+      "type": "good",
+      "code": "// Hashed index for equality queries\n\ndb.users.createIndex({ userId: \"hashed\" })\n\ndb.users.find({ userId: 123456 })\n// Uses the hashed index efficiently",
+      "language": "javascript",
+      "description": "equality lookups"
+    },
+    {
+      "ruleId": "index-hidden",
+      "ruleTitle": "Use Hidden Indexes to Test Removals Safely",
+      "type": "bad",
+      "code": "// Dropping blindly can break critical queries\n\ndb.orders.dropIndex(\"status_1_createdAt_-1\")",
+      "language": "javascript",
+      "description": "drop index immediately"
+    },
+    {
+      "ruleId": "index-hidden",
+      "ruleTitle": "Use Hidden Indexes to Test Removals Safely",
+      "type": "good",
+      "code": "// Hide the index first\n\ndb.orders.hideIndex(\"status_1_createdAt_-1\")\n\n// If performance regresses, unhide\n\ndb.orders.unhideIndex(\"status_1_createdAt_-1\")",
+      "language": "javascript",
+      "description": "hide, observe, then drop"
+    },
+    {
+      "ruleId": "index-high-cardinality-first",
+      "ruleTitle": "Put High-Cardinality Fields First in Equality Conditions",
+      "type": "bad",
+      "code": "// Query: Find orders by status and customerId\ndb.orders.find({ status: \"completed\", customerId: \"cust123\" })\n\n// BAD index: status first (only 5 distinct values)\ndb.orders.createIndex({ status: 1, customerId: 1 })\n\n// What happens on 10M orders:\n// 1. Jump to status=\"completed\" → matches 3M documents (30% of collection)\n// 2. Within those 3M, scan for customerId=\"cust123\" → finds 500 matches\n// Result: totalKeysExamined = 3,000,000 to find 500 documents\n\n// explain() shows:\n{\n  \"totalKeysExamined\": 3000000,   // Scanned 3M index entries!\n  \"totalDocsExamined\": 500,\n  \"nReturned\": 500,\n  \"executionTimeMillis\": 1200     // Over a second\n}",
+      "language": "javascript",
+      "description": "low cardinality first—scans millions"
+    },
+    {
+      "ruleId": "index-high-cardinality-first",
+      "ruleTitle": "Put High-Cardinality Fields First in Equality Conditions",
+      "type": "good",
+      "code": "// GOOD index: customerId first (100K distinct values)\ndb.orders.createIndex({ customerId: 1, status: 1 })\n\n// What happens:\n// 1. Jump to customerId=\"cust123\" → matches 500 documents (0.005% of collection)\n// 2. Within those 500, filter status=\"completed\" → finds 350 matches\n// Result: totalKeysExamined = 500 to find 350 documents\n\n// explain() shows:\n{\n  \"totalKeysExamined\": 500,       // Only 500 index entries!\n  \"totalDocsExamined\": 350,\n  \"nReturned\": 350,\n  \"executionTimeMillis\": 2        // 2 milliseconds\n}\n\n// Same query, 600× fewer keys examined, 600× faster",
+      "language": "javascript",
+      "description": "high cardinality first—scans hundreds"
+    },
+    {
+      "ruleId": "index-multikey",
+      "ruleTitle": "Understand Multikey Indexes for Arrays",
+      "type": "bad",
+      "code": "// Products with tags array\n{\n  _id: \"prod1\",\n  name: \"Laptop\",\n  tags: [\"electronics\", \"computers\", \"portable\", \"gaming\"]\n}\n\n// Without index, array queries scan every document\ndb.products.find({ tags: \"gaming\" })\n// COLLSCAN: Checks every document's tags array\n// 1M products = 1M array scans\n\ndb.products.find({ tags: { $all: [\"electronics\", \"gaming\"] } })\n// Even worse: Multiple array scans per document",
+      "language": "javascript",
+      "description": "no index on array field—COLLSCAN"
+    },
+    {
+      "ruleId": "index-multikey",
+      "ruleTitle": "Understand Multikey Indexes for Arrays",
+      "type": "good",
+      "code": "// Create index on array field\ndb.products.createIndex({ tags: 1 })\n\n// MongoDB automatically creates MULTIKEY index\n// Index entries for prod1:\n// \"computers\" → prod1\n// \"electronics\" → prod1\n// \"gaming\" → prod1\n// \"portable\" → prod1\n\n// Now array queries use index:\ndb.products.find({ tags: \"gaming\" })\n// IXSCAN: Direct lookup for \"gaming\" in index\n\ndb.products.find({ tags: { $in: [\"gaming\", \"electronics\"] } })\n// IXSCAN: Two index lookups, merge results\n\ndb.products.find({ tags: { $all: [\"gaming\", \"electronics\"] } })\n// IXSCAN: Both terms must match (intersection)",
+      "language": "javascript",
+      "description": "multikey index on array field"
+    },
+    {
+      "ruleId": "index-partial",
+      "ruleTitle": "Use Partial Indexes to Reduce Size",
+      "type": "bad",
+      "code": "// Orders collection: 10M documents\n// - 9M completed (rarely queried)\n// - 1M pending (constantly queried)\n\n// Full index includes ALL orders\ndb.orders.createIndex({ customerId: 1, createdAt: -1 })\n\n// Index stats:\n// - Size: 500MB (10M entries)\n// - RAM usage: 500MB\n// - Write cost: Every insert/update touches this index\n\n// But your production queries are:\ndb.orders.find({ customerId: \"x\", status: \"pending\" })\n// Only 10% of index entries are ever accessed!\n// 90% of index size is wasted RAM",
+      "language": "javascript",
+      "description": "full index on rarely-queried data"
+    },
+    {
+      "ruleId": "index-partial",
+      "ruleTitle": "Use Partial Indexes to Reduce Size",
+      "type": "good",
+      "code": "// Partial index: Only pending orders\ndb.orders.createIndex(\n  { customerId: 1, createdAt: -1 },\n  { partialFilterExpression: { status: \"pending\" } }\n)\n\n// Index stats:\n// - Size: 50MB (1M entries, not 10M)\n// - RAM usage: 50MB (90% reduction!)\n// - Write cost: Only touches index when status = \"pending\"\n\n// Query that USES this index:\ndb.orders.find({\n  customerId: \"x\",\n  status: \"pending\"  // Must include filter condition!\n}).sort({ createdAt: -1 })\n// ✓ Index used - matches partialFilterExpression\n\n// Query that CANNOT use this index:\ndb.orders.find({ customerId: \"x\" })\n// ✗ Index not used - doesn't include status: \"pending\"\n// MongoDB can't prove query results won't include completed orders",
+      "language": "javascript",
+      "description": "partial index on active subset"
+    },
+    {
+      "ruleId": "index-prefix-principle",
+      "ruleTitle": "Understand Index Prefix Principle",
+      "type": "bad",
+      "code": "// Common mistake: Creating overlapping indexes\ndb.orders.createIndex({ customerId: 1 })                    // Index 1\ndb.orders.createIndex({ customerId: 1, status: 1 })        // Index 2\ndb.orders.createIndex({ customerId: 1, status: 1, date: -1 }) // Index 3\n\n// Query support:\n// - find({ customerId: x }) → Uses Index 1, 2, OR 3\n// - find({ customerId: x, status: y }) → Uses Index 2 OR 3\n// - find({ customerId: x, status: y, date: z }) → Uses Index 3 only\n\n// Problem: Index 1 and Index 2 are REDUNDANT\n// Index 3 already covers all their use cases!\n\n// Cost of redundancy:\n// - 3 indexes instead of 1\n// - 3× write overhead (each insert/update touches 3 indexes)\n// - 3× RAM usage for index pages\n// - 3× maintenance during compaction",
+      "language": "javascript",
+      "description": "redundant indexes—wasted resources"
+    },
+    {
+      "ruleId": "index-prefix-principle",
+      "ruleTitle": "Understand Index Prefix Principle",
+      "type": "good",
+      "code": "// Single index covers all three query patterns\ndb.orders.createIndex({ customerId: 1, status: 1, date: -1 })\n\n// Prefix coverage:\n// - { customerId: 1 } ← First field prefix\n//   find({ customerId: \"cust123\" }) ✓ USES INDEX\n//\n// - { customerId: 1, status: 1 } ← Two-field prefix\n//   find({ customerId: \"cust123\", status: \"completed\" }) ✓ USES INDEX\n//\n// - { customerId: 1, status: 1, date: -1 } ← Full index\n//   find({ customerId: \"cust123\", status: \"completed\", date: { $gte: d } }) ✓ USES INDEX\n\n// NOT supported (non-prefixes):\n// - { status: 1 } ← Not a prefix (doesn't start with customerId)\n//   find({ status: \"completed\" }) ✗ COLLSCAN\n//\n// - { date: 1 } ← Not a prefix\n//   find({ date: { $gte: d } }) ✗ COLLSCAN\n//\n// - { status: 1, date: 1 } ← Not a prefix (skips customerId)\n//   find({ status: \"completed\", date: { $gte: d } }) ✗ COLLSCAN",
+      "language": "javascript",
+      "description": "single compound index—prefix coverage"
+    },
+    {
+      "ruleId": "index-remove-unused",
+      "ruleTitle": "Remove Unused Indexes",
+      "type": "bad",
+      "code": "// Collection with accumulated indexes over 3 years of development\ndb.products.getIndexes()\n// Returns 12 indexes:\n[\n  { name: \"_id_\" },                    // Required, cannot remove\n  { name: \"sku_1\" },                   // Used frequently\n  { name: \"category_1\" },              // Redundant! (see below)\n  { name: \"category_1_brand_1\" },      // Covers category_1 queries\n  { name: \"name_text\" },               // Created for feature that was removed\n  { name: \"price_1\" },                 // Used once per quarter for reports\n  { name: \"createdAt_1\" },             // Migration script, never used since\n  { name: \"tags_1\" },                  // Feature never launched\n  { name: \"vendor_1_price_1\" },        // Old query pattern, deprecated\n  { name: \"status_1\" },                // Only 3 values, rarely selective\n  { name: \"updatedAt_1\" },             // TTL candidate, not TTL index\n  { name: \"legacy_id_1\" }              // Migration complete 2 years ago\n]\n\n// Cost of 12 indexes:\n// - Insert: Must write to 12 B-trees (6× slower than 2 indexes)\n// - Memory: ~500MB index data competing for 1GB WiredTiger cache\n// - Storage: 2GB index files vs 800MB needed",
+      "language": "javascript",
+      "description": "keeping all indexes \"just in case\""
+    },
+    {
+      "ruleId": "index-remove-unused",
+      "ruleTitle": "Remove Unused Indexes",
+      "type": "good",
+      "code": "// Step 1: Get index usage statistics\ndb.products.aggregate([{ $indexStats: {} }])\n\n// Output shows access patterns since last server restart:\n[\n  { name: \"_id_\", accesses: { ops: 150000, since: ISODate(\"2024-01-01\") } },\n  { name: \"sku_1\", accesses: { ops: 125000 } },           // Heavy use\n  { name: \"category_1\", accesses: { ops: 0 } },           // ZERO - redundant\n  { name: \"category_1_brand_1\", accesses: { ops: 45000 } }, // Covers category queries\n  { name: \"name_text\", accesses: { ops: 0 } },            // ZERO - dead feature\n  { name: \"price_1\", accesses: { ops: 12 } },             // Negligible\n  { name: \"createdAt_1\", accesses: { ops: 0 } },          // ZERO - migration relic\n  { name: \"tags_1\", accesses: { ops: 0 } },               // ZERO - never launched\n  { name: \"vendor_1_price_1\", accesses: { ops: 3 } },     // Nearly zero\n  { name: \"status_1\", accesses: { ops: 89 } },            // Low, low cardinality\n  { name: \"updatedAt_1\", accesses: { ops: 0 } },          // ZERO\n  { name: \"legacy_id_1\", accesses: { ops: 0 } }           // ZERO - migration done\n]\n\n// Step 2: Identify candidates for removal\n// Rule: ops = 0 over 30+ days → drop\n// Rule: ops < 100 and low cardinality → probably not helping\n\n// Step 3: Remove unused indexes (one at a time, monitor)\ndb.products.dropIndex(\"name_text\")        // Dead feature\ndb.products.dropIndex(\"createdAt_1\")      // Migration relic\ndb.products.dropIndex(\"tags_1\")           // Never launched\ndb.products.dropIndex(\"legacy_id_1\")      // Migration complete\ndb.products.dropIndex(\"updatedAt_1\")      // Not serving queries\ndb.products.dropIndex(\"category_1\")       // Redundant with compound\n\n// Step 4: Evaluate low-usage indexes\n// price_1 (12 ops) - keep if quarterly reports need it\n// vendor_1_price_1 (3 ops) - investigate, probably drop\n// status_1 (89 ops) - low cardinality, check if actually helping\n\n// Result: 12 indexes → 6 indexes\n// Write latency: -45%\n// Memory freed: ~300MB for cache",
+      "language": "javascript",
+      "description": "audit and remove unused"
+    },
+    {
+      "ruleId": "index-size-considerations",
+      "ruleTitle": "Consider Index Size and Memory Impact",
+      "type": "bad",
+      "code": "// Creating indexes for every possible query pattern\n// 10M document collection\ndb.orders.createIndex({ customerId: 1 })           // 150MB\ndb.orders.createIndex({ status: 1 })               // 80MB\ndb.orders.createIndex({ createdAt: -1 })           // 170MB\ndb.orders.createIndex({ productId: 1 })            // 160MB\ndb.orders.createIndex({ shippingAddress.city: 1 }) // 200MB\ndb.orders.createIndex({ totalAmount: 1 })          // 80MB\ndb.orders.createIndex({ customerId: 1, status: 1 })// 180MB\ndb.orders.createIndex({ status: 1, createdAt: -1 })// 200MB\n// Total: 1.2GB of indexes for this one collection!\n// Server has 2GB WiredTiger cache → indexes don't fit!\n// Result: Constant page eviction, 10× slower queries",
+      "language": "javascript",
+      "description": "creating indexes without considering memory impact"
+    },
+    {
+      "ruleId": "index-size-considerations",
+      "ruleTitle": "Consider Index Size and Memory Impact",
+      "type": "good",
+      "code": "// Step 1: Audit existing indexes\ndb.orders.aggregate([{ $indexStats: {} }])\n// Found: status_1 has 0 ops (unused), drop it\n\n// Step 2: Use compound indexes to cover multiple query patterns\ndb.orders.createIndex({ customerId: 1, createdAt: -1 })\n// Serves: customerId queries, customerId+createdAt queries\n\n// Step 3: Use partial indexes for filtered queries\ndb.orders.createIndex(\n  { status: 1, createdAt: -1 },\n  { partialFilterExpression: { status: { $in: [\"pending\", \"processing\"] } } }\n)\n// Only indexes 10% of documents (active orders)\n// Size: 20MB instead of 200MB\n\n// Step 4: Monitor total index size vs cache\nconst cache = db.serverStatus().wiredTiger.cache[\"maximum bytes configured\"]\nconst indexSize = db.orders.stats().totalIndexSize\nprint(`Index/cache ratio: ${(indexSize/cache*100).toFixed(1)}%`)\n// Target: < 50%",
+      "language": "javascript",
+      "description": "strategic indexing with memory awareness"
+    },
+    {
+      "ruleId": "index-sparse",
+      "ruleTitle": "Use Sparse Indexes for Optional Fields",
+      "type": "bad",
+      "code": "// Users collection: 1M documents\n// - 100K have twitterHandle (10%)\n// - 900K don't have twitterHandle (90%)\n\n// Regular index includes ALL documents\ndb.users.createIndex({ twitterHandle: 1 })\n\n// Index contains:\n// - 100K entries with actual values\n// - 900K entries with null (field doesn't exist → indexed as null)\n\n// Problems:\n// 1. Index size: 1M entries (10× larger than needed)\n// 2. Query inefficiency:\ndb.users.find({ twitterHandle: \"@alice\" })\n// Must skip through 900K null entries\n\n// 3. Unique constraint FAILS:\ndb.users.createIndex({ twitterHandle: 1 }, { unique: true })\n// ERROR: Duplicate key error on null\n// All 900K docs without twitterHandle have null, violating unique",
+      "language": "javascript",
+      "description": "regular index on optional field"
+    },
+    {
+      "ruleId": "index-sparse",
+      "ruleTitle": "Use Sparse Indexes for Optional Fields",
+      "type": "good",
+      "code": "// Sparse index skips documents where field doesn't exist\ndb.users.createIndex({ twitterHandle: 1 }, { sparse: true })\n\n// Index contains:\n// - 100K entries (only documents WITH twitterHandle)\n// - 0 null entries\n\n// Benefits:\n// 1. Index size: 100K entries (90% reduction)\n// 2. Query efficiency: No null entries to skip\n\n// 3. Unique constraint WORKS:\ndb.users.createIndex({ twitterHandle: 1 }, { unique: true, sparse: true })\n// ✓ Works! Multiple docs without twitterHandle are allowed\n// Only docs WITH twitterHandle must be unique",
+      "language": "javascript",
+      "description": "sparse index on optional field"
+    },
+    {
+      "ruleId": "index-text-search",
+      "ruleTitle": "Use Text Indexes for Full-Text Search",
+      "type": "bad",
+      "code": "// Search for articles about \"running\"\ndb.articles.find({ content: /running/i })\n\n// Problems:\n// 1. COLLSCAN: Scans every document (unanchored regex)\n// 2. No stemming: Misses \"run\", \"runs\", \"runner\"\n// 3. No ranking: All matches treated equally\n// 4. Case handling: Manual /i flag needed\n// 5. Performance: O(n) where n = all documents\n\n// On 1M articles: 30+ seconds for a simple search\n\n// Trying to match variations manually:\ndb.articles.find({\n  content: { $regex: /\\b(run|runs|running|runner)\\b/i }\n})\n// Still COLLSCAN, and you missed \"ran\"",
+      "language": "javascript",
+      "description": "regex for keyword search—COLLSCAN"
+    },
+    {
+      "ruleId": "index-text-search",
+      "ruleTitle": "Use Text Indexes for Full-Text Search",
+      "type": "good",
+      "code": "// Create text index\ndb.articles.createIndex({ title: \"text\", content: \"text\" })\n\n// Search with $text operator\ndb.articles.find({\n  $text: { $search: \"running\" }\n})\n\n// Automatic features:\n// - Stemming: \"running\" matches run, runs, running, runner\n// - Stop words: Common words (the, is, a) ignored\n// - Case insensitive: Built-in\n// - Relevance score: Available via $meta\n\n// With relevance ranking:\ndb.articles.find(\n  { $text: { $search: \"running marathon training\" } },\n  { score: { $meta: \"textScore\" } }\n).sort({ score: { $meta: \"textScore\" } })\n\n// Returns articles ranked by relevance\n// More matches = higher score",
+      "language": "javascript",
+      "description": "text index with stemming and ranking"
+    },
+    {
+      "ruleId": "index-ttl",
+      "ruleTitle": "Use TTL Indexes for Automatic Data Expiration",
+      "type": "bad",
+      "code": "// Sessions collection grows unbounded\n// Manual cleanup required:\n\n// Cron job runs every hour:\ndb.sessions.deleteMany({\n  createdAt: { $lt: new Date(Date.now() - 24*60*60*1000) }\n})\n\n// Problems:\n// 1. Operational burden: Must maintain cron job\n// 2. Batch deletes cause load spikes\n// 3. Collection grows between cleanup runs\n// 4. If cron fails, data accumulates indefinitely\n// 5. Delete operations compete with production traffic\n\n// Same issues with logs, tokens, temporary files, etc.",
+      "language": "javascript",
+      "description": "manual cleanup with cron jobs"
+    },
+    {
+      "ruleId": "index-ttl",
+      "ruleTitle": "Use TTL Indexes for Automatic Data Expiration",
+      "type": "good",
+      "code": "// TTL index: Documents deleted automatically after expiry\ndb.sessions.createIndex(\n  { createdAt: 1 },\n  { expireAfterSeconds: 86400 }  // 24 hours = 86400 seconds\n)\n\n// How it works:\n// 1. MongoDB background thread checks every 60 seconds\n// 2. Finds documents where: createdAt + expireAfterSeconds < now\n// 3. Deletes them automatically\n\n// Document lifecycle:\n{ _id: \"sess1\", createdAt: ISODate(\"2024-01-15T10:00:00Z\"), userId: \"u1\" }\n// Created: Jan 15, 10:00 AM\n// Expires: Jan 16, 10:00 AM (24 hours later)\n// Deleted: Within ~60 seconds after expiry\n\n// Benefits:\n// - No cron jobs or cleanup scripts\n// - Continuous deletion (no batch spikes)\n// - Collection stays bounded\n// - Zero operational maintenance",
+      "language": "javascript",
+      "description": "TTL index for automatic expiration"
+    },
+    {
+      "ruleId": "index-unique",
+      "ruleTitle": "Use Unique Indexes to Enforce Constraints",
+      "type": "bad",
+      "code": "// Two concurrent requests insert the same email\n\ndb.users.insertOne({ email: \"ada@example.com\" })\ndb.users.insertOne({ email: \"ada@example.com\" })\n// Duplicates now exist",
+      "language": "javascript",
+      "description": "application-only uniqueness"
+    },
+    {
+      "ruleId": "index-unique",
+      "ruleTitle": "Use Unique Indexes to Enforce Constraints",
+      "type": "good",
+      "code": "// Enforce uniqueness at the database level\n\ndb.users.createIndex({ email: 1 }, { unique: true })\n\n// Duplicate insert fails immediately\n\ndb.users.insertOne({ email: \"ada@example.com\" })\n// Second insert throws duplicate key error",
+      "language": "javascript",
+      "description": "unique index"
+    },
+    {
+      "ruleId": "index-wildcard",
+      "ruleTitle": "Use Wildcard Indexes for Dynamic Fields",
+      "type": "bad",
+      "code": "// Product catalog with dynamic attributes\n// Different product types have different fields\n{\n  _id: \"laptop1\",\n  type: \"laptop\",\n  attributes: {\n    brand: \"Dell\",\n    screenSize: 15.6,\n    ram: \"16GB\",\n    processor: \"Intel i7\"\n  }\n}\n\n{\n  _id: \"shirt1\",\n  type: \"clothing\",\n  attributes: {\n    brand: \"Nike\",\n    size: \"L\",\n    color: \"blue\",\n    material: \"cotton\"\n  }\n}\n\n// Problem: Can't create indexes for every possible attribute\ndb.products.createIndex({ \"attributes.brand\": 1 })\ndb.products.createIndex({ \"attributes.color\": 1 })\ndb.products.createIndex({ \"attributes.size\": 1 })\ndb.products.createIndex({ \"attributes.screenSize\": 1 })\n// ... hundreds more?\n\n// New attributes require new indexes\n// Custom user-defined attributes impossible to predict",
+      "language": "javascript",
+      "description": "trying to index unknown fields"
+    },
+    {
+      "ruleId": "index-wildcard",
+      "ruleTitle": "Use Wildcard Indexes for Dynamic Fields",
+      "type": "good",
+      "code": "// Wildcard index covers ALL fields under attributes\ndb.products.createIndex({ \"attributes.$**\": 1 })\n\n// Now ALL attribute queries use this index:\ndb.products.find({ \"attributes.brand\": \"Dell\" })        // ✓ Uses index\ndb.products.find({ \"attributes.color\": \"blue\" })        // ✓ Uses index\ndb.products.find({ \"attributes.customField\": \"value\" }) // ✓ Uses index\ndb.products.find({ \"attributes.any.nested.path\": 1 })   // ✓ Uses index\n\n// One index, unlimited fields\n// New attributes automatically indexed without schema changes",
+      "language": "javascript",
+      "description": "wildcard index on dynamic fields"
+    },
+    {
+      "ruleId": "perf-atlas-performance-advisor",
+      "ruleTitle": "Use Atlas Performance Advisor for Index Recommendations",
+      "type": "bad",
+      "code": "// Adding indexes without evidence\n// May create unnecessary write overhead\n\ndb.orders.createIndex({ status: 1 })",
+      "language": "javascript",
+      "description": "guessing indexes without workload data"
+    },
+    {
+      "ruleId": "perf-atlas-performance-advisor",
+      "ruleTitle": "Use Atlas Performance Advisor for Index Recommendations",
+      "type": "good",
+      "code": "// Step 1: Review Performance Advisor suggestions in Atlas\n// Step 2: Validate with explain() on the exact query pattern\n\ndb.orders.find({ status: \"pending\", createdAt: { $gte: ISODate(\"2025-01-01\") } })\n  .explain(\"executionStats\")",
+      "language": "javascript",
+      "description": "use advisor output to guide changes"
+    },
+    {
+      "ruleId": "perf-explain-interpretation",
+      "ruleTitle": "Interpret explain() Output for Query Optimization",
+      "type": "bad",
+      "code": "db.orders.find({ status: \"pending\" }).sort({ createdAt: -1 }).explain(\"executionStats\")\n\n// Output showing in-memory sort:\n{\n  \"queryPlanner\": {\n    \"winningPlan\": {\n      \"stage\": \"SORT\",                    // In-memory sort\n      \"sortPattern\": { \"createdAt\": -1 },\n      \"memLimit\": 104857600,              // 100MB limit\n      \"inputStage\": {\n        \"stage\": \"FETCH\",\n        \"inputStage\": {\n          \"stage\": \"IXSCAN\",\n          \"indexName\": \"status_1\"         // Index for filter only\n        }\n      }\n    }\n  },\n  \"executionStats\": {\n    \"executionTimeMillis\": 500,\n    // Large sort buffer used...\n  }\n}\n\n// Diagnosis: Index doesn't support sort order\n// Fix: db.orders.createIndex({ status: 1, createdAt: -1 })",
+      "language": "javascript",
+      "description": "In-memory SORT (potentially bad) example for Interpret explain() Output for Query Optimization"
+    },
+    {
+      "ruleId": "perf-query-plan-cache",
+      "ruleTitle": "Understand and Manage Query Plan Cache",
+      "type": "bad",
+      "code": "// Clearing entire cache on every deploy or incident\ndb.orders.getPlanCache().clear()\n// Problem: forces expensive replanning for all query shapes\n// and can create avoidable latency spikes",
+      "language": "javascript",
+      "description": "blindly clearing cache and forcing replanning"
+    },
+    {
+      "ruleId": "perf-query-plan-cache",
+      "ruleTitle": "Understand and Manage Query Plan Cache",
+      "type": "good",
+      "code": "// 1) Inspect current cached state for this collection\ndb.orders.aggregate([{ $planCacheStats: {} }])\n\n// 2) Verify actual winning plan for the problem query\ndb.orders.find({ status: \"pending\" })\n  .sort({ createdAt: -1 })\n  .explain(\"executionStats\")\n\n// 3) If needed, clear only the affected query shape\ndb.orders.getPlanCache().clearPlansByQuery(\n  { status: \"pending\" },\n  { createdAt: -1 },\n  { _id: 1, status: 1, total: 1 }\n)",
+      "language": "javascript",
+      "description": "inspect first, then clear only when justified"
+    },
+    {
+      "ruleId": "perf-query-settings",
+      "ruleTitle": "Use Query Settings to Override Query Plans",
+      "type": "bad",
+      "code": "// Application code must be modified for every hint\n// Hint is lost if query is written differently\ndb.orders.find({ status: \"pending\", region: \"us-east\" })\n  .hint({ status: 1, region: 1, createdAt: -1 })\n\n// Problem: Every query location needs updating\n// Different query variations may not get the hint",
+      "language": "javascript",
+      "description": "hardcoding hints in application"
+    },
+    {
+      "ruleId": "perf-query-settings",
+      "ruleTitle": "Use Query Settings to Override Query Plans",
+      "type": "good",
+      "code": "// Set index hint for a query shape - applies cluster-wide\ndb.adminCommand({\n  setQuerySettings: {\n    find: \"orders\",\n    filter: { status: { $eq: {} }, region: { $eq: {} } },\n    $db: \"mydb\"\n  },\n  settings: {\n    indexHints: {\n      ns: { db: \"mydb\", coll: \"orders\" },\n      allowedIndexes: [{ status: 1, region: 1, createdAt: -1 }]\n    },\n    comment: \"force compound index for regional order-status query shape\"\n  }\n})\n\n// Now ANY query matching this shape uses the specified index\ndb.orders.find({ status: \"pending\", region: \"us-east\" })  // Uses hint\ndb.orders.find({ status: \"shipped\", region: \"eu-west\" })   // Uses hint\n// No application code changes needed",
+      "language": "javascript",
+      "description": "persistent query settings"
+    },
+    {
+      "ruleId": "perf-query-settings",
+      "ruleTitle": "Use Query Settings to Override Query Plans",
+      "type": "bad",
+      "code": "// Block a query shape entirely (returns error)\ndb.adminCommand({\n  setQuerySettings: {\n    find: \"logs\",\n    filter: {},  // Unfiltered query on large collection\n    $db: \"mydb\"\n  },\n  settings: {\n    reject: true\n  }\n})\n\n// Any query matching this shape now fails with error\ndb.logs.find({})  // Error: query rejected by query settings",
+      "language": "javascript",
+      "description": "Reject problematic queries example for Use Query Settings to Override Query Plans"
+    },
+    {
+      "ruleId": "perf-query-stats",
+      "ruleTitle": "Use $queryStats to Analyze Query Patterns",
+      "type": "bad",
+      "code": "// Manually checking individual queries without workload data\ndb.orders.explain(\"executionStats\").find({ status: \"pending\" })\n// Problem: Don't know which queries are actually frequent or slow\n// Could optimize a query that runs once a day instead of one running 1000x/minute",
+      "language": "javascript",
+      "description": "guessing which queries need optimization"
+    },
+    {
+      "ruleId": "perf-query-stats",
+      "ruleTitle": "Use $queryStats to Analyze Query Patterns",
+      "type": "good",
+      "code": "// Get query statistics from the cluster\n// Requires queryStatsRead privilege (clusterMonitor includes it)\ndb.adminCommand({\n  aggregate: 1,\n  pipeline: [\n    { $queryStats: {} },\n    {\n      $group: {\n        _id: \"$key.queryShape\",\n        namespace: { $first: \"$key.queryShape.cmdNs\" },\n        totalExecutions: { $sum: \"$metrics.execCount\" },\n        totalDurationMicros: { $sum: \"$metrics.totalExecMicros.sum\" },\n        docsExaminedTotal: { $sum: \"$metrics.docsExamined.sum\" },\n        keysExaminedTotal: { $sum: \"$metrics.keysExamined.sum\" }\n      }\n    },\n    {\n      $project: {\n        namespace: 1,\n        totalExecutions: 1,\n        totalDurationMicros: 1,\n        docsExaminedTotal: 1,\n        keysExaminedTotal: 1,\n        avgDurationMs: {\n          $cond: {\n            if: { $gt: [\"$totalExecutions\", 0] },\n            then: {\n              $divide: [\n                \"$totalDurationMicros\",\n                { $multiply: [\"$totalExecutions\", 1000] }\n              ]\n            },\n            else: null\n          }\n        }\n      }\n    },\n    { $sort: { totalDurationMicros: -1 } },\n    { $limit: 10 }\n  ],\n  cursor: {}\n})\n// Returns top 10 query shapes by total time spent",
+      "language": "javascript",
+      "description": "data-driven query analysis"
+    },
+    {
+      "ruleId": "perf-slow-query-log",
+      "ruleTitle": "Use Slow Query Log to Find Performance Issues",
+      "type": "bad",
+      "code": "// \"I think this query is slow, let me optimize it\"\ndb.orders.createIndex({ status: 1 })  // Created index based on intuition\n\n// Later: Application still slow\n// \"Maybe this query is the problem?\"\ndb.orders.createIndex({ customerId: 1, createdAt: -1 })\n\n// Result: Created 5 indexes based on guesses\n// Actual slow query: db.products.find({ category: \"electronics\" })\n// which was never optimized because we didn't know about it!\n// Wasted effort on wrong queries, real bottleneck remains",
+      "language": "javascript",
+      "description": "guessing which queries are slow"
+    },
+    {
+      "ruleId": "perf-slow-query-log",
+      "ruleTitle": "Use Slow Query Log to Find Performance Issues",
+      "type": "good",
+      "code": "// Enable profiler to capture slow operations\ndb.setProfilingLevel(1, { slowms: 100 })\n\n// Wait for traffic, then find the actual bottlenecks\ndb.system.profile.find({ planSummary: \"COLLSCAN\" })\n  .sort({ millis: -1 })\n  .limit(5)\n// Output shows: products.find({ category: \"electronics\" }) - 2500ms COLLSCAN!\n\n// Now create the RIGHT index\ndb.products.createIndex({ category: 1 })\n\n// Verify improvement\ndb.products.find({ category: \"electronics\" }).explain(\"executionStats\")\n// executionTimeMillis: 5ms (was 2500ms) - 500× improvement!",
+      "language": "javascript",
+      "description": "using profiler to find actual slow queries"
+    },
+    {
+      "ruleId": "perf-use-hint",
+      "ruleTitle": "Use hint() to Control Query Plans When Necessary",
+      "type": "bad",
+      "code": "// Query planner picks a suboptimal index\n\ndb.orders.find({ status: \"shipped\", createdAt: { $gte: ISODate(\"2025-01-01\") } })\n// Uses a less selective index, causing high docsExamined",
+      "language": "javascript",
+      "description": "accepting a poor plan"
+    },
+    {
+      "ruleId": "perf-use-hint",
+      "ruleTitle": "Use hint() to Control Query Plans When Necessary",
+      "type": "good",
+      "code": "// Force the compound index that matches the query\n\ndb.orders.find({\n  status: \"shipped\",\n  createdAt: { $gte: ISODate(\"2025-01-01\") }\n}).hint({ status: 1, createdAt: 1 })",
+      "language": "javascript",
+      "description": "force the intended index"
+    },
+    {
+      "ruleId": "query-anchored-regex",
+      "ruleTitle": "Anchor Regex Patterns with ^",
+      "type": "bad",
+      "code": "// \"Find users with gmail addresses\"\ndb.users.find({ email: /gmail/ })\n\n// What you expect: Use index on email, find gmail matches\n// What happens: FULL COLLECTION SCAN\n\n// Even with index:\ndb.users.createIndex({ email: 1 })\n\n// explain() shows:\n{\n  \"queryPlanner\": {\n    \"winningPlan\": {\n      \"stage\": \"COLLSCAN\"  // Full scan despite index!\n    }\n  },\n  \"executionStats\": {\n    \"totalDocsExamined\": 10000000,  // All 10M docs\n    \"executionTimeMillis\": 32000    // 32 seconds\n  }\n}\n\n// Why? \"gmail\" could be ANYWHERE in string:\n// - alice@gmail.com ✓\n// - bob@gmail.co.uk ✓\n// - gmail_user@yahoo.com ✓ (contains \"gmail\")\n// Index can't help—must check every value",
+      "language": "javascript",
+      "description": "unanchored regex—COLLSCAN regardless of index"
+    },
+    {
+      "ruleId": "query-anchored-regex",
+      "ruleTitle": "Anchor Regex Patterns with ^",
+      "type": "good",
+      "code": "// \"Find users whose email starts with 'alice'\"\ndb.users.find({ email: /^alice/ })\n\n// Index CAN be used because:\n// - All matches start with \"alice\"\n// - Index is sorted alphabetically\n// - Seek to \"alice\", scan until \"alicf\" (first non-match)\n\n// explain() shows:\n{\n  \"queryPlanner\": {\n    \"winningPlan\": {\n      \"stage\": \"IXSCAN\",\n      \"indexName\": \"email_1\",\n      \"indexBounds\": {\n        \"email\": [\n          \"[\\\"alice\\\", \\\"alicf\\\")\",  // Bounded range!\n          \"[/^alice/, /^alice/]\"\n        ]\n      }\n    }\n  },\n  \"executionStats\": {\n    \"totalKeysExamined\": 1547,     // Only ~1500 entries\n    \"totalDocsExamined\": 1547,\n    \"executionTimeMillis\": 5       // 5ms vs 32 seconds!\n  }\n}",
+      "language": "javascript",
+      "description": "anchored regex—efficient IXSCAN"
+    },
+    {
+      "ruleId": "query-avoid-ne-nin",
+      "ruleTitle": "Avoid $ne and $nin Operators",
+      "type": "bad",
+      "code": "// \"Find all non-deleted users\"\ndb.users.find({ status: { $ne: \"deleted\" } })\n\n// Data distribution in 1M users:\n// status=\"active\": 700,000 docs\n// status=\"pending\": 150,000 docs\n// status=\"suspended\": 100,000 docs\n// status=\"deleted\": 50,000 docs\n\n// With index on { status: 1 }, MongoDB must:\n// 1. Scan \"active\" range (700K entries) → return all\n// 2. Scan \"pending\" range (150K entries) → return all\n// 3. Scan \"suspended\" range (100K entries) → return all\n// 4. Skip \"deleted\" range (50K entries) → ignore\n// Total: Scans 950,000 index entries = 95% of index\n\n// explain() shows:\n{\n  \"totalKeysExamined\": 950000,  // Almost full index scan\n  \"totalDocsExamined\": 950000,\n  \"executionTimeMillis\": 4500\n}\n\n// Similarly problematic:\ndb.orders.find({ status: { $nin: [\"cancelled\", \"refunded\", \"failed\"] } })\n// Scans everything except 3 statuses",
+      "language": "javascript",
+      "description": "negation—scans almost entire index"
+    },
+    {
+      "ruleId": "query-avoid-ne-nin",
+      "ruleTitle": "Avoid $ne and $nin Operators",
+      "type": "good",
+      "code": "// Explicitly list the values you WANT\ndb.users.find({\n  status: { $in: [\"active\", \"pending\", \"suspended\"] }\n})\n\n// MongoDB execution:\n// 1. Three targeted index seeks\n// 2. Returns exact matches only\n// 3. No scanning of unwanted values\n\n// explain() shows:\n{\n  \"totalKeysExamined\": 950000,  // Same count but...\n  \"indexBounds\": {\n    \"status\": [\n      \"[\\\"active\\\", \\\"active\\\"]\",\n      \"[\\\"pending\\\", \\\"pending\\\"]\",\n      \"[\\\"suspended\\\", \\\"suspended\\\"]\"\n    ]\n  },\n  \"executionTimeMillis\": 450    // 10× faster!\n}\n\n// Why faster? Index seeks vs index scan\n// $ne: Continuous scan skipping values (seek + scan + skip + scan)\n// $in: Direct seeks to each value (seek + seek + seek)",
+      "language": "javascript",
+      "description": "positive matching—targeted index scan"
+    },
+    {
+      "ruleId": "query-batch-operations",
+      "ruleTitle": "Batch Operations to Avoid N+1 Queries",
+      "type": "bad",
+      "code": "// \"Get pending orders with customer details\"\nconst orders = await db.orders.find({ status: \"pending\" }).toArray()\n\n// N+1 anti-pattern: loop queries\nfor (const order of orders) {\n  // Each iteration = 1 database round trip\n  order.customer = await db.customers.findOne({ _id: order.customerId })\n}\n\n// Cost breakdown for 100 orders:\n// - Initial query: 1 round trip, 5ms\n// - Customer lookups: 100 round trips, 5ms each = 500ms\n// - Total: 101 round trips, ~505ms minimum\n//\n// At scale:\n// - 1,000 orders = 1,001 queries = 5+ seconds\n// - 10,000 orders = 10,001 queries = 50+ seconds\n//\n// With network latency (cloud/microservices):\n// - 100ms latency × 100 queries = 10 SECONDS just waiting for network\n\n// Even worse: nested N+1\nfor (const order of orders) {\n  order.customer = await db.customers.findOne({ _id: order.customerId })\n  order.items = await db.items.find({ orderId: order._id }).toArray()\n  for (const item of order.items) {\n    item.product = await db.products.findOne({ _id: item.productId })\n  }\n}\n// 100 orders × 3 items each = 100 + 100 + 300 = 500+ queries",
+      "language": "javascript",
+      "description": "N+1 queries—linear scaling horror"
+    },
+    {
+      "ruleId": "query-batch-operations",
+      "ruleTitle": "Batch Operations to Avoid N+1 Queries",
+      "type": "good",
+      "code": "// Get orders\nconst orders = await db.orders.find({ status: \"pending\" }).toArray()\n\n// Collect all customer IDs (deduplicated)\nconst customerIds = [...new Set(orders.map(o => o.customerId))]\n\n// Single batch query for ALL customers\nconst customers = await db.customers.find({\n  _id: { $in: customerIds }\n}).toArray()\n\n// Build lookup map for O(1) access\nconst customerMap = new Map(\n  customers.map(c => [c._id.toString(), c])\n)\n\n// Attach customers to orders (in-memory, no DB)\norders.forEach(o => {\n  o.customer = customerMap.get(o.customerId.toString())\n})\n\n// Cost: 2 round trips total, regardless of order count\n// 100 orders = 2 queries = 10ms\n// 10,000 orders = 2 queries = ~50ms (larger payload)",
+      "language": "javascript",
+      "description": "batch with $in—constant round trips"
+    },
+    {
+      "ruleId": "query-batch-operations",
+      "ruleTitle": "Batch Operations to Avoid N+1 Queries",
+      "type": "good",
+      "code": "// All in one database operation\nconst ordersWithCustomers = await db.orders.aggregate([\n  { $match: { status: \"pending\" } },\n  {\n    $lookup: {\n      from: \"customers\",\n      localField: \"customerId\",\n      foreignField: \"_id\",  // Must be indexed!\n      as: \"customer\"\n    }\n  },\n  { $unwind: \"$customer\" }  // Convert array to single object\n]).toArray()\n\n// Cost: 1 round trip, database handles join internally\n// IMPORTANT: Ensure index on customers._id (it's _id, so automatic)\n// For non-_id joins: db.customers.createIndex({ externalId: 1 })",
+      "language": "javascript",
+      "description": "$lookup—single aggregation"
+    },
+    {
+      "ruleId": "query-bulkwrite-command",
+      "ruleTitle": "Use bulkWrite for Cross-Collection Batch Operations",
+      "type": "bad",
+      "code": "// Multiple operations across collections - not atomic\n// If operation 2 fails, operation 1 already committed\nawait db.orders.insertOne({ orderId: \"123\", status: \"pending\" })\nawait db.inventory.updateOne(\n  { productId: \"abc\" },\n  { $inc: { quantity: -1 } }\n)\nawait db.audit.insertOne({\n  action: \"order_created\",\n  orderId: \"123\",\n  timestamp: new Date()\n})\n// Risk: Partial failure leaves inconsistent state",
+      "language": "javascript",
+      "description": "multiple separate operations"
+    },
+    {
+      "ruleId": "query-bulkwrite-command",
+      "ruleTitle": "Use bulkWrite for Cross-Collection Batch Operations",
+      "type": "good",
+      "code": "// MongoDB 8.0+ bulkWrite command across multiple namespaces\ndb.adminCommand({\n  bulkWrite: 1,\n  ops: [\n    {\n      insert: 0,  // Index into nsInfo array\n      document: { orderId: \"123\", status: \"pending\" }\n    },\n    {\n      update: 1,\n      filter: { productId: \"abc\" },\n      updateMods: { $inc: { quantity: -1 } }\n    },\n    {\n      insert: 2,\n      document: {\n        action: \"order_created\",\n        orderId: \"123\",\n        timestamp: new Date()\n      }\n    }\n  ],\n  nsInfo: [\n    { ns: \"mydb.orders\" },\n    { ns: \"mydb.inventory\" },\n    { ns: \"mydb.audit\" }\n  ],\n  ordered: true  // Stop on first error (default)\n})",
+      "language": "javascript",
+      "description": "single-request cross-collection batch"
+    },
+    {
+      "ruleId": "query-exists-with-sparse",
+      "ruleTitle": "Understand $exists Behavior with Sparse Indexes",
+      "type": "good",
+      "code": "// Sparse index { twitterHandle: 1 } SUPPORTS:\ndb.users.find({ twitterHandle: \"alice123\" })\n// ✓ Uses index - looks up specific value\n\ndb.users.find({ twitterHandle: { $exists: true } })\n// ✓ Can use index - all entries in sparse index have the field\n// MongoDB may use index scan since sparse only contains docs with field\n\ndb.users.find({ twitterHandle: { $in: [\"alice\", \"bob\"] } })\n// ✓ Uses index - multiple value lookups\n\n// Sparse index { twitterHandle: 1 } CANNOT SUPPORT:\ndb.users.find({ twitterHandle: { $exists: false } })\n// ✗ COLLSCAN - documents without field aren't in index\n\ndb.users.find({ twitterHandle: null })\n// ⚠️ Complex - null matches BOTH explicit null AND missing field\n// Sparse index has explicit nulls but not missing docs\n// May result in incorrect results or COLLSCAN\n\ndb.users.find().sort({ twitterHandle: 1 })\n// ✗ Can't use sparse for full-collection sort\n// Missing 900K documents from sort order",
+      "language": "javascript",
+      "description": "understand what sparse indexes can and cannot do"
+    },
+    {
+      "ruleId": "query-or-index",
+      "ruleTitle": "Index All $or Clauses for Index Usage",
+      "type": "bad",
+      "code": "// Indexes: { status: 1 }, { category: 1 }\n// Missing: index on { priority: 1 }\n\ndb.tasks.find({\n  $or: [\n    { status: \"urgent\" },      // Has index ✓\n    { category: \"critical\" },  // Has index ✓\n    { priority: { $gte: 9 } }  // NO INDEX ✗\n  ]\n})\n\n// What happens:\n// MongoDB cannot use partial indexes for $or\n// Falls back to COLLSCAN of entire collection\n// Even though 2 of 3 clauses have indexes!\n\n// explain() shows:\n{\n  \"winningPlan\": {\n    \"stage\": \"COLLSCAN\"  // Full collection scan!\n  },\n  \"totalDocsExamined\": 5000000,\n  \"executionTimeMillis\": 8500\n}",
+      "language": "javascript",
+      "description": "one clause missing index—full collection scan"
+    },
+    {
+      "ruleId": "query-or-index",
+      "ruleTitle": "Index All $or Clauses for Index Usage",
+      "type": "good",
+      "code": "// Create index for the missing clause\ndb.tasks.createIndex({ priority: 1 })\n\n// Now all three clauses have indexes:\n// { status: 1 }, { category: 1 }, { priority: 1 }\n\ndb.tasks.find({\n  $or: [\n    { status: \"urgent\" },\n    { category: \"critical\" },\n    { priority: { $gte: 9 } }\n  ]\n})\n\n// What happens:\n// 1. Scan status index for \"urgent\" → 1,000 docs\n// 2. Scan category index for \"critical\" → 500 docs\n// 3. Scan priority index for >= 9 → 2,000 docs\n// 4. Merge and deduplicate results\n\n// explain() shows:\n{\n  \"winningPlan\": {\n    \"stage\": \"SUBPLAN\",\n    \"inputStages\": [\n      { \"stage\": \"IXSCAN\", \"indexName\": \"status_1\" },\n      { \"stage\": \"IXSCAN\", \"indexName\": \"category_1\" },\n      { \"stage\": \"IXSCAN\", \"indexName\": \"priority_1\" }\n    ]\n  },\n  \"totalDocsExamined\": 3500,  // Only matching docs\n  \"executionTimeMillis\": 45    // 190× faster!\n}",
+      "language": "javascript",
+      "description": "all clauses indexed—parallel index scans"
+    },
+    {
+      "ruleId": "query-pagination",
+      "ruleTitle": "Use Range-Based Pagination Instead of skip()",
+      "type": "bad",
+      "code": "// Page 1: skip(0) - fast\ndb.posts.find().sort({ createdAt: -1 }).skip(0).limit(20)\n// Examines: 20 docs, returns: 20 docs\n// Time: 5ms ✓\n\n// Page 100: skip(1980) - slower\ndb.posts.find().sort({ createdAt: -1 }).skip(1980).limit(20)\n// Examines: 2,000 docs, discards: 1,980, returns: 20\n// Time: 200ms ⚠️\n\n// Page 10,000: skip(199980) - unusable\ndb.posts.find().sort({ createdAt: -1 }).skip(199980).limit(20)\n// Examines: 200,000 docs, discards: 199,980, returns: 20\n// Time: 20 seconds ❌\n\n// Why? MongoDB must:\n// 1. Start at beginning of index\n// 2. Walk through 199,980 entries\n// 3. Only THEN return the next 20\n// It's O(skip_value) not O(limit)",
+      "language": "javascript",
+      "description": "skip degrades linearly with page depth"
+    },
+    {
+      "ruleId": "query-pagination",
+      "ruleTitle": "Use Range-Based Pagination Instead of skip()",
+      "type": "good",
+      "code": "// Page 1: Get first page\nconst page1 = await db.posts\n  .find({ status: \"published\" })\n  .sort({ createdAt: -1 })\n  .limit(20)\n  .toArray()\n\n// Remember cursor position\nconst lastItem = page1[page1.length - 1]\nconst cursor = lastItem.createdAt\n\n// Page 2: Continue from cursor\nconst page2 = await db.posts\n  .find({\n    status: \"published\",\n    createdAt: { $lt: cursor }  // Only docs BEFORE cursor\n  })\n  .sort({ createdAt: -1 })\n  .limit(20)\n  .toArray()\n\n// Page N: Always the same performance\n// Index seeks directly to cursor position\n// Examines exactly 20 docs every time\n// Time: 5ms regardless of page number",
+      "language": "javascript",
+      "description": "range-based / keyset pagination"
+    },
+    {
+      "ruleId": "query-pagination",
+      "ruleTitle": "Use Range-Based Pagination Instead of skip()",
+      "type": "good",
+      "code": "// Problem: Multiple posts can have same createdAt\n// Result: Some posts get skipped or duplicated\n\n// Solution: Add unique tiebreaker (_id)\n// Index must include both fields:\ndb.posts.createIndex({ createdAt: -1, _id: -1 })\n\nconst lastItem = page1[page1.length - 1]\n\n// Compound cursor condition\nconst page2 = await db.posts.find({\n  status: \"published\",\n  $or: [\n    // Either strictly before in time\n    { createdAt: { $lt: lastItem.createdAt } },\n    // Or same time but lower _id\n    {\n      createdAt: lastItem.createdAt,\n      _id: { $lt: lastItem._id }\n    }\n  ]\n})\n  .sort({ createdAt: -1, _id: -1 })\n  .limit(20)\n  .toArray()\n\n// This guarantees: no duplicates, no skips, deterministic order",
+      "language": "javascript",
+      "description": "Handle non-unique sort fields (critical for correctness) example for Use Range-Based Pagination Instead of skip()"
+    },
+    {
+      "ruleId": "query-sort-collation",
+      "ruleTitle": "Match Sort and Collation to Indexes",
+      "type": "bad",
+      "code": "// Index uses default collation\n\ndb.users.createIndex({ lastName: 1 })\n\n// Query uses a different collation\n\ndb.users.find({ status: \"active\" })\n  .collation({ locale: \"en\", strength: 2 })\n  .sort({ lastName: 1 })\n// In-memory sort because collations do not match",
+      "language": "javascript",
+      "description": "sort without matching index or collation"
+    },
+    {
+      "ruleId": "query-sort-collation",
+      "ruleTitle": "Match Sort and Collation to Indexes",
+      "type": "good",
+      "code": "// Create index with the same collation as the query\n\ndb.users.createIndex(\n  { status: 1, lastName: 1, firstName: 1 },\n  { collation: { locale: \"en\", strength: 2 } }\n)\n\n// Query uses matching collation and sort order\n\ndb.users.find({ status: \"active\" })\n  .collation({ locale: \"en\", strength: 2 })\n  .sort({ lastName: 1, firstName: 1 })",
+      "language": "javascript",
+      "description": "index includes sort fields and matching collation"
+    },
+    {
+      "ruleId": "query-updateone-sort",
+      "ruleTitle": "Use sort Option in updateOne/replaceOne for Deterministic Updates",
+      "type": "bad",
+      "code": "// Multiple documents match - which one gets updated?\n// Result depends on storage order, which is undefined\ndb.tasks.updateOne(\n  { status: \"pending\", priority: \"high\" },\n  { $set: { status: \"in_progress\", assignee: \"worker-1\" } }\n)\n// Problem: Different runs may update different documents\n// Race condition when multiple workers process tasks",
+      "language": "javascript",
+      "description": "non-deterministic update"
+    },
+    {
+      "ruleId": "query-updateone-sort",
+      "ruleTitle": "Use sort Option in updateOne/replaceOne for Deterministic Updates",
+      "type": "good",
+      "code": "// MongoDB 8.0+: sort ensures we always get the oldest task\ndb.tasks.updateOne(\n  { status: \"pending\", priority: \"high\" },\n  { $set: { status: \"in_progress\", assignee: \"worker-1\" } },\n  { sort: { createdAt: 1 } }  // Always update oldest first\n)\n// Deterministic: always updates the earliest created matching document",
+      "language": "javascript",
+      "description": "deterministic update with sort"
+    },
+    {
+      "ruleId": "query-use-projection",
+      "ruleTitle": "Use Projections to Limit Fields",
+      "type": "bad",
+      "code": "// \"Just get active users\" - fetches EVERYTHING\nconst users = await db.users.find({ status: \"active\" }).toArray()\n\n// What you actually use in your code:\nusers.map(u => ({ name: u.name, email: u.email }))\n\n// What you transferred over the network:\n// - name: 50 bytes\n// - email: 50 bytes\n// - profile: 2KB (bio, avatar URL, social links)\n// - preferences: 5KB (notification settings, UI config)\n// - activityHistory: 40KB (last 1000 events)\n// - metadata: 3KB (audit fields, tags, scores)\n// Total per doc: ~50KB\n\n// 1,000 active users × 50KB = 50MB transferred\n// You only needed: 1,000 × 100 bytes = 100KB (500× waste)",
+      "language": "javascript",
+      "description": "fetching entire documents—bandwidth killer"
+    },
+    {
+      "ruleId": "query-use-projection",
+      "ruleTitle": "Use Projections to Limit Fields",
+      "type": "good",
+      "code": "// Explicitly request only what you need\nconst users = await db.users.find(\n  { status: \"active\" },\n  { projection: { name: 1, email: 1, _id: 0 } }\n).toArray()\n\n// Returns:\n// [\n//   { name: \"Alice\", email: \"alice@ex.com\" },\n//   { name: \"Bob\", email: \"bob@ex.com\" },\n//   ...\n// ]\n\n// 1,000 users × 100 bytes = 100KB transferred\n// Response time: 50ms instead of 30s",
+      "language": "javascript",
+      "description": "projection limits to needed fields"
+    }
+  ]
+}

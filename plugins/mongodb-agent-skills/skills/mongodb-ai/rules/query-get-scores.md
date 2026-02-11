@@ -9,6 +9,10 @@ tags: score, vectorSearchScore, $meta, relevance
 
 Use `$meta: "vectorSearchScore"` to retrieve similarity scores. Scores enable relevance thresholds and quality assessment.
 
+`vectorSearchScore` is normalized to a fixed range of `0` to `1` for returned documents (`1` = higher similarity). Do not treat it as a raw cosine, Euclidean distance, or dot-product value.
+
+Starting in MongoDB 8.2, MongoDB logs a warning if `vectorSearchScore` is referenced after another query stage. Project or add the score directly after the `$vectorSearch` stage that produced it.
+
 **Incorrect (not retrieving scores):**
 
 ```javascript
@@ -85,11 +89,9 @@ db.products.aggregate([
 
 **Score Interpretation:**
 
-| Similarity | Score Range | Meaning |
-|------------|-------------|---------|
-| cosine | 0 to 1 | 1 = identical, 0 = orthogonal |
-| euclidean | 0 to ∞ | Lower = more similar |
-| dotProduct | -∞ to ∞ | Higher = more similar |
+| Field | Range | Meaning |
+|-------|-------|---------|
+| `vectorSearchScore` | `0` to `1` | Closer to `1` = higher similarity |
 
 **Using Scores for Thresholds:**
 
@@ -180,5 +182,11 @@ const relevantContext = context
 - When you don't need relevance information
 - When using scores for absolute thresholds (scores are relative)
 - Comparing scores across different queries (only compare within same query)
+
+## Verify with
+
+1. Run the "Correct" index or query example on a staging dataset.
+2. Validate expected behavior and performance using explain and Atlas metrics.
+3. Confirm version-gated behavior on your target MongoDB release before production rollout.
 
 Reference: [MongoDB vectorSearchScore](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-stage/#std-label-vectorSearch-score)

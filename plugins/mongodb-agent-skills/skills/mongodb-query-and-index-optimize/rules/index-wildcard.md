@@ -187,7 +187,7 @@ db.content.createIndex({ "metadata.$**": 1 })
 - **High-cardinality paths**: If most paths have unique values, index becomes huge.
 - **Array elements**: Wildcard indexes can index arrays, but behavior is complex.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Analyze wildcard index usage

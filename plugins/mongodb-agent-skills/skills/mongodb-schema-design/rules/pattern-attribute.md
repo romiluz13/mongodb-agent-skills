@@ -59,7 +59,7 @@ db.items.find({
 - **Type-specific validation**: If each field needs strict schema rules.
 - **Single-field queries only**: A normal field may be simpler and faster.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Ensure queries use the multikey index

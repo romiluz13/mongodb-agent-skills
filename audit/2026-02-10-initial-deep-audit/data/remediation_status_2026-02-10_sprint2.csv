@@ -1,0 +1,12 @@
+task_id,status,completed_at,evidence_file,evidence_note
+FIX-006,DONE,2026-02-10,22-sprint-2-execution-log.md,Added setQuerySettings.comment availability note (8.1 and 8.0.4+)
+FIX-007,DONE,2026-02-10,22-sprint-2-execution-log.md,Added index-filter deprecation migration guidance
+FIX-008,DONE,2026-02-10,22-sprint-2-execution-log.md,Added count/distinct query-shape compatibility notes
+FIX-009,DONE,2026-02-10,22-sprint-2-execution-log.md,Added $unionWith nuance for $vectorSearch in MongoDB 8.0+
+FIX-010,DONE,2026-02-10,22-sprint-2-execution-log.md,Added version gates for rankFusion/vectorSearch input behavior
+FIX-011,DONE,2026-02-10,22-sprint-2-execution-log.md,Corrected scoreFusion and rankFusion weight/combination syntax examples
+FIX-012,DONE,2026-02-10,22-sprint-2-execution-log.md,Added explicit 8192 dimension guidance in vector index rules
+FIX-022,DONE,2026-02-10,22-sprint-2-execution-log.md,Added rankFusion-on-views (8.2+) note
+FIX-023,DONE,2026-02-10,22-sprint-2-execution-log.md,Added queryStats 8.2 delinquency and cpuNanos metric guidance
+FIX-013,DONE,2026-02-10,22-sprint-2-execution-log.md,Added errorAndLog downgrade caveat in validation-action-levels
+FIX-014,DONE,2026-02-10,22-sprint-2-execution-log.md,Added rollback pathway in validation rollout strategy

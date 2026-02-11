@@ -6,7 +6,7 @@ January 2026
 
 > **Note:**
 > This document is mainly for agents and LLMs to follow when maintaining,
-> generating, or reviewing MongoDB schemas and queries. Humans may also
+> generating, or reviewing MongoDB schemas, queries, and AI search patterns. Humans may also
 > find it useful, but guidance here is optimized for automation and
 > consistency by AI-assisted workflows.
 
@@ -14,7 +14,7 @@ January 2026
 
 ## Abstract
 
-MongoDB schema design patterns and anti-patterns for AI agents and developers. Contains 29 rules across 5 categories: Schema Anti-Patterns (CRITICAL - unbounded arrays, bloated documents, schema drift), Schema Fundamentals (HIGH - embed vs reference, document model, 16MB awareness), Relationship Patterns (HIGH - one-to-one, one-to-few, one-to-many, one-to-squillions, many-to-many, tree structures), Design Patterns (MEDIUM - bucket, time series collections, attribute, polymorphic, schema versioning, computed, subset, outlier, extended reference), and Schema Validation (MEDIUM - JSON Schema, validation levels, rollout strategy). Each rule includes incorrect/correct code examples with quantified impact metrics, 'When NOT to use' exceptions, and verification diagnostics.
+MongoDB schema design patterns and anti-patterns for AI agents and developers. Contains 30 rules across 5 categories: Schema Anti-Patterns (CRITICAL - unbounded arrays, bloated documents, schema drift), Schema Fundamentals (HIGH - embed vs reference, document model, 16MB awareness), Relationship Patterns (HIGH - one-to-one, one-to-few, one-to-many, one-to-squillions, many-to-many, tree structures), Design Patterns (MEDIUM - bucket, time series collections, attribute, polymorphic, schema versioning, computed, subset, outlier, extended reference), and Schema Validation (MEDIUM - JSON Schema, validation levels, rollout strategy). Each rule includes incorrect/correct code examples with quantified impact metrics, 'When NOT to use' exceptions, and verification diagnostics.
 
 ---
 
@@ -41,15 +41,16 @@ MongoDB schema design patterns and anti-patterns for AI agents and developers. C
    - 3.5 [Model One-to-Squillions with References and Summaries](#35-model-one-to-squillions-with-references-and-summaries)
    - 3.6 [Model Tree and Hierarchical Data](#36-model-tree-and-hierarchical-data)
 4. [Design Patterns](#4-design-patterns) — **MEDIUM**
-   - 4.1 [Use Attribute Pattern for Sparse or Variable Fields](#41-use-attribute-pattern-for-sparse-or-variable-fields)
-   - 4.2 [Use Bucket Pattern for Time-Series Data](#42-use-bucket-pattern-for-time-series-data)
-   - 4.3 [Use Computed Pattern for Expensive Calculations](#43-use-computed-pattern-for-expensive-calculations)
-   - 4.4 [Use Extended Reference Pattern](#44-use-extended-reference-pattern)
-   - 4.5 [Use Outlier Pattern for Exceptional Documents](#45-use-outlier-pattern-for-exceptional-documents)
-   - 4.6 [Use Polymorphic Pattern for Heterogeneous Documents](#46-use-polymorphic-pattern-for-heterogeneous-documents)
-   - 4.7 [Use Schema Versioning for Safe Evolution](#47-use-schema-versioning-for-safe-evolution)
-   - 4.8 [Use Subset Pattern for Hot/Cold Data](#48-use-subset-pattern-for-hotcold-data)
-   - 4.9 [Use Time Series Collections for Time Series Data](#49-use-time-series-collections-for-time-series-data)
+   - 4.1 [Use Archive Pattern for Historical Data](#41-use-archive-pattern-for-historical-data)
+   - 4.2 [Use Attribute Pattern for Sparse or Variable Fields](#42-use-attribute-pattern-for-sparse-or-variable-fields)
+   - 4.3 [Use Bucket Pattern for Time-Series Data](#43-use-bucket-pattern-for-time-series-data)
+   - 4.4 [Use Computed Pattern for Expensive Calculations](#44-use-computed-pattern-for-expensive-calculations)
+   - 4.5 [Use Extended Reference Pattern](#45-use-extended-reference-pattern)
+   - 4.6 [Use Outlier Pattern for Exceptional Documents](#46-use-outlier-pattern-for-exceptional-documents)
+   - 4.7 [Use Polymorphic Pattern for Heterogeneous Documents](#47-use-polymorphic-pattern-for-heterogeneous-documents)
+   - 4.8 [Use Schema Versioning for Safe Evolution](#48-use-schema-versioning-for-safe-evolution)
+   - 4.9 [Use Subset Pattern for Hot/Cold Data](#49-use-subset-pattern-for-hotcold-data)
+   - 4.10 [Use Time Series Collections for Time Series Data](#410-use-time-series-collections-for-time-series-data)
 5. [Schema Validation](#5-schema-validation) — **MEDIUM**
    - 5.1 [Choose Validation Level and Action Appropriately](#51-choose-validation-level-and-action-appropriately)
    - 5.2 [Define Validation Rules with JSON Schema](#52-define-validation-rules-with-json-schema)
@@ -133,14 +134,6 @@ Projection reduces network transfer but still loads full documents into memory.
 
 **When NOT to use this pattern:**
 
-- **Small collections that fit in RAM**: If your entire collection is <1GB, document size matters less.
-
-- **Always need all data**: If every access pattern truly needs the full document, splitting adds overhead.
-
-- **Write-heavy with rare reads**: If you write once and rarely read, optimize for write simplicity.
-
-**Verify with:**
-
 ```javascript
 // Find your largest documents
 db.products.aggregate([
@@ -174,6 +167,12 @@ db.products.aggregate([
 ])
 // Shows which fields are bloating documents
 ```
+
+- **Small collections that fit in RAM**: If your entire collection is <1GB, document size matters less.
+
+- **Always need all data**: If every access pattern truly needs the full document, splitting adds overhead.
+
+- **Write-heavy with rare reads**: If you write once and rarely read, optimize for write simplicity.
 
 Atlas Schema Suggestions flags: "Document size exceeds recommended limit"
 
@@ -248,14 +247,6 @@ Bucket pattern reduces document count 10-100× while keeping arrays bounded by t
 
 **When NOT to use this pattern:**
 
-- **Truly bounded arrays are fine**: Tags (max 20), roles (max 5), shipping addresses (max 10). If you can enforce a hard limit, embedding is appropriate.
-
-- **Low-volume applications**: If a user generates <100 events total lifetime, an embedded array may be simpler than a separate collection.
-
-- **Read-heavy with rare writes**: If you read the full array constantly but rarely add to it, embedding avoids $lookup overhead.
-
-**Verify with:**
-
 ```javascript
 // Check document sizes in collection
 db.users.aggregate([
@@ -275,6 +266,12 @@ db.users.aggregate([
 ])
 // Any result > 0 indicates unbounded growth
 ```
+
+- **Truly bounded arrays are fine**: Tags (max 20), roles (max 5), shipping addresses (max 10). If you can enforce a hard limit, embedding is appropriate.
+
+- **Low-volume applications**: If a user generates <100 events total lifetime, an embedded array may be simpler than a separate collection.
+
+- **Read-heavy with rare writes**: If you read the full array constantly but rarely add to it, embedding avoids $lookup overhead.
 
 Atlas Schema Suggestions flags: "Array field 'activityLog' may grow without bound"
 
@@ -384,14 +381,6 @@ db.posts.updateOne(
 
 **When NOT to use this pattern:**
 
-- **Write-once arrays**: If you build the array once and never modify, size matters less (still affects working set).
-
-- **Arrays of primitives**: `tags: ["a", "b", "c"]` is much cheaper than array of objects.
-
-- **Infrequent writes**: If array is updated once per day, 200ms writes may be acceptable.
-
-**Verify with:**
-
 ```javascript
 // Find documents with large arrays
 db.posts.aggregate([
@@ -413,6 +402,12 @@ db.posts.stats().indexSizes
 db.setProfilingLevel(1, { slowms: 100 })
 // Then check db.system.profile for slow $push operations
 ```
+
+- **Write-once arrays**: If you build the array once and never modify, size matters less (still affects working set).
+
+- **Arrays of primitives**: `tags: ["a", "b", "c"]` is much cheaper than array of objects.
+
+- **Infrequent writes**: If array is updated once per day, 200ms writes may be acceptable.
 
 Reference: [https://mongodb.com/blog/post/building-with-patterns-the-subset-pattern](https://mongodb.com/blog/post/building-with-patterns-the-subset-pattern)
 
@@ -586,14 +581,6 @@ db.users.find({
 
 **When NOT to strictly enforce schema:**
 
-- **Truly polymorphic data**: Event logs with different event types may need flexible schemas.
-
-- **Early prototyping**: Skip validation during exploration, add before production.
-
-- **User-defined fields**: Some applications allow custom metadata fields.
-
-**Verify with:**
-
 ```javascript
 // Check if validation exists
 db.getCollectionInfos({ name: "users" })[0].options.validator
@@ -617,6 +604,12 @@ db.runCommand({
   full: true
 })
 ```
+
+- **Truly polymorphic data**: Event logs with different event types may need flexible schemas.
+
+- **Early prototyping**: Skip validation during exploration, add before production.
+
+- **User-defined fields**: Some applications allow custom metadata fields.
 
 Reference: [https://mongodb.com/docs/manual/core/schema-validation/](https://mongodb.com/docs/manual/core/schema-validation/)
 
@@ -733,16 +726,6 @@ db.products.aggregate([
 
 **When NOT to use this pattern:**
 
-- **Data changes frequently and independently**: If brand logos change daily, denormalization creates update overhead.
-
-- **Rarely-accessed data**: Don't embed review details if only 5% of product views load reviews.
-
-- **Many-to-many with high cardinality**: Products with 1000+ categories shouldn't embed all category data.
-
-- **Analytics queries**: Batch jobs can afford $lookup latency; real-time queries cannot.
-
-**Verify with:**
-
 ```javascript
 // Find pipelines with multiple $lookup stages
 // Check slow query log for aggregations
@@ -768,6 +751,14 @@ db.products.aggregate([
 ]).explain("executionStats")
 // Check totalDocsExamined in $lookup stage
 ```
+
+- **Data changes frequently and independently**: If brand logos change daily, denormalization creates update overhead.
+
+- **Rarely-accessed data**: Don't embed review details if only 5% of product views load reviews.
+
+- **Many-to-many with high cardinality**: Products with 1000+ categories shouldn't embed all category data.
+
+- **Analytics queries**: Batch jobs can afford $lookup latency; real-time queries cannot.
 
 Atlas Schema Suggestions flags: "Reduce $lookup operations"
 
@@ -896,16 +887,6 @@ This isn't denormalization—it's proper document modeling. Orders are self-cont
 
 **When NOT to use this pattern:**
 
-- **Data is genuinely independent**: Products exist separately from orders; don't embed full product catalog in every order.
-
-- **Frequent independent updates**: If customer email changes shouldn't update all historical orders (it shouldn't).
-
-- **Data is accessed in different contexts**: Same address entity used for shipping, billing, user profile—keep it separate.
-
-- **Regulatory requirements**: Some industries require normalized data for audit trails.
-
-**Verify with:**
-
 ```javascript
 // Count your collections
 db.adminCommand({ listDatabases: 1 }).databases
@@ -932,6 +913,14 @@ db.system.profile.aggregate([
 ])
 // Collections with similar access patterns should be combined
 ```
+
+- **Data is genuinely independent**: Products exist separately from orders; don't embed full product catalog in every order.
+
+- **Frequent independent updates**: If customer email changes shouldn't update all historical orders (it shouldn't).
+
+- **Data is accessed in different contexts**: Same address entity used for shipping, billing, user profile—keep it separate.
+
+- **Regulatory requirements**: Some industries require normalized data for audit trails.
 
 Atlas Schema Suggestions flags: "Reduce number of collections"
 
@@ -1054,16 +1043,6 @@ db.users.updateOne(
 
 **When NOT to use embedding:**
 
-- **Data grows unbounded**: Comments, logs, events—separate collection.
-
-- **Large child documents**: If each child is >16KB, embedding few hits 16MB limit.
-
-- **Independent access**: If you ever query child without parent, reference.
-
-- **Different lifecycles**: If child data is archived/deleted separately.
-
-**Verify with:**
-
 ```javascript
 // Check document sizes for embedded collections
 db.posts.aggregate([
@@ -1087,6 +1066,14 @@ db.profiles.aggregate([
 ])
 // Orphans suggest 1:1 should be embedded
 ```
+
+- **Data grows unbounded**: Comments, logs, events—separate collection.
+
+- **Large child documents**: If each child is >16KB, embedding few hits 16MB limit.
+
+- **Independent access**: If you ever query child without parent, reference.
+
+- **Different lifecycles**: If child data is archived/deleted separately.
 
 Reference: [https://mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/](https://mongodb.com/docs/manual/data-modeling/concepts/embedding-vs-references/)
 
@@ -1175,14 +1162,6 @@ db.customers.updateOne(
 
 **When NOT to use this pattern:**
 
-- **Genuinely independent data**: If addresses are shared across users or accessed independently, keep them separate.
-
-- **Unbounded relationships**: User with 10,000 orders should NOT embed all orders.
-
-- **Regulatory requirements**: Some compliance rules require normalized audit trails.
-
-**Verify with:**
-
 ```javascript
 // Count your collections vs expected entities
 db.adminCommand({ listDatabases: 1 }).databases.forEach(d => {
@@ -1198,6 +1177,12 @@ db.addresses.aggregate([
 ]).itcount()
 // If addresses always belong to customers, they should be embedded
 ```
+
+- **Genuinely independent data**: If addresses are shared across users or accessed independently, keep them separate.
+
+- **Unbounded relationships**: User with 10,000 orders should NOT embed all orders.
+
+- **Regulatory requirements**: Some compliance rules require normalized audit trails.
 
 Reference: [https://mongodb.com/docs/manual/data-modeling/schema-design-process/](https://mongodb.com/docs/manual/data-modeling/schema-design-process/)
 
@@ -1389,14 +1374,6 @@ const downloadStream = bucket.openDownloadStream(videoId)
 
 **When NOT to worry about 16MB:**
 
-- **Small, fixed schemas**: User profiles, configs, small entities rarely hit limits.
-
-- **Bounded arrays with validation**: If you enforce `maxItems: 50`, you're safe.
-
-- **Read-heavy with controlled writes**: If writes are always small updates.
-
-**Verify with:**
-
 ```javascript
 // Set up monitoring for large documents
 db.createCollection("documentSizeAlerts")
@@ -1414,6 +1391,12 @@ db.users.aggregate([
 // Alert if any documents are approaching limit
 db.documentSizeAlerts.find({ size: { $gt: 10000000 } })
 ```
+
+- **Small, fixed schemas**: User profiles, configs, small entities rarely hit limits.
+
+- **Bounded arrays with validation**: If you enforce `maxItems: 50`, you're safe.
+
+- **Read-heavy with controlled writes**: If writes are always small updates.
 
 Reference: [https://mongodb.com/docs/manual/reference/limits/#std-label-limit-bson-document-size](https://mongodb.com/docs/manual/reference/limits/#std-label-limit-bson-document-size)
 
@@ -1511,14 +1494,6 @@ const article = await db.articles.findOne({ _id: articleId })
 
 **When NOT to use this pattern:**
 
-- **Data accessed independently**: Author profile page exists separately from articles—keep full author data in authors collection.
-
-- **Different update frequencies**: If author avatar changes daily but articles never change, embedding creates update overhead.
-
-- **Unbounded growth**: Don't embed all 10,000 comments in a popular post.
-
-**Verify with:**
-
 ```javascript
 // Profile your actual queries
 db.setProfilingLevel(1, { slowms: 10 })
@@ -1537,6 +1512,12 @@ db.system.profile.aggregate([
 ])
 // Collections queried in same minute = candidates for embedding
 ```
+
+- **Data accessed independently**: Author profile page exists separately from articles—keep full author data in authors collection.
+
+- **Different update frequencies**: If author avatar changes daily but articles never change, embedding creates update overhead.
+
+- **Unbounded growth**: Don't embed all 10,000 comments in a popular post.
 
 Reference: [https://mongodb.com/docs/manual/data-modeling/](https://mongodb.com/docs/manual/data-modeling/)
 
@@ -1658,14 +1639,6 @@ db.runCommand({
 
 **When NOT to use this pattern:**
 
-- **Rapid prototyping**: Skip validation during early development, add before production.
-
-- **Schema-per-document designs**: Some collections intentionally store varied document shapes.
-
-- **Log/event collections**: High-write collections where validation overhead matters.
-
-**Verify with:**
-
 ```javascript
 // Check if validation exists on collection
 db.getCollectionInfos({ name: "users" })[0].options.validator
@@ -1685,6 +1658,12 @@ db.users.find({
   ]
 })
 ```
+
+- **Rapid prototyping**: Skip validation during early development, add before production.
+
+- **Schema-per-document designs**: Some collections intentionally store varied document shapes.
+
+- **Log/event collections**: High-write collections where validation overhead matters.
 
 Reference: [https://mongodb.com/docs/manual/core/schema-validation/](https://mongodb.com/docs/manual/core/schema-validation/)
 
@@ -1854,14 +1833,6 @@ session.withTransaction(async () => {
 
 **When NOT to use this pattern:**
 
-- **Extremely high cardinality**: 10,000+ connections per entity—use graph database or reference-only with pagination.
-
-- **Frequently changing relationships**: If students change classes hourly, overhead of updating both sides is high.
-
-- **No primary query direction**: If truly 50/50 query split, consider hybrid approach.
-
-**Verify with:**
-
 ```javascript
 // Check array sizes in many-to-many relationships
 db.students.aggregate([
@@ -1889,6 +1860,12 @@ db.students.aggregate([
   { $match: { match: { $size: 0 } } }  // Find inconsistencies
 ])
 ```
+
+- **Extremely high cardinality**: 10,000+ connections per entity—use graph database or reference-only with pagination.
+
+- **Frequently changing relationships**: If students change classes hourly, overhead of updating both sides is high.
+
+- **No primary query direction**: If truly 50/50 query split, consider hybrid approach.
 
 Reference: [https://mongodb.com/docs/manual/tutorial/model-embedded-many-to-many-relationships-between-documents/](https://mongodb.com/docs/manual/tutorial/model-embedded-many-to-many-relationships-between-documents/)
 
@@ -2022,22 +1999,6 @@ db.users.updateOne(
 
 **One-to-Few vs One-to-Many decision:**
 
-| Factor | One-to-Few (Embed) | One-to-Many (Reference) |
-
-|--------|-------------------|------------------------|
-
-| Typical count | <50 | >100 |
-
-| Max possible | <100, enforced | Unbounded |
-
-| Child size | Small (<500 bytes) | Any size |
-
-| Access pattern | Always with parent | Sometimes independent |
-
-| Update frequency | Rare | Frequent |
-
-**Verify with:**
-
 ```javascript
 // Check embedded array sizes
 db.users.aggregate([
@@ -2058,6 +2019,20 @@ db.users.find({
   $expr: { $gt: [{ $size: { $ifNull: ["$addresses", []] } }, 20] }
 })
 ```
+
+| Factor | One-to-Few (Embed) | One-to-Many (Reference) |
+
+|--------|-------------------|------------------------|
+
+| Typical count | <50 | >100 |
+
+| Max possible | <100, enforced | Unbounded |
+
+| Child size | Small (<500 bytes) | Any size |
+
+| Access pattern | Always with parent | Sometimes independent |
+
+| Update frequency | Rare | Frequent |
 
 Reference: [https://mongodb.com/docs/manual/tutorial/model-embedded-one-to-many-relationships-between-documents/](https://mongodb.com/docs/manual/tutorial/model-embedded-one-to-many-relationships-between-documents/)
 
@@ -2193,14 +2168,6 @@ db.publishers.updateOne(
 
 **When NOT to use this pattern:**
 
-- **Bounded small arrays**: User's 3 addresses should be embedded, not referenced.
-
-- **Always accessed together**: Order line items should be embedded in order.
-
-- **No independent queries**: If you never query children without parent, consider embedding.
-
-**Verify with:**
-
 ```javascript
 // Check for missing indexes on reference fields
 db.books.getIndexes()
@@ -2226,6 +2193,12 @@ db.books.aggregate([
 ])
 // Orphans indicate data integrity issues
 ```
+
+- **Bounded small arrays**: User's 3 addresses should be embedded, not referenced.
+
+- **Always accessed together**: Order line items should be embedded in order.
+
+- **No independent queries**: If you never query children without parent, consider embedding.
 
 Reference: [https://mongodb.com/docs/manual/tutorial/model-referenced-one-to-many-relationships-between-documents/](https://mongodb.com/docs/manual/tutorial/model-referenced-one-to-many-relationships-between-documents/)
 
@@ -2323,16 +2296,6 @@ db.users.deleteOne({ _id: "user123" })
 
 **When NOT to use this pattern:**
 
-- **Data accessed independently**: If profile page is separate from auth operations, consider separation.
-
-- **Different security requirements**: If auth data needs stricter access controls than profile.
-
-- **Extreme size difference**: If embedded doc is >10KB and parent is <1KB, consider separation.
-
-- **Different update frequencies**: If profile changes hourly but auth rarely, separate may reduce write amplification.
-
-**Verify with:**
-
 ```javascript
 // Find collections that look like 1:1 splits
 db.profiles.aggregate([
@@ -2355,6 +2318,14 @@ db.profiles.aggregate([
 ])
 // Any orphans = referential integrity problem, embedding solves this
 ```
+
+- **Data accessed independently**: If profile page is separate from auth operations, consider separation.
+
+- **Different security requirements**: If auth data needs stricter access controls than profile.
+
+- **Extreme size difference**: If embedded doc is >10KB and parent is <1KB, consider separation.
+
+- **Different update frequencies**: If profile changes hourly but auth rarely, separate may reduce write amplification.
 
 Reference: [https://mongodb.com/docs/manual/tutorial/model-embedded-one-to-one-relationships-between-documents/](https://mongodb.com/docs/manual/tutorial/model-embedded-one-to-one-relationships-between-documents/)
 
@@ -2406,12 +2377,6 @@ db.user_activities.createIndex({ userId: 1, ts: -1 })
 
 **When NOT to use this pattern:**
 
-- **Small, bounded child sets**: Embed for simplicity and atomic reads.
-
-- **Always-accessed-together data**: Embedding may be faster.
-
-**Verify with:**
-
 ```javascript
 // Ensure parent doc stays small
 
@@ -2424,6 +2389,10 @@ db.users.aggregate([
 
 db.user_activities.find({ userId: "user123" }).explain("executionStats")
 ```
+
+- **Small, bounded child sets**: Embed for simplicity and atomic reads.
+
+- **Always-accessed-together data**: Embedding may be faster.
 
 Reference: [https://mongodb.com/docs/manual/tutorial/model-referenced-one-to-many-relationships-between-documents/](https://mongodb.com/docs/manual/tutorial/model-referenced-one-to-many-relationships-between-documents/)
 
@@ -2563,14 +2532,6 @@ db.categories.find({ _id: { $in: breadcrumb } }).sort({ depth: 1 })
 
 **When NOT to use tree patterns:**
 
-- **Graph-like data**: If nodes can have multiple parents, use graph database or $graphLookup.
-
-- **Flat structure**: If depth is always 1-2, simple parent reference is sufficient.
-
-- **Extremely deep trees**: 100+ levels may need specialized approaches.
-
-**Verify with:**
-
 ```javascript
 // Check tree consistency (no orphans)
 db.categories.aggregate([
@@ -2596,6 +2557,12 @@ db.categories.find({
 })
 ```
 
+- **Graph-like data**: If nodes can have multiple parents, use graph database or $graphLookup.
+
+- **Flat structure**: If depth is always 1-2, simple parent reference is sufficient.
+
+- **Extremely deep trees**: 100+ levels may need specialized approaches.
+
 Reference: [https://mongodb.com/docs/manual/applications/data-models-tree-structures/](https://mongodb.com/docs/manual/applications/data-models-tree-structures/)
 
 ---
@@ -2606,7 +2573,279 @@ Reference: [https://mongodb.com/docs/manual/applications/data-models-tree-struct
 
 MongoDB's document model enables patterns impossible in relational databases. Time series collections and the Bucket pattern reduce document count 10-100× for IoT and analytics workloads. The Attribute and Polymorphic patterns tame variable schemas and keep queries indexable. The Schema Versioning pattern keeps applications online during migrations. The Computed pattern pre-calculates expensive aggregations, trading write complexity for read performance. The Subset pattern keeps hot data embedded while archiving cold data, keeping working sets small. The Outlier pattern handles the viral post with 1M comments without penalizing the 99.9% with normal engagement. Apply these patterns when your use case matches—don't over-engineer simple schemas.
 
-### 4.1 Use Attribute Pattern for Sparse or Variable Fields
+### 4.1 Use Archive Pattern for Historical Data
+
+**Impact: MEDIUM (Reduces active collection size, improves query performance, lowers storage costs)**
+
+**Storing old data alongside recent data degrades performance.** As collections grow with historical data that's rarely accessed, queries slow down, indexes bloat, and working set exceeds RAM. The archive pattern moves old data to separate storage while keeping your active collection fast.
+
+**Incorrect: all data in one collection**
+
+```javascript
+// Sales collection with 5 years of data
+// 50 million documents, only recent 6 months actively queried
+db.sales.find({ date: { $gte: lastMonth } })
+
+// Problems:
+// 1. Index on date covers 50M docs, only 1M relevant
+// 2. Working set includes old data pages
+// 3. Backups include rarely-accessed historical data
+// 4. Storage costs for hot tier when cold would suffice
+```
+
+**Correct: archive old data separately**
+
+```javascript
+// Step 1: Define archive threshold
+const fiveYearsAgo = new Date()
+fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5)
+
+// Step 2: Move old data to archive collection using $merge
+db.sales.aggregate([
+  { $match: { date: { $lt: fiveYearsAgo } } },
+  { $merge: {
+      into: "sales_archive",
+      on: "_id",
+      whenMatched: "keepExisting",  // Don't overwrite if re-run
+      whenNotMatched: "insert"
+    }
+  }
+])
+
+// Step 3: Delete archived data from active collection
+db.sales.deleteMany({ date: { $lt: fiveYearsAgo } })
+
+// Result:
+// - sales: Recent data, fast queries, small indexes
+// - sales_archive: Historical data, rarely queried
+```
+
+**Archive storage options: best to worst for cost/performance**
+
+```javascript
+// Option 1: External file storage (S3, cloud object storage)
+// Best for: Compliance, long-term retention, lowest cost
+// Export to JSON/BSON, store in S3
+// Use Atlas Data Federation to query when needed
+
+// Option 2: Separate, cheaper cluster
+// Best for: Occasional historical queries
+// Replicate to lower-tier Atlas cluster
+// Different performance tier = lower cost
+
+// Option 3: Separate collection on same cluster
+// Best for: Simple implementation, frequent historical access
+// As shown above with sales_archive
+// Still uses same storage tier
+
+// Option 4: Atlas Online Archive (Atlas only)
+// Best for: Automatic tiering without code changes
+// MongoDB manages movement to cloud object storage
+// Query via Federated Database Instance
+```
+
+**Design tips for archivable schemas:**
+
+```javascript
+// TIP 1: Use embedded data model for archives
+// Archived data must be self-contained
+
+// BAD: References that may be deleted
+{
+  _id: "order123",
+  customerId: "cust456",  // Customer may be deleted
+  productIds: ["prod1", "prod2"]  // Products may change
+}
+
+// GOOD: Embedded snapshot of related data
+{
+  _id: "order123",
+  customer: {
+    _id: "cust456",
+    name: "Jane Doe",
+    email: "jane@example.com"
+  },
+  products: [
+    { _id: "prod1", name: "Widget", price: 29.99 },
+    { _id: "prod2", name: "Gadget", price: 49.99 }
+  ],
+  date: ISODate("2020-01-15")
+}
+
+// TIP 2: Store age in a single, indexable field
+// Makes archive queries efficient
+{
+  date: ISODate("2020-01-15"),  // Single field for age
+  // NOT: { year: 2020, month: 1, day: 15 }
+}
+
+// TIP 3: Handle "never expire" documents
+{
+  date: ISODate("2025-01-15"),
+  retentionPolicy: "permanent"  // Or use far-future date
+}
+
+// Archive query excludes permanent records:
+db.sales.aggregate([
+  { $match: {
+      date: { $lt: fiveYearsAgo },
+      retentionPolicy: { $ne: "permanent" }
+    }
+  },
+  { $merge: { into: "sales_archive" } }
+])
+```
+
+**Automated archival with scheduling:**
+
+```javascript
+// Create an archive script to run periodically
+function archiveOldSales(yearsToKeep = 5) {
+  const cutoffDate = new Date()
+  cutoffDate.setFullYear(cutoffDate.getFullYear() - yearsToKeep)
+
+  print(`Archiving sales before ${cutoffDate.toISOString()}`)
+
+  // Count documents to archive
+  const toArchive = db.sales.countDocuments({
+    date: { $lt: cutoffDate },
+    retentionPolicy: { $ne: "permanent" }
+  })
+  print(`Documents to archive: ${toArchive}`)
+
+  if (toArchive === 0) {
+    print("Nothing to archive")
+    return
+  }
+
+  // Archive in batches to avoid long-running operations
+  const batchSize = 10000
+  let archived = 0
+
+  while (archived < toArchive) {
+    // Get batch of IDs
+    const batch = db.sales.find(
+      { date: { $lt: cutoffDate }, retentionPolicy: { $ne: "permanent" } },
+      { _id: 1 }
+    ).limit(batchSize).toArray()
+
+    if (batch.length === 0) break
+
+    const ids = batch.map(d => d._id)
+
+    // Move to archive
+    db.sales.aggregate([
+      { $match: { _id: { $in: ids } } },
+      { $merge: { into: "sales_archive", on: "_id" } }
+    ])
+
+    // Delete from active
+    db.sales.deleteMany({ _id: { $in: ids } })
+
+    archived += batch.length
+    print(`Archived ${archived}/${toArchive}`)
+  }
+
+  print("Archive complete")
+}
+
+// Run monthly via cron, Atlas Triggers, or application scheduler
+// archiveOldSales(5)
+```
+
+**Atlas Online Archive: Atlas only**
+
+```javascript
+// Atlas Online Archive automatically tiers data
+// Configure via Atlas UI or API:
+
+// 1. Set archive rule based on date field
+// archiveAfter: 365 days on "date" field
+
+// 2. Data moves to MongoDB-managed cloud object storage
+// Transparent to application - appears as same collection
+
+// 3. Query via Federated Database Instance
+// Slightly slower but much cheaper storage
+
+// Benefits:
+// - No code changes
+// - Automatic data movement
+// - Unified query interface
+// - Pay cloud storage rates for cold data
+```
+
+**When NOT to use archive pattern:**
+
+```javascript
+// Analyze archive candidates
+function analyzeArchiveCandidates(collection, dateField, yearsThreshold) {
+  const cutoff = new Date()
+  cutoff.setFullYear(cutoff.getFullYear() - yearsThreshold)
+
+  const stats = db[collection].aggregate([
+    { $facet: {
+        total: [{ $count: "count" }],
+        old: [
+          { $match: { [dateField]: { $lt: cutoff } } },
+          { $count: "count" }
+        ],
+        recent: [
+          { $match: { [dateField]: { $gte: cutoff } } },
+          { $count: "count" }
+        ],
+        oldestDoc: [
+          { $sort: { [dateField]: 1 } },
+          { $limit: 1 },
+          { $project: { [dateField]: 1 } }
+        ],
+        newestDoc: [
+          { $sort: { [dateField]: -1 } },
+          { $limit: 1 },
+          { $project: { [dateField]: 1 } }
+        ]
+      }
+    }
+  ]).toArray()[0]
+
+  const total = stats.total[0]?.count || 0
+  const old = stats.old[0]?.count || 0
+  const recent = stats.recent[0]?.count || 0
+
+  print(`\n=== Archive Analysis for ${collection} ===`)
+  print(`Date field: ${dateField}`)
+  print(`Threshold: ${yearsThreshold} years (before ${cutoff.toISOString().split('T')[0]})`)
+  print(`\nDocument counts:`)
+  print(`  Total: ${total.toLocaleString()}`)
+  print(`  Archivable (>${yearsThreshold}yr): ${old.toLocaleString()} (${((old/total)*100).toFixed(1)}%)`)
+  print(`  Keep active: ${recent.toLocaleString()} (${((recent/total)*100).toFixed(1)}%)`)
+
+  if (stats.oldestDoc[0]) {
+    print(`\nDate range:`)
+    print(`  Oldest: ${stats.oldestDoc[0][dateField]}`)
+    print(`  Newest: ${stats.newestDoc[0][dateField]}`)
+  }
+
+  if (old > 0 && old / total > 0.3) {
+    print(`\nRECOMMENDATION: Archive ${old.toLocaleString()} documents to improve performance`)
+  }
+}
+
+// Usage
+analyzeArchiveCandidates("sales", "date", 5)
+```
+
+- **Small datasets**: If total data fits comfortably in RAM, archiving adds complexity without benefit.
+
+- **Uniform access patterns**: If old and new data are queried equally.
+
+- **Compliance requires instant access**: If regulations require sub-second queries on all historical data.
+
+- **Already using TTL**: If data should be deleted, not archived, use TTL indexes.
+
+Reference: [https://mongodb.com/docs/manual/data-modeling/design-patterns/archive/](https://mongodb.com/docs/manual/data-modeling/design-patterns/archive/)
+
+### 4.2 Use Attribute Pattern for Sparse or Variable Fields
 
 **Impact: MEDIUM (Reduces sparse indexes and enables efficient search across many optional fields)**
 
@@ -2658,14 +2897,6 @@ db.items.find({
 
 **When NOT to use this pattern:**
 
-- **Fixed schema**: If fields are stable and always present.
-
-- **Type-specific validation**: If each field needs strict schema rules.
-
-- **Single-field queries only**: A normal field may be simpler and faster.
-
-**Verify with:**
-
 ```javascript
 // Ensure queries use the multikey index
 
@@ -2674,9 +2905,15 @@ db.items.find({
 }).explain("executionStats")
 ```
 
+- **Fixed schema**: If fields are stable and always present.
+
+- **Type-specific validation**: If each field needs strict schema rules.
+
+- **Single-field queries only**: A normal field may be simpler and faster.
+
 Reference: [https://mongodb.com/docs/manual/data-modeling/design-patterns/group-data/attribute-pattern/](https://mongodb.com/docs/manual/data-modeling/design-patterns/group-data/attribute-pattern/)
 
-### 4.2 Use Bucket Pattern for Time-Series Data
+### 4.3 Use Bucket Pattern for Time-Series Data
 
 **Impact: MEDIUM (100-3600× fewer documents, 10-50× smaller indexes, 5-20× faster range queries)**
 
@@ -2781,14 +3018,6 @@ db.sensor_data.insertOne({
 
 **When NOT to use this pattern:**
 
-- **Random access patterns**: If you frequently query individual events by ID, not time ranges.
-
-- **Low volume**: <1000 events/day per entity doesn't justify bucketing complexity.
-
-- **Varied event sizes**: Bucketing works best when events are uniform size.
-
-**Verify with:**
-
 ```javascript
 // Check document counts - should be low for time-series
 db.sensor_data.estimatedDocumentCount()
@@ -2802,9 +3031,15 @@ db.sensor_data.aggregate([
 // Bucketed: 10-100KB; Unbucketed: 100-500 bytes
 ```
 
+- **Random access patterns**: If you frequently query individual events by ID, not time ranges.
+
+- **Low volume**: <1000 events/day per entity doesn't justify bucketing complexity.
+
+- **Varied event sizes**: Bucketing works best when events are uniform size.
+
 Reference: [https://mongodb.com/blog/post/building-with-patterns-the-bucket-pattern](https://mongodb.com/blog/post/building-with-patterns-the-bucket-pattern)
 
-### 4.3 Use Computed Pattern for Expensive Calculations
+### 4.4 Use Computed Pattern for Expensive Calculations
 
 **Impact: MEDIUM (100-1000× faster reads by pre-computing aggregations)**
 
@@ -2972,16 +3207,6 @@ db.screenings.aggregate([
 
 **When NOT to use this pattern:**
 
-- **Rarely accessed calculations**: If stat is viewed once/day, compute on demand.
-
-- **High write frequency**: If source data changes every second, update overhead may exceed read savings.
-
-- **Complex multi-collection joins**: Some computations are too complex to maintain incrementally.
-
-- **Strong consistency required**: Computed values may be slightly stale.
-
-**Verify with:**
-
 ```javascript
 // Find expensive aggregations that should be pre-computed
 db.setProfilingLevel(1, { slowms: 100 })
@@ -3003,9 +3228,17 @@ db.system.profile.aggregate([
 // High count + high avgMs = candidate for computed pattern
 ```
 
+- **Rarely accessed calculations**: If stat is viewed once/day, compute on demand.
+
+- **High write frequency**: If source data changes every second, update overhead may exceed read savings.
+
+- **Complex multi-collection joins**: Some computations are too complex to maintain incrementally.
+
+- **Strong consistency required**: Computed values may be slightly stale.
+
 Reference: [https://mongodb.com/docs/manual/data-modeling/design-patterns/computed-values/computed-schema-pattern/](https://mongodb.com/docs/manual/data-modeling/design-patterns/computed-values/computed-schema-pattern/)
 
-### 4.4 Use Extended Reference Pattern
+### 4.5 Use Extended Reference Pattern
 
 **Impact: MEDIUM (Eliminates $lookup for 80% of queries, 5-10× faster list views)**
 
@@ -3133,16 +3366,6 @@ if (!order.customerCache ||
 
 **When NOT to use this pattern:**
 
-- **Frequently-changing data**: If customer name changes daily, update overhead exceeds $lookup cost.
-
-- **Large cached payloads**: Don't embed 50KB of author bio in every article.
-
-- **Sensitive data segregation**: Don't copy PII into collections with different access controls.
-
-- **Writes >> Reads**: If you write 100× more than read, caching adds overhead.
-
-**Verify with:**
-
 ```javascript
 // Find $lookup-heavy aggregations in profile
 db.setProfilingLevel(1, { slowms: 20 })
@@ -3160,9 +3383,17 @@ db.system.profile.aggregate([
 // High count = candidate for extended reference
 ```
 
+- **Frequently-changing data**: If customer name changes daily, update overhead exceeds $lookup cost.
+
+- **Large cached payloads**: Don't embed 50KB of author bio in every article.
+
+- **Sensitive data segregation**: Don't copy PII into collections with different access controls.
+
+- **Writes >> Reads**: If you write 100× more than read, caching adds overhead.
+
 Reference: [https://mongodb.com/blog/post/building-with-patterns-the-extended-reference-pattern](https://mongodb.com/blog/post/building-with-patterns-the-extended-reference-pattern)
 
-### 4.5 Use Outlier Pattern for Exceptional Documents
+### 4.6 Use Outlier Pattern for Exceptional Documents
 
 **Impact: MEDIUM (Prevents 95% of queries from being slowed by 5% of outlier documents)**
 
@@ -3306,16 +3537,6 @@ db.book_customers_extra.createIndex({ customers: 1 })
 
 **When NOT to use this pattern:**
 
-- **Uniform distribution**: If all documents have similar array sizes, no outliers to isolate.
-
-- **Always need full data**: If you always display all 50,000 customers, pattern doesn't help.
-
-- **Write-heavy outliers**: Complex update logic may not be worth the read optimization.
-
-- **Small outliers**: If outliers are 200 vs typical 50, just use larger threshold.
-
-**Verify with:**
-
 ```javascript
 // Find outlier documents
 db.books.aggregate([
@@ -3344,126 +3565,705 @@ db.books.stats().indexSizes
 // Large multikey index suggests outliers are bloating it
 ```
 
+- **Uniform distribution**: If all documents have similar array sizes, no outliers to isolate.
+
+- **Always need full data**: If you always display all 50,000 customers, pattern doesn't help.
+
+- **Write-heavy outliers**: Complex update logic may not be worth the read optimization.
+
+- **Small outliers**: If outliers are 200 vs typical 50, just use larger threshold.
+
 Reference: [https://mongodb.com/docs/manual/data-modeling/design-patterns/group-data/outlier-pattern/](https://mongodb.com/docs/manual/data-modeling/design-patterns/group-data/outlier-pattern/)
 
-### 4.6 Use Polymorphic Pattern for Heterogeneous Documents
+### 4.7 Use Polymorphic Pattern for Heterogeneous Documents
 
 **Impact: MEDIUM (Keeps related entities in one collection while preserving type-specific fields)**
 
-**Store related but different document shapes in one collection with a type discriminator.** This keeps shared queries and indexes simple while allowing type-specific fields.
+**Store related but different document shapes in one collection with a type discriminator.** This keeps shared queries and indexes simple while allowing type-specific fields. Common use cases: product catalogs with different product types, content management systems, event stores, and any domain with inheritance.
 
 **Incorrect: separate collections per subtype**
 
 ```javascript
-// products_books, products_electronics, products_furniture
-// Queries across all products require multiple queries or unions
+// Separate collections for each product type
+db.products_books.find({})
+db.products_electronics.find({})
+db.products_clothing.find({})
+
+// Problems:
+// 1. Queries across all products need multiple calls or $unionWith
+// 2. Shared indexes must be duplicated
+// 3. Adding new types requires new collections
+// 4. Application code branches on collection names
+
+// Querying all products is painful:
+const allProducts = [
+  ...db.products_books.find({ price: { $lt: 50 } }).toArray(),
+  ...db.products_electronics.find({ price: { $lt: 50 } }).toArray(),
+  ...db.products_clothing.find({ price: { $lt: 50 } }).toArray()
+]
 ```
 
-**Correct: single collection with a type field**
+**Correct: single collection with discriminator**
 
 ```javascript
-// One collection with a discriminator
+// Single collection with type field as discriminator
+// All products share common fields, type-specific fields vary
+
+// Book
 {
-  _id: 1,
+  _id: ObjectId("..."),
   type: "book",
-  title: "Database Systems",
-  author: "Elmasri",
-  pages: 1200
+  name: "MongoDB: The Definitive Guide",
+  price: 49.99,
+  inStock: true,
+  // Book-specific fields
+  author: "Shannon Bradshaw",
+  isbn: "978-1491954461",
+  pages: 514
 }
 
+// Electronics
 {
-  _id: 2,
+  _id: ObjectId("..."),
   type: "electronics",
-  name: "Noise Cancelling Headphones",
+  name: "Wireless Headphones",
+  price: 79.99,
+  inStock: true,
+  // Electronics-specific fields
+  brand: "Sony",
   wattage: 20,
-  batteryHours: 30
+  batteryHours: 30,
+  warranty: "2 years"
 }
 
-// Query by type
+// Clothing
+{
+  _id: ObjectId("..."),
+  type: "clothing",
+  name: "Running Shoes",
+  price: 129.99,
+  inStock: false,
+  // Clothing-specific fields
+  size: ["S", "M", "L", "XL"],
+  color: "blue",
+  material: "synthetic"
+}
 
-db.products.createIndex({ type: 1 })
+// Query all products easily:
+db.products.find({ price: { $lt: 100 } })
 
-db.products.find({ type: "book" })
+// Query specific type:
+db.products.find({ type: "book", author: "Shannon Bradshaw" })
 ```
 
-**When NOT to use this pattern:**
-
-- **Conflicting index needs**: If each type needs very different indexes.
-
-- **Highly divergent access patterns**: Separate collections may be simpler.
-
-- **Strict schema enforcement per type**: Use separate collections if required.
-
-**Verify with:**
+**Design the discriminator field:**
 
 ```javascript
-// Ensure the type index is used
+// TIP 1: Use a clear, consistent discriminator field name
+// Common choices: type, kind, _type, docType, category
 
-db.products.find({ type: "electronics" }).explain("executionStats")
+// GOOD: Clear discriminator
+{ type: "book", ... }
+{ type: "electronics", ... }
+
+// BAD: Ambiguous or varying field
+{ category: "book", ... }      // "category" might mean product category
+{ productType: "electronic", ...}  // Different field name!
+
+// TIP 2: Use lowercase, singular values
+// GOOD
+{ type: "book" }
+{ type: "user" }
+
+// AVOID
+{ type: "BOOK" }      // Inconsistent casing
+{ type: "books" }     // Plural
+{ type: "Book" }      // Title case
+
+// TIP 3: Store additional type metadata if needed
+{
+  type: "book",
+  typeVersion: 2,     // Schema version for this type
+  ...
+}
 ```
+
+**Index strategies for polymorphic collections:**
+
+```javascript
+// Strategy 1: Compound index with type first
+// Best for: Queries that always filter by type
+db.products.createIndex({ type: 1, price: 1 })
+db.products.createIndex({ type: 1, name: 1 })
+
+// Query uses index efficiently:
+db.products.find({ type: "book", price: { $lt: 50 } })
+
+// Strategy 2: Compound index with type second
+// Best for: Queries that rarely filter by type
+db.products.createIndex({ price: 1, type: 1 })
+
+// Query across all types uses index:
+db.products.find({ price: { $lt: 50 } })
+
+// Strategy 3: Partial indexes for type-specific fields
+// Best for: Fields that only exist on some types
+db.products.createIndex(
+  { author: 1 },
+  { partialFilterExpression: { type: "book" } }
+)
+
+db.products.createIndex(
+  { brand: 1, wattage: 1 },
+  { partialFilterExpression: { type: "electronics" } }
+)
+
+// Strategy 4: Wildcard index for varying fields
+// Best for: Many type-specific fields, ad-hoc queries
+db.products.createIndex({ "specs.$**": 1 })
+
+// Documents store type-specific data in specs:
+{ type: "book", specs: { author: "...", isbn: "..." } }
+{ type: "electronics", specs: { brand: "...", wattage: 20 } }
+```
+
+**Query patterns across types:**
+
+```javascript
+// Pattern 1: Query all types with shared fields
+db.products.find({ price: { $lt: 100 }, inStock: true })
+  .sort({ price: 1 })
+
+// Pattern 2: Query specific type with type-specific fields
+db.products.find({
+  type: "book",
+  pages: { $gt: 300 },
+  author: /bradshaw/i
+})
+
+// Pattern 3: Aggregation across types with type-specific handling
+db.products.aggregate([
+  { $match: { inStock: true } },
+  { $group: {
+      _id: "$type",
+      count: { $sum: 1 },
+      avgPrice: { $avg: "$price" }
+    }
+  }
+])
+
+// Pattern 4: Faceted search with type breakdown
+db.products.aggregate([
+  { $match: { price: { $lt: 100 } } },
+  { $facet: {
+      byType: [{ $group: { _id: "$type", count: { $sum: 1 } } }],
+      priceRanges: [
+        { $bucket: {
+            groupBy: "$price",
+            boundaries: [0, 25, 50, 100],
+            default: "100+"
+          }
+        }
+      ]
+    }
+  }
+])
+```
+
+**Validation per type:**
+
+```javascript
+// Use JSON Schema with discriminator-based validation
+db.runCommand({
+  collMod: "products",
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["type", "name", "price"],
+      properties: {
+        type: { enum: ["book", "electronics", "clothing"] },
+        name: { bsonType: "string" },
+        price: { bsonType: "number", minimum: 0 }
+      },
+      oneOf: [
+        {
+          properties: { type: { const: "book" } },
+          required: ["author", "isbn"]
+        },
+        {
+          properties: { type: { const: "electronics" } },
+          required: ["brand"]
+        },
+        {
+          properties: { type: { const: "clothing" } },
+          required: ["size", "color"]
+        }
+      ]
+    }
+  },
+  validationLevel: "moderate"
+})
+```
+
+**Adding new types:**
+
+```javascript
+// Polymorphic pattern makes adding types easy
+// No schema migration needed - just insert new documents
+
+// Add a new "furniture" type
+db.products.insertOne({
+  type: "furniture",
+  name: "Standing Desk",
+  price: 599.99,
+  inStock: true,
+  // Furniture-specific fields
+  dimensions: { width: 60, depth: 30, height: 48 },
+  material: "bamboo",
+  assemblyRequired: true
+})
+
+// Add partial index for furniture-specific queries
+db.products.createIndex(
+  { "dimensions.width": 1 },
+  { partialFilterExpression: { type: "furniture" } }
+)
+
+// Update validation to include new type
+// (if using strict validation)
+```
+
+**When NOT to use polymorphic pattern:**
+
+```javascript
+// Analyze polymorphic collection health
+function analyzePolymorphicCollection(collectionName, typeField = "type") {
+  const coll = db[collectionName]
+
+  // Get type distribution
+  const typeStats = coll.aggregate([
+    { $group: {
+        _id: `$${typeField}`,
+        count: { $sum: 1 },
+        avgSize: { $avg: { $bsonSize: "$$ROOT" } }
+      }
+    },
+    { $sort: { count: -1 } }
+  ]).toArray()
+
+  print(`\n=== Polymorphic Analysis: ${collectionName} ===`)
+  print(`Discriminator field: ${typeField}`)
+  print(`\nType distribution:`)
+
+  let totalDocs = 0
+  typeStats.forEach(t => {
+    totalDocs += t.count
+    print(`  ${t._id || "(null)"}: ${t.count.toLocaleString()} docs, avg ${t.avgSize?.toFixed(0) || "?"} bytes`)
+  })
+  print(`  TOTAL: ${totalDocs.toLocaleString()} documents`)
+
+  // Check for missing type field
+  const missingType = coll.countDocuments({ [typeField]: { $exists: false } })
+  if (missingType > 0) {
+    print(`\nWARNING: ${missingType} documents missing '${typeField}' field`)
+  }
+
+  // Analyze indexes
+  print(`\nIndexes:`)
+  const indexes = coll.getIndexes()
+  indexes.forEach(idx => {
+    const hasType = Object.keys(idx.key).includes(typeField)
+    const isPartial = !!idx.partialFilterExpression
+    print(`  ${idx.name}: ${JSON.stringify(idx.key)}${hasType ? " [includes type]" : ""}${isPartial ? " [partial]" : ""}`)
+  })
+
+  // Suggest missing indexes
+  const hasTypeIndex = indexes.some(idx => Object.keys(idx.key)[0] === typeField)
+  if (!hasTypeIndex && typeStats.length > 3) {
+    print(`\nSUGGESTION: Consider index on { ${typeField}: 1 } for type-filtered queries`)
+  }
+}
+
+// Usage
+analyzePolymorphicCollection("products", "type")
+```
+
+- **Completely different access patterns**: If each type is queried independently with no cross-type queries, separate collections may be cleaner.
+
+- **Conflicting index requirements**: If types need many different indexes, the index overhead may outweigh benefits.
+
+- **Strict type separation required**: Regulatory or security requirements may mandate separate collections.
+
+- **Vastly different document sizes**: If one type has 100-byte docs and another has 100KB docs, working set suffers.
+
+- **Type-specific sharding needs**: Different types may need different shard keys.
 
 Reference: [https://mongodb.com/docs/manual/data-modeling/design-patterns/polymorphic-data/polymorphic-schema-pattern/](https://mongodb.com/docs/manual/data-modeling/design-patterns/polymorphic-data/polymorphic-schema-pattern/)
 
-### 4.7 Use Schema Versioning for Safe Evolution
+### 4.8 Use Schema Versioning for Safe Evolution
 
 **Impact: MEDIUM (Avoids breaking reads/writes during migrations and enables online backfills)**
 
-**Schema changes are inevitable.** Add a `schemaVersion` field so your application can read old documents while you migrate data in-place. This prevents production outages caused by suddenly missing or renamed fields.
+**Schema changes are inevitable.** Add a `schemaVersion` field so your application can read old and new documents simultaneously while you migrate data in-place. This prevents production outages caused by suddenly missing, renamed, or restructured fields. Online migrations keep your application running during schema evolution.
 
 **Incorrect: breaking change without versioning**
 
 ```javascript
-// Old documents only have "address" as a string
-{ _id: 1, name: "Ada", address: "12 Main St" }
+// Version 1: address is a string
+{ _id: 1, name: "Ada", address: "12 Main St, NYC 10001" }
 
-// New code expects "address" to be an object
-// Old documents now break reads or writes
+// Developer changes schema: address becomes an object
+// New code expects:
+{ _id: 1, name: "Ada", address: { street: "12 Main St", city: "NYC", zip: "10001" } }
+
+// PROBLEMS:
+// 1. Old documents break: address.city returns undefined
+// 2. Application crashes or returns wrong data
+// 3. Can't deploy gradually - all-or-nothing
+// 4. Rollback is dangerous if new docs were written
 ```
 
-**Correct: versioned documents with backfill path**
+**Correct: versioned documents with migration path**
 
 ```javascript
-// New documents include version and new structure
-{ _id: 1, name: "Ada", schemaVersion: 2,
-  address: { street: "12 Main St", city: "NYC" } }
+// Version 1 documents (existing)
+{ _id: 1, name: "Ada", schemaVersion: 1, address: "12 Main St, NYC 10001" }
 
-// Application reads both versions
-// if schemaVersion < 2, treat address as legacy string
+// Version 2 documents (new structure)
+{ _id: 2, name: "Bob", schemaVersion: 2,
+  address: { street: "45 Oak Ave", city: "Boston", zip: "02101" } }
 
-// Online backfill for old docs
-// Upgrade only when safe for the workload
+// Application code handles both versions:
+function getCity(user) {
+  if (user.schemaVersion >= 2) {
+    return user.address.city
+  }
+  // Parse city from v1 string format
+  return parseAddressString(user.address).city
+}
 
-db.users.updateMany(
-  { schemaVersion: { $ne: 2 } },
-  [
-    { $set: {
-        address: { street: "$address" },
-        schemaVersion: 2
-      } }
-  ]
-)
+// Benefits:
+// 1. Old and new documents coexist
+// 2. Deploy new code before migrating data
+// 3. Gradual migration during low-traffic periods
+// 4. Easy rollback - old code still works
 ```
 
-**When NOT to use this pattern:**
+**Online migration strategies:**
 
-- **Small datasets with downtime**: You can migrate offline in minutes.
+```javascript
+// Strategy 1: Background batch migration
+// Best for: Large collections, can tolerate mixed versions temporarily
 
-- **Truly stable schemas**: If no evolution is expected.
+function migrateToV2(batchSize = 1000) {
+  let migrated = 0
+  let cursor = db.users.find({ schemaVersion: { $lt: 2 } }).limit(batchSize)
 
-**Verify with:**
+  while (cursor.hasNext()) {
+    const doc = cursor.next()
+
+    // Transform v1 → v2
+    const parsed = parseAddressString(doc.address)
+
+    db.users.updateOne(
+      { _id: doc._id, schemaVersion: { $lt: 2 } },  // Prevent double-migration
+      {
+        $set: {
+          schemaVersion: 2,
+          address: {
+            street: parsed.street,
+            city: parsed.city,
+            zip: parsed.zip
+          }
+        }
+      }
+    )
+    migrated++
+  }
+
+  print(`Migrated ${migrated} documents`)
+  return migrated
+}
+
+// Run in batches during off-peak hours
+while (migrateToV2(1000) > 0) {
+  sleep(100)  // Throttle to reduce load
+}
+
+
+// Strategy 2: Aggregation pipeline update (MongoDB 4.2+)
+// Best for: Simple transformations, moderate collection sizes
+
+db.users.updateMany(
+  { schemaVersion: { $lt: 2 } },
+  [
+    {
+      $set: {
+        schemaVersion: 2,
+        address: {
+          $cond: {
+            if: { $eq: [{ $type: "$address" }, "string"] },
+            then: {
+              // Parse string address into object
+              street: { $arrayElemAt: [{ $split: ["$address", ", "] }, 0] },
+              city: { $arrayElemAt: [{ $split: ["$address", ", "] }, 1] },
+              zip: { $arrayElemAt: [{ $split: ["$address", ", "] }, 2] }
+            },
+            else: "$address"  // Already an object
+          }
+        }
+      }
+    }
+  ]
+)
+
+
+// Strategy 3: Read-time migration (lazy migration)
+// Best for: Low-traffic documents, immediate consistency needed
+
+function getUser(userId) {
+  const user = db.users.findOne({ _id: userId })
+
+  if (user && user.schemaVersion < 2) {
+    // Migrate on read
+    const migrated = migrateUserToV2(user)
+    db.users.replaceOne({ _id: userId }, migrated)
+    return migrated
+  }
+
+  return user
+}
+```
+
+**Handling complex migrations:**
+
+```javascript
+// Multiple version jumps: v1 → v2 → v3
+// Define transformation functions for each step
+
+const migrations = {
+  1: (doc) => {
+    // v1 → v2: address string to object
+    const parsed = parseAddressString(doc.address)
+    return {
+      ...doc,
+      schemaVersion: 2,
+      address: { street: parsed.street, city: parsed.city, zip: parsed.zip }
+    }
+  },
+  2: (doc) => {
+    // v2 → v3: add country, rename zip to postalCode
+    return {
+      ...doc,
+      schemaVersion: 3,
+      address: {
+        street: doc.address.street,
+        city: doc.address.city,
+        postalCode: doc.address.zip,
+        country: "USA"  // Default for existing data
+      }
+    }
+  }
+}
+
+function migrateToLatest(doc, targetVersion = 3) {
+  let current = doc
+  while (current.schemaVersion < targetVersion) {
+    const migrator = migrations[current.schemaVersion]
+    if (!migrator) throw new Error(`No migration from v${current.schemaVersion}`)
+    current = migrator(current)
+  }
+  return current
+}
+```
+
+**Backward-compatible changes (no version bump needed):**
+
+```javascript
+// These changes DON'T require schemaVersion increment:
+
+// 1. Adding new optional fields
+// Old: { name: "Ada" }
+// New: { name: "Ada", nickname: "A" }
+// Old code ignores nickname, new code uses it if present
+
+// 2. Adding new indexes
+db.users.createIndex({ email: 1 })
+// Transparent to application code
+
+// 3. Relaxing validation (removing required fields)
+// If "phone" was required, making it optional is backward-compatible
+
+// These changes DO require schemaVersion:
+
+// 1. Renaming fields
+// address → shippingAddress
+
+// 2. Changing field types
+// price: "19.99" → price: 19.99
+
+// 3. Restructuring (flat to nested, or vice versa)
+// firstName, lastName → name: { first, last }
+
+// 4. Removing fields that old code expects
+// Removing "legacyId" that old code reads
+```
+
+**Version field conventions:**
+
+```javascript
+// Option 1: Integer version (recommended)
+{ schemaVersion: 1 }
+{ schemaVersion: 2 }
+// Simple, easy to compare, clear progression
+
+// Option 2: Semantic version string
+{ schemaVersion: "1.0.0" }
+{ schemaVersion: "1.1.0" }
+// More expressive but harder to query
+
+// Option 3: Date-based version
+{ schemaVersion: "2025-01-15" }
+// Ties to deployment dates
+
+// Option 4: No explicit version (implicit v1)
+// Treat missing schemaVersion as version 1
+function getVersion(doc) {
+  return doc.schemaVersion || 1
+}
+```
+
+**Monitoring migration progress:**
 
 ```javascript
 // Track version distribution
-
 db.users.aggregate([
-  { $group: { _id: "$schemaVersion", count: { $sum: 1 } } }
+  { $group: {
+      _id: "$schemaVersion",
+      count: { $sum: 1 }
+    }
+  },
+  { $sort: { _id: 1 } }
 ])
-// Remaining old versions indicate incomplete migration
+
+// Example output during migration:
+// { _id: 1, count: 45000 }   // 45% still on v1
+// { _id: 2, count: 55000 }   // 55% migrated to v2
+
+// Set up alerts when migration stalls
+// Monitor for: v1 count not decreasing over time
 ```
+
+**Cleanup after migration:**
+
+```javascript
+// After all documents migrated and old code retired:
+
+// 1. Verify no old versions remain
+const oldCount = db.users.countDocuments({ schemaVersion: { $lt: 2 } })
+if (oldCount > 0) {
+  print(`WARNING: ${oldCount} documents still on old schema`)
+  // Don't proceed with cleanup
+}
+
+// 2. Remove old field handling from application code
+// Delete migration functions, version checks
+
+// 3. Optionally remove schemaVersion field
+// (Keep it for future migrations)
+db.users.updateMany(
+  {},
+  { $unset: { schemaVersion: "" } }
+)
+
+// 4. Update validation to require new structure only
+db.runCommand({
+  collMod: "users",
+  validator: {
+    $jsonSchema: {
+      required: ["address"],
+      properties: {
+        address: {
+          bsonType: "object",
+          required: ["street", "city", "postalCode"]
+        }
+      }
+    }
+  }
+})
+```
+
+**When NOT to use schema versioning:**
+
+```javascript
+// Schema version health check
+function analyzeSchemaVersions(collectionName, versionField = "schemaVersion") {
+  const coll = db[collectionName]
+
+  // Get version distribution
+  const versions = coll.aggregate([
+    { $group: {
+        _id: `$${versionField}`,
+        count: { $sum: 1 },
+        oldestDoc: { $min: "$_id" },
+        newestDoc: { $max: "$_id" }
+      }
+    },
+    { $sort: { _id: 1 } }
+  ]).toArray()
+
+  print(`\n=== Schema Version Analysis: ${collectionName} ===`)
+
+  let total = 0
+  let latestVersion = 0
+  versions.forEach(v => {
+    total += v.count
+    const ver = v._id || "(missing)"
+    if (typeof v._id === "number" && v._id > latestVersion) {
+      latestVersion = v._id
+    }
+    print(`  Version ${ver}: ${v.count.toLocaleString()} documents`)
+  })
+
+  print(`\nTotal: ${total.toLocaleString()} documents`)
+
+  // Check for missing version field
+  const missingVersion = coll.countDocuments({ [versionField]: { $exists: false } })
+  if (missingVersion > 0) {
+    print(`\nWARNING: ${missingVersion.toLocaleString()} documents missing '${versionField}'`)
+    print(`  These may be v1 documents (implicit version)`)
+  }
+
+  // Check for old versions
+  const oldVersions = versions.filter(v => v._id !== null && v._id < latestVersion)
+  if (oldVersions.length > 0) {
+    const oldCount = oldVersions.reduce((sum, v) => sum + v.count, 0)
+    const pct = ((oldCount / total) * 100).toFixed(1)
+    print(`\nMIGRATION STATUS: ${oldCount.toLocaleString()} documents (${pct}%) on old versions`)
+
+    if (oldCount > 0) {
+      print(`  Run migration to upgrade to version ${latestVersion}`)
+    }
+  } else {
+    print(`\nMIGRATION STATUS: Complete - all documents on latest version`)
+  }
+}
+
+// Usage
+analyzeSchemaVersions("users", "schemaVersion")
+```
+
+- **Small datasets with downtime window**: If you can migrate all data in minutes during maintenance.
+
+- **Truly stable schemas**: If the schema is mature and changes are rare.
+
+- **Additive-only changes**: If you only add optional fields, versioning is overkill.
+
+- **Event sourcing**: If using event sourcing, version the events instead.
 
 Reference: [https://mongodb.com/docs/manual/data-modeling/design-patterns/data-versioning/schema-versioning/](https://mongodb.com/docs/manual/data-modeling/design-patterns/data-versioning/schema-versioning/)
 
-### 4.8 Use Subset Pattern for Hot/Cold Data
+### 4.9 Use Subset Pattern for Hot/Cold Data
 
 **Impact: MEDIUM (10-100× better working set efficiency, fits 100× more documents in RAM)**
 
@@ -3602,14 +4402,6 @@ db.movies.updateOne(
 
 **When NOT to use this pattern:**
 
-- **Small documents**: If total document is <16KB, subset pattern adds complexity without benefit.
-
-- **Always need all data**: If 90% of requests need full reviews, separation hurts.
-
-- **Write-heavy cold data**: If reviews are written 100× more than read, keeping them embedded may simplify writes.
-
-**Verify with:**
-
 ```javascript
 // Find documents with hot/cold imbalance
 db.movies.aggregate([
@@ -3633,13 +4425,21 @@ db.serverStatus().wiredTiger.cache
 // If near max, subset pattern will help significantly
 ```
 
+- **Small documents**: If total document is <16KB, subset pattern adds complexity without benefit.
+
+- **Always need all data**: If 90% of requests need full reviews, separation hurts.
+
+- **Write-heavy cold data**: If reviews are written 100× more than read, keeping them embedded may simplify writes.
+
 Reference: [https://mongodb.com/blog/post/building-with-patterns-the-subset-pattern](https://mongodb.com/blog/post/building-with-patterns-the-subset-pattern)
 
-### 4.9 Use Time Series Collections for Time Series Data
+### 4.10 Use Time Series Collections for Time Series Data
 
 **Impact: MEDIUM (10-100× lower storage and index overhead with automatic bucketing and compression)**
 
-**Time series collections are purpose-built for append-only measurements.** MongoDB automatically buckets, compresses, and indexes time series data so you get high ingest rates with far less storage and index overhead than a standard collection.
+**Time series collections are purpose-built for append-only measurements.** MongoDB automatically buckets, compresses, and indexes time series data so you get high ingest rates with far less storage and index overhead than a standard collection. Use them for IoT sensor data, application metrics, financial data, and event logs.
+
+**MongoDB 8.0 Performance:** Block processing introduced in MongoDB 8.0 delivers **200%+ throughput improvement** for time series queries by processing data in compressed blocks rather than document-by-document. This is automatic - no configuration needed.
 
 **Incorrect: regular collection for measurements**
 
@@ -3652,56 +4452,278 @@ Reference: [https://mongodb.com/blog/post/building-with-patterns-the-subset-patt
   value: 22.5
 }
 
+// Problems:
+// 1. Each measurement is a separate document
+// 2. Index overhead per document
+// 3. No automatic compression
+// 4. Working set grows linearly
+
 // Standard index (large and grows fast)
 db.sensor_data.createIndex({ sensorId: 1, ts: 1 })
 ```
 
-**Correct: time series collection with metadata**
+**Correct: time series collection with optimized settings**
 
 ```javascript
-// Native time series collection
-// MongoDB buckets and compresses automatically
-
-// Create the collection once
-// timeField = timestamp, metaField = shared metadata
-// granularity tunes bucket size for query patterns
-// expireAfterSeconds enables automatic retention
-
+// Create time series collection with careful configuration
 db.createCollection("sensor_data", {
   timeseries: {
-    timeField: "ts",
-    metaField: "sensorId",
-    granularity: "seconds"
+    timeField: "ts",           // Required: timestamp field
+    metaField: "metadata",     // Recommended: grouping field
+    granularity: "minutes"     // Match your data rate
   },
-  expireAfterSeconds: 60 * 60 * 24 * 30
+  expireAfterSeconds: 60 * 60 * 24 * 90  // 90-day retention
 })
 
-// Insert as one document per measurement
-// MongoDB stores buckets internally
-
+// Insert documents - MongoDB buckets automatically
 db.sensor_data.insertOne({
-  sensorId: "temp-01",
+  metadata: { sensorId: "temp-01", location: "building-A" },
   ts: new Date(),
-  value: 22.5
+  value: 22.5,
+  unit: "celsius"
 })
+
+// Benefits:
+// - Automatic bucketing (many measurements per internal doc)
+// - Column compression (40-60% disk reduction)
+// - Auto-created compound index on metaField + timeField
+// - Optimized for time-range queries
 ```
 
-**When NOT to use this pattern:**
-
-- **Not time-based data**: If the primary access is not time range queries.
-
-- **Frequent updates to old measurements**: Updates/deletes inside buckets are slower.
-
-- **Very low volume**: If you only store a few hundred events total.
-
-**Verify with:**
+**Choose the right metaField:**
 
 ```javascript
-// Confirm the collection is time series
-// Look for the "timeseries" section in the options
+// metaField groups measurements into buckets
+// Choose fields that:
+// 1. Are queried together with time ranges
+// 2. Have moderate cardinality (not too unique, not too few)
+// 3. Don't change for a given time series
 
-db.getCollectionInfos({ name: "sensor_data" })
+// GOOD: Sensor/device identifier as metaField
+{
+  metadata: { sensorId: "temp-01", region: "us-east" },
+  ts: new Date(),
+  value: 22.5
+}
+// Queries like: "All readings from temp-01 in last hour"
+
+// BAD: High-cardinality field as metaField
+{
+  metadata: { requestId: "uuid-123..." },  // Unique per doc!
+  ts: new Date()
+}
+// Creates one bucket per requestId - no compression benefit
+
+// BAD: Frequently changing field in metaField
+{
+  metadata: { sensorId: "temp-01", currentValue: 22.5 },  // Changes!
+  ts: new Date()
+}
+// metaField should be static for the time series
 ```
+
+**Select appropriate granularity:**
+
+```javascript
+// Granularity determines bucket time span
+// Match it to your data ingestion rate
+
+// "seconds" - Data every second or faster
+// Bucket spans: ~1 hour
+db.createCollection("high_freq_metrics", {
+  timeseries: { timeField: "ts", metaField: "host", granularity: "seconds" }
+})
+
+// "minutes" - Data every few seconds to minutes (DEFAULT)
+// Bucket spans: ~24 hours
+db.createCollection("app_metrics", {
+  timeseries: { timeField: "ts", metaField: "service", granularity: "minutes" }
+})
+
+// "hours" - Data every few minutes to hours
+// Bucket spans: ~30 days
+db.createCollection("daily_reports", {
+  timeseries: { timeField: "ts", metaField: "reportType", granularity: "hours" }
+})
+
+// Custom bucketing (MongoDB 6.3+) for precise control
+db.createCollection("custom_metrics", {
+  timeseries: {
+    timeField: "ts",
+    metaField: "device",
+    bucketMaxSpanSeconds: 3600,      // Max 1 hour per bucket
+    bucketRoundingSeconds: 3600      // Align to hour boundaries
+  }
+})
+```
+
+**Optimize insert performance:**
+
+```javascript
+// TIP 1: Batch inserts with insertMany
+// Group documents with same metaField value together
+const batch = [
+  { metadata: { sensorId: "temp-01" }, ts: new Date(), value: 22.5 },
+  { metadata: { sensorId: "temp-01" }, ts: new Date(), value: 22.6 },
+  { metadata: { sensorId: "temp-01" }, ts: new Date(), value: 22.4 },
+  // ... more temp-01 readings
+  { metadata: { sensorId: "temp-02" }, ts: new Date(), value: 19.2 },
+  // ... more temp-02 readings
+]
+
+db.sensor_data.insertMany(batch, { ordered: false })
+// ordered: false allows parallel processing
+
+// TIP 2: Use consistent field order
+// Column compression works better with consistent structure
+// GOOD: Same field order in every document
+{ metadata: {...}, ts: new Date(), value: 22.5, unit: "C" }
+{ metadata: {...}, ts: new Date(), value: 22.6, unit: "C" }
+
+// BAD: Varying field order
+{ metadata: {...}, ts: new Date(), value: 22.5, unit: "C" }
+{ unit: "C", value: 22.6, metadata: {...}, ts: new Date() }
+
+// TIP 3: Omit empty values for better compression
+// GOOD: Omit field entirely if no value
+{ metadata: {...}, ts: new Date(), value: 22.5 }
+
+// BAD: Include empty/null values
+{ metadata: {...}, ts: new Date(), value: 22.5, error: null, note: "" }
+```
+
+**Optimize compression:**
+
+```javascript
+// Time series collections use column compression
+// Optimize data for maximum compression:
+
+// TIP 1: Round numeric values to needed precision
+// BAD: Excessive precision
+{ value: 22.5123456789 }
+
+// GOOD: Round to needed decimals
+{ value: 22.5 }
+
+// TIP 2: Use consistent nested field order
+// Compression is per-field, nested fields need consistency
+// GOOD
+{ metadata: { sensorId: "a", location: "b" } }
+{ metadata: { sensorId: "c", location: "d" } }
+
+// BAD
+{ metadata: { sensorId: "a", location: "b" } }
+{ metadata: { location: "d", sensorId: "c" } }
+
+// TIP 3: Consider flattening for high-cardinality metadata
+// If metadata has many unique combinations, flatten may help
+{ sensorId: "temp-01", location: "building-A", ts: new Date(), value: 22.5 }
+```
+
+**Secondary indexes on time series:**
+
+```javascript
+// Time series auto-creates index on { metaField, timeField }
+// Add secondary indexes for other query patterns
+
+// Index on measurement values for threshold queries
+db.sensor_data.createIndex({ "value": 1 })
+// Query: "All readings where value > 100"
+
+// Compound index for filtered time queries
+db.sensor_data.createIndex({ "metadata.location": 1, "ts": 1 })
+// Query: "Readings from building-A in last hour"
+
+// Partial index for specific conditions
+db.sensor_data.createIndex(
+  { "metadata.alertLevel": 1 },
+  { partialFilterExpression: { "metadata.alertLevel": { $exists: true } } }
+)
+```
+
+**Sharding time series collections:**
+
+```javascript
+// For very high volume, shard on metaField
+// MongoDB 8.0+: timeField sharding is deprecated
+
+// Create sharded time series collection
+sh.shardCollection("mydb.sensor_data", { "metadata.region": 1 })
+
+// Good shard keys for time series:
+// - metadata.sensorId (if many sensors)
+// - metadata.region (geographic distribution)
+// - metadata.customerId (multi-tenant)
+
+// BAD: Sharding on timeField alone
+// Creates hot spots on recent time ranges
+```
+
+**When NOT to use time series collections:**
+
+```javascript
+// Analyze time series collection efficiency
+function analyzeTimeSeries(collectionName) {
+  // Get collection info
+  const info = db.getCollectionInfos({ name: collectionName })[0]
+
+  if (!info?.options?.timeseries) {
+    print(`${collectionName} is not a time series collection`)
+    return
+  }
+
+  const ts = info.options.timeseries
+  print(`\n=== Time Series: ${collectionName} ===`)
+  print(`Time field: ${ts.timeField}`)
+  print(`Meta field: ${ts.metaField || "(none)"}`)
+  print(`Granularity: ${ts.granularity || "default"}`)
+
+  if (info.options.expireAfterSeconds) {
+    const days = info.options.expireAfterSeconds / 86400
+    print(`TTL: ${days} days`)
+  }
+
+  // Get stats
+  const stats = db[collectionName].stats()
+  print(`\nStorage:`)
+  print(`  Documents: ${stats.count?.toLocaleString() || "N/A"}`)
+  print(`  Size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`)
+  print(`  Avg doc size: ${stats.avgObjSize?.toFixed(0) || "N/A"} bytes`)
+
+  // Check bucket efficiency (via system.buckets)
+  const bucketColl = `system.buckets.${collectionName}`
+  const bucketCount = db[bucketColl].countDocuments({})
+  if (bucketCount > 0 && stats.count) {
+    const docsPerBucket = stats.count / bucketCount
+    print(`\nBucketing efficiency:`)
+    print(`  Buckets: ${bucketCount.toLocaleString()}`)
+    print(`  Docs per bucket: ${docsPerBucket.toFixed(1)}`)
+
+    if (docsPerBucket < 10) {
+      print(`  WARNING: Low docs/bucket - consider adjusting granularity or metaField`)
+    }
+  }
+
+  // Show indexes
+  print(`\nIndexes:`)
+  db[collectionName].getIndexes().forEach(idx => {
+    print(`  ${idx.name}: ${JSON.stringify(idx.key)}`)
+  })
+}
+
+// Usage
+analyzeTimeSeries("sensor_data")
+```
+
+- **Not time-based data**: Primary access isn't time range queries.
+
+- **Frequent updates/deletes**: Time series optimized for append-only; updates to old data are slow.
+
+- **Very low volume**: A few hundred events don't benefit from bucketing.
+
+- **Need transactions**: Time series collections don't support multi-document transactions.
+
+- **Complex queries on measurements**: If you mostly query by non-time fields, regular collections may be better.
 
 Reference: [https://mongodb.com/docs/manual/core/timeseries-collections/](https://mongodb.com/docs/manual/core/timeseries-collections/)
 
@@ -3784,7 +4806,7 @@ db.runCommand({
 
 | `warn` | Allow but log warning | Discovery phase, monitoring |
 
-| `errorAndLog` (v8.1+) | Reject AND log | Production with audit trail |
+| `errorAndLog` (v8.1+) | Reject AND log | Production with audit trail (plan downgrade path) |
 
 **Migration workflow—adding validation to existing collection:**
 
@@ -3879,6 +4901,20 @@ db.adminCommand({ getLog: "global" }).log.filter(
 )
 ```
 
+**Downgrade caution for `errorAndLog`:**
+
+```javascript
+// If a collection uses validationAction: "errorAndLog",
+// downgrade to older versions is blocked until you:
+// 1) change validationAction to a supported mode (error/warn), or
+// 2) drop the collection.
+
+db.runCommand({
+  collMod: "users",
+  validationAction: "error" // or "warn"
+})
+```
+
 **Bypassing validation: use sparingly**
 
 ```javascript
@@ -3937,14 +4973,6 @@ db.users.insertOne({ schemaVersion: 2, firstName: "Bob", lastName: "Smith" })  /
 
 **When NOT to use strict + error:**
 
-- **During active migration**: Use moderate + warn until data is cleaned.
-
-- **Legacy systems integration**: External data may not conform.
-
-- **Feature flag rollouts**: New fields may be optional initially.
-
-**Verify with:**
-
 ```javascript
 // Check current validation settings
 const info = db.getCollectionInfos({ name: "users" })[0]
@@ -3960,6 +4988,12 @@ db.users.countDocuments({
 })
 // If count > 0, fix data before switching to strict
 ```
+
+- **During active migration**: Use moderate + warn until data is cleaned.
+
+- **Legacy systems integration**: External data may not conform.
+
+- **Feature flag rollouts**: New fields may be optional initially.
 
 Reference: [https://mongodb.com/docs/manual/core/schema-validation/specify-validation-level/](https://mongodb.com/docs/manual/core/schema-validation/specify-validation-level/)
 
@@ -4200,14 +5234,6 @@ db.products.insertOne({ name: "", price: -5 })
 
 **When NOT to use JSON Schema:**
 
-- **Polymorphic collections**: Event logs with varied structures may need looser validation.
-
-- **Schema-less by design**: Some applications intentionally allow arbitrary fields.
-
-- **Very complex cross-field logic**: Use query operators or application validation instead.
-
-**Verify with:**
-
 ```javascript
 // View existing validation rules
 db.getCollectionInfos({ name: "products" })[0].options.validator
@@ -4232,6 +5258,12 @@ db.products.find({
 })
 ```
 
+- **Polymorphic collections**: Event logs with varied structures may need looser validation.
+
+- **Schema-less by design**: Some applications intentionally allow arbitrary fields.
+
+- **Very complex cross-field logic**: Use query operators or application validation instead.
+
 Reference: [https://mongodb.com/docs/manual/core/schema-validation/specify-json-schema/](https://mongodb.com/docs/manual/core/schema-validation/specify-json-schema/)
 
 ### 5.3 Roll Out Schema Validation Safely (Warn to Error)
@@ -4239,6 +5271,8 @@ Reference: [https://mongodb.com/docs/manual/core/schema-validation/specify-json-
 **Impact: MEDIUM (Prevents production write failures when introducing new validation rules)**
 
 **Introduce validation in phases on existing collections.** Start with `validationAction: "warn"` so you can identify invalid documents without breaking writes, then backfill and switch to `"error"` when clean.
+
+If you use `validationAction: "errorAndLog"` (MongoDB 8.1+), include a downgrade rollback step in your runbook.
 
 **Incorrect: enable strict validation immediately**
 
@@ -4275,19 +5309,28 @@ db.runCommand({
 })
 ```
 
+**Rollback/downgrade safety step for `errorAndLog`:**
+
+```javascript
+// Before downgrading to versions that do not support errorAndLog,
+// switch validationAction back to error or warn.
+db.runCommand({
+  collMod: "users",
+  validationAction: "error"
+})
+```
+
 **When NOT to use this pattern:**
-
-- **Brand new collections**: Use `validationAction: "error"` immediately.
-
-- **Offline maintenance windows**: You can fix data first and enable strict mode directly.
-
-**Verify with:**
 
 ```javascript
 // Inspect current validation settings
 
 db.getCollectionInfos({ name: "users" })
 ```
+
+- **Brand new collections**: Use `validationAction: "error"` immediately.
+
+- **Offline maintenance windows**: You can fix data first and enable strict mode directly.
 
 Reference: [https://mongodb.com/docs/manual/core/schema-validation/handle-invalid-documents/](https://mongodb.com/docs/manual/core/schema-validation/handle-invalid-documents/)
 

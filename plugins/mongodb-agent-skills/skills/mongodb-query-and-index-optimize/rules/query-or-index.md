@@ -158,7 +158,7 @@ db.items.find({
 - **Already filtered by equality**: `{ tenantId: X, $or: [...] }` where compound indexes cover all cases.
 - **Rare queries**: One-time analytics where performance isn't critical.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check if $or query uses indexes

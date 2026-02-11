@@ -77,7 +77,7 @@ Projection reduces network transfer but still loads full documents into memory.
 - **Always need all data**: If every access pattern truly needs the full document, splitting adds overhead.
 - **Write-heavy with rare reads**: If you write once and rarely read, optimize for write simplicity.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Find your largest documents

@@ -224,7 +224,7 @@ db.products.aggregate([
 - **Single field exact match**: Regular index more efficient for exact string match.
 - **Memory constraints**: Text indexes can be large. Consider Atlas Search for scalability.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check text index and search performance

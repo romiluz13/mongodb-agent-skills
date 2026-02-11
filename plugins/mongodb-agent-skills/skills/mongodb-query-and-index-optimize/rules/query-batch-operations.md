@@ -187,7 +187,7 @@ async function getDashboardData(userId) {
 - **Caching layer**: Related data is cached, no DB hit anyway.
 - **Different databases**: Can't $lookup across MongoDB instances, must query separately.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Detect N+1 patterns in slow query log

@@ -212,7 +212,7 @@ function archiveOldSales(yearsToKeep = 5) {
 - **Compliance requires instant access**: If regulations require sub-second queries on all historical data.
 - **Already using TTL**: If data should be deleted, not archived, use TTL indexes.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Analyze archive candidates

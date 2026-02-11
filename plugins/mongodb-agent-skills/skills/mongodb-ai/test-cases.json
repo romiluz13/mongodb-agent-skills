@@ -1,0 +1,547 @@
+{
+  "skill": "mongodb-ai",
+  "generatedAt": "2026-02-10T23:28:59.223Z",
+  "totalTestCases": 67,
+  "summary": {
+    "badExamples": 33,
+    "goodExamples": 34
+  },
+  "testCases": [
+    {
+      "ruleId": "agent-memory-retrieval",
+      "ruleTitle": "Semantic Memory Retrieval",
+      "type": "bad",
+      "code": "// WRONG: Exact keyword match - misses semantically related memories\nconst memories = await db.longTermMemory.find({\n  userId: currentUserId,\n  content: { $regex: \"Python\", $options: \"i\" }\n}).toArray()\n// Result: Misses \"prefers code examples in snake_case\" (related but no keyword)\n\n// WRONG: Retrieving all memories - no relevance filtering\nconst memories = await db.longTermMemory.find({\n  userId: currentUserId\n}).toArray()\n// Result: Too much irrelevant context",
+      "language": "javascript",
+      "description": "keyword-based retrieval"
+    },
+    {
+      "ruleId": "agent-memory-retrieval",
+      "ruleTitle": "Semantic Memory Retrieval",
+      "type": "good",
+      "code": "// Semantic memory retrieval function\nasync function retrieveRelevantMemories(currentContext, userId, options = {}) {\n  const {\n    limit = 5,\n    minRelevance = 0.7,\n    memoryTypes = [\"fact\", \"preference\", \"instruction\"]\n  } = options\n\n  // Embed the current context\n  const contextEmbedding = await embed(currentContext)\n\n  // Search long-term memory\n  const memories = await db.longTermMemory.aggregate([\n    {\n      $vectorSearch: {\n        index: \"ltm_vector_index\",\n        path: \"embedding\",\n        queryVector: contextEmbedding,\n        numCandidates: limit * 20,\n        limit: limit * 2,\n        filter: {\n          $and: [\n            { userId: userId },\n            { status: \"active\" },\n            { type: { $in: memoryTypes } }\n          ]\n        }\n      }\n    },\n    {\n      $addFields: {\n        relevance: { $meta: \"vectorSearchScore\" }\n      }\n    },\n    {\n      $match: {\n        relevance: { $gte: minRelevance }\n      }\n    },\n    {\n      $sort: { relevance: -1, importance: -1 }\n    },\n    {\n      $limit: limit\n    },\n    {\n      $project: {\n        type: 1,\n        content: 1,\n        summary: 1,\n        relevance: 1,\n        importance: 1\n      }\n    }\n  ]).toArray()\n\n  // Update access metrics\n  const memoryIds = memories.map(m => m._id)\n  await db.longTermMemory.updateMany(\n    { _id: { $in: memoryIds } },\n    {\n      $inc: { accessCount: 1 },\n      $set: { lastAccessed: new Date() }\n    }\n  )\n\n  return memories\n}\n\n// Usage in agent\nasync function generateResponse(userMessage, userId, sessionId) {\n  // Retrieve relevant memories\n  const memories = await retrieveRelevantMemories(userMessage, userId)\n\n  // Format memories for context\n  const memoryContext = memories.map(m =>\n    `[${m.type}] ${m.content}`\n  ).join('\\n')\n\n  // Include in system prompt\n  const systemPrompt = `You are a helpful assistant.\n\nUser Information (from memory):\n${memoryContext || \"No relevant memories found.\"}\n\nUse this information to personalize your response.`\n\n  return await llm.chat([\n    { role: \"system\", content: systemPrompt },\n    { role: \"user\", content: userMessage }\n  ])\n}",
+      "language": "javascript",
+      "description": "semantic retrieval"
+    },
+    {
+      "ruleId": "agent-memory-schema",
+      "ruleTitle": "AI Agent Memory Schema Design",
+      "type": "bad",
+      "code": "// WRONG: No structure - can't filter or manage\nawait db.memory.insertOne({\n  content: \"User likes dark mode\"\n  // No userId, sessionId, type, embedding, or timestamps\n})\n// Result: Can't retrieve user-specific memories, no semantic search",
+      "language": "javascript",
+      "description": "unstructured memory"
+    },
+    {
+      "ruleId": "agent-memory-schema",
+      "ruleTitle": "AI Agent Memory Schema Design",
+      "type": "good",
+      "code": "// SHORT-TERM MEMORY: Conversation context\nconst shortTermMemorySchema = {\n  // Identifiers\n  sessionId: String,       // Conversation session\n  userId: String,          // User identifier\n  messageId: String,       // Unique message ID\n\n  // Content\n  role: String,            // \"user\" | \"assistant\" | \"system\"\n  content: String,         // The message text\n  embedding: [Number],     // For semantic search over history\n\n  // Context\n  turnNumber: Number,      // Position in conversation\n  parentMessageId: String, // For threading\n\n  // Metadata\n  createdAt: Date,\n  tokenCount: Number,\n  model: String\n}\n\n// LONG-TERM MEMORY: Persistent knowledge\nconst longTermMemorySchema = {\n  // Identifiers\n  memoryId: String,\n  userId: String,\n\n  // Content\n  type: String,            // \"fact\" | \"preference\" | \"instruction\" | \"episode\"\n  content: String,         // The memory content\n  summary: String,         // Condensed version\n  embedding: [Number],     // For semantic retrieval\n\n  // Importance\n  importance: Number,      // 0-1 score for prioritization\n  accessCount: Number,     // How often retrieved\n  lastAccessed: Date,\n\n  // Source\n  source: {\n    sessionId: String,     // Where it was learned\n    extractedFrom: String  // Original context\n  },\n\n  // Lifecycle\n  createdAt: Date,\n  expiresAt: Date,         // null for permanent\n  status: String           // \"active\" | \"archived\" | \"forgotten\"\n}\n\n// Create both types\nawait db.shortTermMemory.insertOne({\n  sessionId: \"session_123\",\n  userId: \"user_456\",\n  messageId: \"msg_789\",\n  role: \"user\",\n  content: \"I prefer dark mode and Python code examples\",\n  embedding: await embed(\"I prefer dark mode and Python code examples\"),\n  turnNumber: 1,\n  createdAt: new Date(),\n  tokenCount: 12\n})\n\nawait db.longTermMemory.insertOne({\n  memoryId: \"mem_001\",\n  userId: \"user_456\",\n  type: \"preference\",\n  content: \"User prefers dark mode UI\",\n  summary: \"dark mode preference\",\n  embedding: await embed(\"User prefers dark mode UI\"),\n  importance: 0.8,\n  accessCount: 0,\n  lastAccessed: null,\n  source: {\n    sessionId: \"session_123\",\n    extractedFrom: \"user message about preferences\"\n  },\n  createdAt: new Date(),\n  expiresAt: null,\n  status: \"active\"\n})",
+      "language": "javascript",
+      "description": "structured memory schemas"
+    },
+    {
+      "ruleId": "agent-session-context",
+      "ruleTitle": "Session Context Storage",
+      "type": "bad",
+      "code": "// WRONG: No session tracking\nawait db.messages.insertOne({\n  role: \"user\",\n  content: userMessage\n  // No session, no user, no ordering\n})\n// Result: Can't maintain conversation continuity\n\n// WRONG: Storing entire conversation in single document\nawait db.sessions.updateOne(\n  { sessionId: sessionId },\n  { $push: { messages: { role: \"user\", content: userMessage } } }\n)\n// Result: Document grows unbounded, hits 16MB limit",
+      "language": "javascript",
+      "description": "no session management"
+    },
+    {
+      "ruleId": "agent-session-context",
+      "ruleTitle": "Session Context Storage",
+      "type": "good",
+      "code": "// Session document (metadata only)\nconst sessionSchema = {\n  sessionId: String,\n  userId: String,\n\n  // Session metadata\n  title: String,           // Auto-generated or user-set\n  createdAt: Date,\n  lastActivity: Date,\n  status: String,          // \"active\" | \"archived\" | \"deleted\"\n\n  // Context summary\n  summary: String,         // Condensed conversation context\n  summaryEmbedding: [Number],\n\n  // Statistics\n  messageCount: Number,\n  totalTokens: Number,\n\n  // Settings\n  model: String,\n  temperature: Number\n}\n\n// Create new session\nasync function createSession(userId, model = \"gpt-4\") {\n  const sessionId = generateId()\n\n  await db.sessions.insertOne({\n    sessionId,\n    userId,\n    title: \"New Conversation\",\n    createdAt: new Date(),\n    lastActivity: new Date(),\n    status: \"active\",\n    summary: null,\n    summaryEmbedding: null,\n    messageCount: 0,\n    totalTokens: 0,\n    model\n  })\n\n  return sessionId\n}\n\n// Add message to session\nasync function addMessage(sessionId, role, content) {\n  const messageId = generateId()\n  const embedding = await embed(content)\n  const tokenCount = estimateTokens(content)\n\n  // Get current turn number\n  const lastMessage = await db.shortTermMemory\n    .find({ sessionId })\n    .sort({ turnNumber: -1 })\n    .limit(1)\n    .toArray()\n\n  const turnNumber = (lastMessage[0]?.turnNumber || 0) + 1\n\n  // Insert message\n  await db.shortTermMemory.insertOne({\n    sessionId,\n    messageId,\n    role,\n    content,\n    embedding,\n    turnNumber,\n    createdAt: new Date(),\n    tokenCount\n  })\n\n  // Update session metadata\n  await db.sessions.updateOne(\n    { sessionId },\n    {\n      $set: { lastActivity: new Date() },\n      $inc: {\n        messageCount: 1,\n        totalTokens: tokenCount\n      }\n    }\n  )\n\n  return messageId\n}",
+      "language": "javascript",
+      "description": "session-based storage"
+    },
+    {
+      "ruleId": "hybrid-limitations",
+      "ruleTitle": "Hybrid Search Limitations",
+      "type": "bad",
+      "code": "// WRONG: Using $project in sub-pipeline\ndb.products.aggregate([\n  {\n    $rankFusion: {\n      input: {\n        pipelines: {\n          vector: [\n            { $vectorSearch: { ... } },\n            { $project: { title: 1 } }  // NOT ALLOWED!\n          ]\n        }\n      }\n    }\n  }\n])\n// Error: $project not supported in $rankFusion sub-pipelines\n\n// WRONG: Cross-collection search\ndb.products.aggregate([\n  {\n    $rankFusion: {\n      input: {\n        pipelines: {\n          products: [{ $vectorSearch: { index: \"products_vector\", ... } }],\n          reviews: [\n            { $lookup: { from: \"reviews\", ... } }  // NOT ALLOWED!\n          ]\n        }\n      }\n    }\n  }\n])\n// Error: All pipelines must search same collection",
+      "language": "javascript",
+      "description": "violating limitations"
+    },
+    {
+      "ruleId": "hybrid-limitations",
+      "ruleTitle": "Hybrid Search Limitations",
+      "type": "good",
+      "code": "// Project AFTER $rankFusion, not inside\ndb.products.aggregate([\n  {\n    $rankFusion: {\n      input: {\n        pipelines: {\n          vector: [\n            {\n              $vectorSearch: {\n                index: \"vector_index\",\n                path: \"embedding\",\n                queryVector: queryEmbedding,\n                numCandidates: 100,\n                limit: 20\n              }\n            }\n          ],\n          text: [\n            {\n              $search: {\n                index: \"text_index\",\n                text: { query: searchTerm, path: \"description\" }\n              }\n            },\n            { $limit: 20 }  // $limit IS allowed\n          ]\n        }\n      }\n    }\n  },\n  { $limit: 10 },\n  { $project: { title: 1, description: 1 } }  // Project AFTER\n])",
+      "language": "javascript",
+      "description": "working within constraints"
+    },
+    {
+      "ruleId": "hybrid-rankfusion",
+      "ruleTitle": "Rank-Based Hybrid Search with $rankFusion",
+      "type": "bad",
+      "code": "// WRONG: Running separate queries and merging manually\nconst vectorResults = await db.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 100,\n      limit: 10\n    }\n  }\n]).toArray()\n\nconst textResults = await db.products.aggregate([\n  {\n    $search: {\n      index: \"text_index\",\n      text: { query: \"laptop\", path: \"description\" }\n    }\n  },\n  { $limit: 10 }\n]).toArray()\n\n// Manual merge is complex, error-prone, and loses ranking info",
+      "language": "javascript",
+      "description": "separate queries and manual merge"
+    },
+    {
+      "ruleId": "hybrid-rankfusion",
+      "ruleTitle": "Rank-Based Hybrid Search with $rankFusion",
+      "type": "good",
+      "code": "// CORRECT: Single hybrid query with $rankFusion\ndb.products.aggregate([\n  {\n    $rankFusion: {\n      input: {\n        pipelines: {\n          // Vector (semantic) search\n          vector: [\n            {\n              $vectorSearch: {\n                index: \"vector_index\",\n                path: \"embedding\",\n                queryVector: queryEmbedding,\n                numCandidates: 100,\n                limit: 20\n              }\n            }\n          ],\n          // Text (lexical) search\n          text: [\n            {\n              $search: {\n                index: \"text_index\",\n                text: {\n                  query: \"laptop for programming\",\n                  path: \"description\"\n                }\n              }\n            },\n            { $limit: 20 }\n          ]\n        }\n      }\n    }\n  },\n  { $limit: 10 },\n  {\n    $project: {\n      title: 1,\n      description: 1,\n      score: { $meta: \"score\" }  // RRF combined score\n    }\n  }\n])",
+      "language": "javascript",
+      "description": "using $rankFusion with vector + text on MongoDB 8.1+"
+    },
+    {
+      "ruleId": "hybrid-scorefusion",
+      "ruleTitle": "Score-Based Hybrid Search with $scoreFusion",
+      "type": "bad",
+      "code": "// WRONG: $rankFusion ignores actual score values\n// A document at rank 1 with score 0.99 is treated the same\n// as rank 1 with score 0.51 - losing precision\ndb.products.aggregate([\n  {\n    $rankFusion: {\n      input: {\n        pipelines: {\n          vector: [{ $vectorSearch: { ... } }],\n          text: [{ $search: { ... } }]\n        },\n        weights: { vector: 0.5, text: 0.5 }\n      }\n    }\n  }\n])\n// Result: High-confidence matches not distinguished from marginal ones",
+      "language": "javascript",
+      "description": "using $rankFusion when scores matter"
+    },
+    {
+      "ruleId": "hybrid-scorefusion",
+      "ruleTitle": "Score-Based Hybrid Search with $scoreFusion",
+      "type": "good",
+      "code": "// CORRECT: $scoreFusion uses actual scores with normalization\ndb.products.aggregate([\n  {\n    $scoreFusion: {\n      input: {\n        pipelines: {\n          vector: [{\n            $vectorSearch: {\n              index: \"vector_index\",\n              path: \"embedding\",\n              queryVector: queryEmbedding,\n              numCandidates: 100,\n              limit: 20\n            }\n          }],\n          text: [{\n            $search: {\n              index: \"text_index\",\n              text: { query: searchTerm, path: \"description\" }\n            }\n          }, { $limit: 20 }]\n        },\n        normalization: \"sigmoid\"  // Normalize scores to 0-1\n      },\n      combination: {\n        weights: { vector: 0.6, text: 0.4 }\n        // Default method: \"avg\" - weighted average of normalized scores\n      }\n    }\n  },\n  { $limit: 10 }\n])",
+      "language": "javascript",
+      "description": "using $scoreFusion for score-aware combination"
+    },
+    {
+      "ruleId": "hybrid-weights",
+      "ruleTitle": "Tuning Hybrid Search Weights",
+      "type": "bad",
+      "code": "// WRONG: Same weights for all query types\nconst hybridSearch = (query) => db.products.aggregate([\n  {\n    $rankFusion: {\n      input: {\n        pipelines: {\n          vector: [{ $vectorSearch: { ... } }],\n          text: [{ $search: { ... } }]\n        },\n        weights: {\n          vector: 0.5,  // Always 50/50 - suboptimal\n          text: 0.5\n        }\n      }\n    }\n  }\n])\n// Result: Concept queries get too much keyword weight, and vice versa",
+      "language": "javascript",
+      "description": "static weights for all queries"
+    },
+    {
+      "ruleId": "hybrid-weights",
+      "ruleTitle": "Tuning Hybrid Search Weights",
+      "type": "good",
+      "code": "// Query type detection\nfunction detectQueryType(query) {\n  // Technical queries often have specific terms\n  const technicalPatterns = /\\b(error|bug|api|function|method|class|config)\\b/i\n\n  // Conceptual queries are more abstract\n  const conceptualPatterns = /\\b(how to|best way|explain|understand|similar to)\\b/i\n\n  // Exact match queries have quotes or very specific terms\n  const exactPatterns = /\"[^\"]+\"|\\b[A-Z]{2,}\\b|\\d{4,}/\n\n  if (exactPatterns.test(query)) return \"exact\"\n  if (technicalPatterns.test(query)) return \"technical\"\n  if (conceptualPatterns.test(query)) return \"conceptual\"\n  return \"balanced\"\n}\n\n// Weight configuration by query type\nconst weightConfigs = {\n  exact: { vector: 0.2, text: 0.8 },      // Lexical-heavy\n  technical: { vector: 0.4, text: 0.6 },   // Slight lexical bias\n  balanced: { vector: 0.5, text: 0.5 },    // Equal weight\n  conceptual: { vector: 0.7, text: 0.3 }   // Semantic-heavy\n}\n\n// Dynamic hybrid search\nasync function hybridSearch(query) {\n  const queryType = detectQueryType(query)\n  const weights = weightConfigs[queryType]\n  const queryEmbedding = await embed(query)\n\n  return db.products.aggregate([\n    {\n      $rankFusion: {\n        input: {\n          pipelines: {\n            vector: [{\n              $vectorSearch: {\n                index: \"vector_index\",\n                path: \"embedding\",\n                queryVector: queryEmbedding,\n                numCandidates: 100,\n                limit: 20\n              }\n            }],\n            text: [{\n              $search: {\n                index: \"text_index\",\n                text: { query: query, path: \"description\" }\n              }\n            }, { $limit: 20 }]\n          },\n          normalization: \"none\"\n        },\n        combination: {\n          weights: weights\n        }\n      }\n    },\n    { $limit: 10 }\n  ]).toArray()\n}",
+      "language": "javascript",
+      "description": "dynamic weights based on query type"
+    },
+    {
+      "ruleId": "index-automated-embedding",
+      "ruleTitle": "Automated Embedding Generation",
+      "type": "bad",
+      "code": "// WRONG for self-managed Community 8.2+ auto-embedding path\ndb.listingsAndReviews.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"text\",\n    path: \"summary\",\n    model: \"voyage-3-large\"\n  }]\n})",
+      "language": "javascript",
+      "description": "using older/private-preview syntax for Community 8.2+"
+    },
+    {
+      "ruleId": "index-automated-embedding",
+      "ruleTitle": "Automated Embedding Generation",
+      "type": "good",
+      "code": "// Index definition for Community 8.2+ preview\ndb.listingsAndReviews.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [\n    {\n      type: \"autoEmbed\",\n      modality: \"text\",\n      path: \"summary\",\n      model: \"voyage-4\"\n    },\n    { type: \"filter\", path: \"address.country\" },\n    { type: \"filter\", path: \"bedrooms\" }\n  ]\n})\n\n// Query with text input (MongoDB generates query embedding)\ndb.listingsAndReviews.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"summary\",\n      filter: {\n        bedrooms: { $gte: 3 },\n        \"address.country\": { $in: [\"United States\"] }\n      },\n      query: { text: \"close to amusement parks\" },\n      model: \"voyage-4\",\n      numCandidates: 100,\n      limit: 10\n    }\n  }\n])",
+      "language": "javascript",
+      "description": "Community 8.2+ Preview with `autoEmbed`"
+    },
+    {
+      "ruleId": "index-dimensions-match",
+      "ruleTitle": "numDimensions Must Match Embedding Model",
+      "type": "bad",
+      "code": "// WRONG: OpenAI text-embedding-3-small outputs 1536 dims\n// but index specifies 768\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 768,  // WRONG! Model outputs 1536\n    similarity: \"cosine\"\n  }]\n})\n// Result: Documents won't be indexed, queries return nothing\n\n// WRONG: Guessing dimensions\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 512,  // Guessing is dangerous\n    similarity: \"cosine\"\n  }]\n})\n\n// WRONG: Exceeding maximum supported dimensions\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 9000,  // Exceeds maximum supported (8192)\n    similarity: \"cosine\"\n  }]\n})",
+      "language": "javascript",
+      "description": "wrong dimensions"
+    },
+    {
+      "ruleId": "index-dimensions-match",
+      "ruleTitle": "numDimensions Must Match Embedding Model",
+      "type": "good",
+      "code": "// CORRECT: OpenAI text-embedding-3-small = 1536 dimensions\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\"\n  }]\n})\n\n// CORRECT: OpenAI text-embedding-3-large = 3072 dimensions\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 3072,\n    similarity: \"cosine\"\n  }]\n})\n\n// CORRECT: Cohere embed-english-v3.0 = 1024 dimensions\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1024,\n    similarity: \"cosine\"\n  }]\n})",
+      "language": "javascript",
+      "description": "matching model dimensions"
+    },
+    {
+      "ruleId": "index-filter-fields",
+      "ruleTitle": "Index Filter Fields for Pre-Filtering",
+      "type": "bad",
+      "code": "// Index WITHOUT filter field\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\"\n  }]\n  // Missing filter field definition!\n})\n\n// Query with filter - FAILS!\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 100,\n      limit: 10,\n      filter: { category: \"electronics\" }  // Error: 'category' not indexed\n    }\n  }\n])\n// Error: Path 'category' needs to be indexed as token",
+      "language": "javascript",
+      "description": "filtering on unindexed field"
+    },
+    {
+      "ruleId": "index-filter-fields",
+      "ruleTitle": "Index Filter Fields for Pre-Filtering",
+      "type": "good",
+      "code": "// Index WITH filter fields\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [\n    {\n      type: \"vector\",\n      path: \"embedding\",\n      numDimensions: 1536,\n      similarity: \"cosine\"\n    },\n    {\n      type: \"filter\",\n      path: \"category\"\n    },\n    {\n      type: \"filter\",\n      path: \"status\"\n    },\n    {\n      type: \"filter\",\n      path: \"price\"\n    }\n  ]\n})\n\n// Query with filter - WORKS!\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 100,\n      limit: 10,\n      filter: {\n        $and: [\n          { category: \"electronics\" },\n          { status: \"active\" },\n          { price: { $gte: 100, $lte: 500 } }\n        ]\n      }\n    }\n  }\n])",
+      "language": "javascript",
+      "description": "filter fields indexed"
+    },
+    {
+      "ruleId": "index-hnsw-options",
+      "ruleTitle": "HNSW Index Options Tuning",
+      "type": "bad",
+      "code": "// Using only defaults without considering workload\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\"\n    // No hnswOptions - uses defaults\n  }]\n})\n// Result: May be suboptimal for specific use cases",
+      "language": "javascript",
+      "description": "ignoring HNSW options"
+    },
+    {
+      "ruleId": "index-hnsw-options",
+      "ruleTitle": "HNSW Index Options Tuning",
+      "type": "good",
+      "code": "// High-recall configuration (better accuracy)\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\",\n    hnswOptions: {\n      maxEdges: 64,           // More connections per node\n      numEdgeCandidates: 400  // More candidates during build\n    }\n  }]\n})\n\n// Fast-build configuration (quicker indexing)\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\",\n    hnswOptions: {\n      maxEdges: 16,           // Fewer connections\n      numEdgeCandidates: 100  // Minimum valid value\n    }\n  }]\n})",
+      "language": "javascript",
+      "description": "configured HNSW options"
+    },
+    {
+      "ruleId": "index-multitenant",
+      "ruleTitle": "Multi-Tenant Vector Search Architecture",
+      "type": "bad",
+      "code": "// WRONG: One collection per tenant\n// Creates operational complexity, performance issues\ndb.tenant_acme_products.createSearchIndex(\"vector_index\", \"vectorSearch\", {...})\ndb.tenant_globex_products.createSearchIndex(\"vector_index\", \"vectorSearch\", {...})\ndb.tenant_initech_products.createSearchIndex(\"vector_index\", \"vectorSearch\", {...})\n// Result: Change stream overhead, index management nightmare",
+      "language": "javascript",
+      "description": "separate collections per tenant"
+    },
+    {
+      "ruleId": "index-multitenant",
+      "ruleTitle": "Multi-Tenant Vector Search Architecture",
+      "type": "good",
+      "code": "// CORRECT: Single collection with tenant_id field\n// Document schema\n{\n  _id: ObjectId(\"...\"),\n  tenant_id: \"tenant_acme\",       // Tenant identifier\n  content: \"Product description\",\n  embedding: [...],\n  metadata: { category: \"...\" }\n}\n\n// Vector index with tenant_id as filter\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [\n    {\n      type: \"vector\",\n      path: \"embedding\",\n      numDimensions: 1536,\n      similarity: \"cosine\"\n    },\n    {\n      type: \"filter\",\n      path: \"tenant_id\"         // CRITICAL: Index for filtering\n    }\n  ]\n})\n\n// Query with tenant isolation\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: queryEmbedding,\n      numCandidates: 200,\n      limit: 10,\n      filter: { tenant_id: currentTenantId }  // Guaranteed isolation\n    }\n  }\n])",
+      "language": "javascript",
+      "description": "single collection, tenant_id filter"
+    },
+    {
+      "ruleId": "index-quantization",
+      "ruleTitle": "Vector Quantization for Scale",
+      "type": "bad",
+      "code": "// WRONG: 1M vectors at 1536 dimensions without quantization\n// RAM usage: ~6GB just for vectors + HNSW graph\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\"\n    // Missing quantization!\n  }]\n})",
+      "language": "javascript",
+      "description": "no quantization on large dataset"
+    },
+    {
+      "ruleId": "index-quantization",
+      "ruleTitle": "Vector Quantization for Scale",
+      "type": "good",
+      "code": "// CORRECT: Scalar quantization (3.75x RAM reduction)\n// Good for most embedding models\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\",\n    quantization: \"scalar\"  // int8 quantization\n  }]\n})\n\n// CORRECT: Binary quantization (24x RAM reduction)\n// Best for normalized embeddings (OpenAI, Voyage AI)\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\",\n    quantization: \"binary\"  // int1 quantization with rescoring\n  }]\n})",
+      "language": "javascript",
+      "description": "quantization enabled"
+    },
+    {
+      "ruleId": "index-similarity-function",
+      "ruleTitle": "Choosing the Right Similarity Function",
+      "type": "bad",
+      "code": "// WRONG: Using dotProduct with non-normalized vectors\n// dotProduct requires pre-normalized vectors (magnitude = 1)\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"dotProduct\"  // Incorrect if vectors aren't normalized!\n  }]\n})\n\n// WRONG: Using euclidean for text embeddings\n// Most text embedding models are designed for cosine similarity\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"euclidean\"  // Works but suboptimal for text\n  }]\n})",
+      "language": "javascript",
+      "description": "mismatched similarity function"
+    },
+    {
+      "ruleId": "index-similarity-function",
+      "ruleTitle": "Choosing the Right Similarity Function",
+      "type": "good",
+      "code": "// CORRECT: cosine for text embeddings (most common)\n// Works with OpenAI, Cohere, Voyage AI, etc.\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\"  // Normalizes automatically\n  }]\n})\n\n// CORRECT: euclidean for image/spatial embeddings\n// When absolute distance matters\ndb.images.createSearchIndex(\"image_vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 512,\n    similarity: \"euclidean\"\n  }]\n})\n\n// CORRECT: dotProduct when vectors are pre-normalized\n// AND you want maximum performance\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"normalized_embedding\",  // Must be normalized!\n    numDimensions: 1536,\n    similarity: \"dotProduct\"\n  }]\n})",
+      "language": "javascript",
+      "description": "matching similarity to use case"
+    },
+    {
+      "ruleId": "index-vector-definition",
+      "ruleTitle": "Vector Index Definition Requirements",
+      "type": "bad",
+      "code": "// WRONG: This will fail - missing type, numDimensions, similarity\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{ path: \"embedding\" }]\n})\n\n// WRONG: Using incorrect type value\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"text\",  // Wrong! Must be \"vector\"\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\"\n  }]\n})",
+      "language": "javascript",
+      "description": "missing required fields"
+    },
+    {
+      "ruleId": "index-vector-definition",
+      "ruleTitle": "Vector Index Definition Requirements",
+      "type": "good",
+      "code": "// CORRECT: All required fields present\ndb.products.createSearchIndex(\n  \"vector_index\",\n  \"vectorSearch\",\n  {\n    fields: [\n      {\n        type: \"vector\",           // Required: must be \"vector\"\n        path: \"embedding\",        // Required: field containing embeddings\n        numDimensions: 1536,      // Required: must match embedding model (<= 8192)\n        similarity: \"cosine\"      // Required: \"cosine\"|\"euclidean\"|\"dotProduct\"\n      }\n    ]\n  }\n)",
+      "language": "javascript",
+      "description": "all required fields specified"
+    },
+    {
+      "ruleId": "index-views-partial",
+      "ruleTitle": "Partial Indexing with Views",
+      "type": "bad",
+      "code": "// WRONG: Index includes documents without embeddings\n// or inactive/archived documents\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\"\n  }]\n})\n// Result: Index includes null embeddings, wastes resources",
+      "language": "javascript",
+      "description": "indexing all documents"
+    },
+    {
+      "ruleId": "index-views-partial",
+      "ruleTitle": "Partial Indexing with Views",
+      "type": "good",
+      "code": "// Step 1: Create View filtering to documents with embeddings\ndb.createView(\n  \"products_with_embeddings\",  // View name\n  \"products\",                   // Source collection\n  [\n    {\n      $match: {\n        embedding: { $exists: true, $type: \"array\" },\n        status: \"active\"\n      }\n    }\n  ]\n)\n\n// Step 2: Create vector index on the View\ndb.products_with_embeddings.createSearchIndex(\n  \"vector_index\",\n  \"vectorSearch\",\n  {\n    fields: [{\n      type: \"vector\",\n      path: \"embedding\",\n      numDimensions: 1536,\n      similarity: \"cosine\"\n    }]\n  }\n)\n\n// Step 3: Query the View\ndb.products_with_embeddings.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: queryEmbedding,\n      numCandidates: 200,\n      limit: 10\n    }\n  }\n])",
+      "language": "javascript",
+      "description": "partial indexing via Views"
+    },
+    {
+      "ruleId": "perf-explain-vectorsearch",
+      "ruleTitle": "Explain Vector Search Queries",
+      "type": "bad",
+      "code": "// WRONG: Running queries without understanding execution\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10\n    }\n  }\n])\n// Result: No visibility into what's happening, can't optimize",
+      "language": "javascript",
+      "description": "guessing performance issues"
+    },
+    {
+      "ruleId": "perf-explain-vectorsearch",
+      "ruleTitle": "Explain Vector Search Queries",
+      "type": "good",
+      "code": "// CORRECT: Analyze query execution with explain\n// Basic execution stats\ndb.products.explain(\"executionStats\").aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: queryEmbedding,\n      numCandidates: 200,\n      limit: 10\n    }\n  }\n])\n\n// Full query plan analysis\ndb.products.explain(\"allPlansExecution\").aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: queryEmbedding,\n      numCandidates: 200,\n      limit: 10\n    }\n  }\n])\n\n// Query planner only (fastest, no execution)\ndb.products.explain(\"queryPlanner\").aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: queryEmbedding,\n      numCandidates: 200,\n      limit: 10\n    }\n  }\n])",
+      "language": "javascript",
+      "description": "using explain for analysis"
+    },
+    {
+      "ruleId": "perf-index-in-memory",
+      "ruleTitle": "Vector Index Must Fit in RAM",
+      "type": "bad",
+      "code": "// WRONG: Large index on small instance\n// 2M vectors × 1536 dims = ~12GB index\n// Running on M30 with 8GB RAM = spillover to disk\n\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\"\n    // No quantization on 2M vectors = 12GB needed\n  }]\n})\n// Result: Query latency goes from 50ms to 5000ms",
+      "language": "javascript",
+      "description": "index exceeds available RAM"
+    },
+    {
+      "ruleId": "perf-index-in-memory",
+      "ruleTitle": "Vector Index Must Fit in RAM",
+      "type": "good",
+      "code": "// Option 1: Enable quantization to reduce RAM\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\",\n    quantization: \"binary\"  // Reduces to ~0.5GB\n  }]\n})\n\n// Option 2: Upgrade cluster tier\n// M30 (8GB) → M40 (16GB) → M50 (32GB)\n\n// Option 3: Use partial indexing approach\n// Only index active/recent documents\ndb.products.createSearchIndex(\"active_vector_index\", \"vectorSearch\", {\n  fields: [\n    {\n      type: \"vector\",\n      path: \"embedding\",\n      numDimensions: 1536,\n      similarity: \"cosine\"\n    },\n    {\n      type: \"filter\",\n      path: \"status\"\n    }\n  ]\n})\n// Then always filter: filter: { status: \"active\" }",
+      "language": "javascript",
+      "description": "size index to fit RAM"
+    },
+    {
+      "ruleId": "perf-numcandidates-tradeoff",
+      "ruleTitle": "numCandidates Trade-offs",
+      "type": "bad",
+      "code": "// WRONG: Too low - poor recall\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 20,  // Too low for limit of 10\n      limit: 10\n    }\n  }\n])\n// Result: ~60% recall, fast but missing relevant results\n\n// WRONG: Too high - unnecessary latency\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 10000,  // Maximum - overkill for most cases\n      limit: 10\n    }\n  }\n])\n// Result: ~99.9% recall, but 5x slower than needed",
+      "language": "javascript",
+      "description": "extreme values"
+    },
+    {
+      "ruleId": "perf-numcandidates-tradeoff",
+      "ruleTitle": "numCandidates Trade-offs",
+      "type": "good",
+      "code": "// Real-time search: Optimize for latency\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 100,  // 10x limit - fast, acceptable recall\n      limit: 10\n    }\n  }\n])\n// Result: ~85% recall, < 20ms latency\n\n// Quality-focused search: Optimize for recall\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 500,  // 50x limit - high recall\n      limit: 10\n    }\n  }\n])\n// Result: ~97% recall, < 50ms latency\n\n// Critical search: Maximum recall\ndb.legalDocs.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 2000,  // 200x limit\n      limit: 10\n    }\n  }\n])\n// Result: ~99% recall, < 100ms latency",
+      "language": "javascript",
+      "description": "tuned for use case"
+    },
+    {
+      "ruleId": "perf-prefilter-narrow",
+      "ruleTitle": "Pre-filter to Narrow Candidate Set",
+      "type": "bad",
+      "code": "// WRONG: Searching 1M vectors without filtering\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10\n      // No filter - searches ALL 1M products\n    }\n  }\n])\n// Result: Slower queries, potentially irrelevant results",
+      "language": "javascript",
+      "description": "no filtering on large dataset"
+    },
+    {
+      "ruleId": "perf-prefilter-narrow",
+      "ruleTitle": "Pre-filter to Narrow Candidate Set",
+      "type": "good",
+      "code": "// Filter by category first\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10,\n      filter: { category: \"electronics\" }  // 1M → 100K candidates\n    }\n  }\n])\n\n// Multi-filter for targeted search\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10,\n      filter: {\n        $and: [\n          { category: \"electronics\" },\n          { brand: \"Apple\" },\n          { inStock: true }\n        ]\n      }\n    }\n  }\n])\n// 1M → 5K candidates = 200x fewer comparisons",
+      "language": "javascript",
+      "description": "strategic pre-filtering"
+    },
+    {
+      "ruleId": "perf-quantization-scale",
+      "ruleTitle": "Enable Quantization at Scale",
+      "type": "bad",
+      "code": "// WRONG: 500K vectors without quantization\n// RAM required: ~3GB just for vectors\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\"\n    // No quantization - expensive!\n  }]\n})",
+      "language": "javascript",
+      "description": "no quantization on large dataset"
+    },
+    {
+      "ruleId": "perf-quantization-scale",
+      "ruleTitle": "Enable Quantization at Scale",
+      "type": "good",
+      "code": "// Dataset size determines quantization type\nconst vectorCount = await db.products.countDocuments({ embedding: { $exists: true } })\n\nif (vectorCount > 1000000) {\n  // > 1M vectors: Use binary (24x reduction)\n  db.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n    fields: [{\n      type: \"vector\",\n      path: \"embedding\",\n      numDimensions: 1536,\n      similarity: \"cosine\",\n      quantization: \"binary\"\n    }]\n  })\n} else if (vectorCount > 100000) {\n  // 100K-1M vectors: Use scalar (3.75x reduction)\n  db.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n    fields: [{\n      type: \"vector\",\n      path: \"embedding\",\n      numDimensions: 1536,\n      similarity: \"cosine\",\n      quantization: \"scalar\"\n    }]\n  })\n}",
+      "language": "javascript",
+      "description": "quantization enabled"
+    },
+    {
+      "ruleId": "perf-search-nodes",
+      "ruleTitle": "Dedicated Search Nodes for Production",
+      "type": "bad",
+      "code": "// WRONG: Production workload on shared node\n// MongoDB (mongod) and Search (mongot) compete for resources\n// Cluster: M30 with Vector Search enabled\n// Result: Resource contention, unpredictable latency",
+      "language": "javascript",
+      "description": "shared resources"
+    },
+    {
+      "ruleId": "perf-search-nodes",
+      "ruleTitle": "Dedicated Search Nodes for Production",
+      "type": "good",
+      "code": "Production Architecture:\n┌─────────────────┐     ┌─────────────────┐\n│  Database Node  │     │   Search Node   │\n│     (mongod)    │────▶│    (mongot)     │\n│    M40 tier     │     │    S30 tier     │\n└─────────────────┘     └─────────────────┘\n        │                       │\n   Database ops           Vector Search\n   (reads/writes)          (queries)",
+      "language": "javascript",
+      "description": "dedicated Search Nodes"
+    },
+    {
+      "ruleId": "query-ann-vs-enn",
+      "ruleTitle": "ANN vs ENN Search",
+      "type": "bad",
+      "code": "// WRONG: Using ENN for real-time user queries (too slow)\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      exact: true,  // Too slow for real-time!\n      limit: 10\n    }\n  }\n])\n// Result: 500ms+ latency on large datasets\n\n// WRONG: Using low numCandidates ANN for critical searches\ndb.legalDocs.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 50,  // Too low for legal discovery\n      limit: 10\n    }\n  }\n])\n// Result: Missed relevant documents in critical search",
+      "language": "javascript",
+      "description": "always using one approach"
+    },
+    {
+      "ruleId": "query-ann-vs-enn",
+      "ruleTitle": "ANN vs ENN Search",
+      "type": "good",
+      "code": "// ANN: Real-time user-facing search (fast, good enough)\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: userQueryEmbedding,\n      numCandidates: 200,  // ANN with 20x rule\n      limit: 10\n    }\n  }\n])\n// Result: ~10ms latency, ~90%+ recall\n\n// ENN: Batch processing / critical searches (accurate)\ndb.legalDocs.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: searchEmbedding,\n      exact: true,  // ENN for perfect recall\n      limit: 100\n    }\n  }\n])\n// Result: ~500ms latency, 100% recall\n\n// ENN: Measuring recall accuracy of ANN\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: testQueryEmbedding,\n      exact: true,  // Ground truth for testing\n      limit: 10\n    }\n  }\n])",
+      "language": "javascript",
+      "description": "choosing based on use case"
+    },
+    {
+      "ruleId": "query-get-scores",
+      "ruleTitle": "Retrieving Vector Search Scores",
+      "type": "bad",
+      "code": "// WRONG: No way to assess result quality\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10\n    }\n  }\n])\n// Result: No visibility into match quality\n\n// WRONG: Trying to access score without projection\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10\n    }\n  },\n  { $match: { score: { $gte: 0.8 } } }  // score field doesn't exist!\n])",
+      "language": "javascript",
+      "description": "not retrieving scores"
+    },
+    {
+      "ruleId": "query-get-scores",
+      "ruleTitle": "Retrieving Vector Search Scores",
+      "type": "good",
+      "code": "// CORRECT: Add score via $project\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10\n    }\n  },\n  {\n    $project: {\n      title: 1,\n      description: 1,\n      score: { $meta: \"vectorSearchScore\" }\n    }\n  }\n])\n\n// CORRECT: Add score via $addFields (keeps all fields)\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10\n    }\n  },\n  {\n    $addFields: {\n      score: { $meta: \"vectorSearchScore\" }\n    }\n  }\n])",
+      "language": "javascript",
+      "description": "retrieving and using scores"
+    },
+    {
+      "ruleId": "query-lexical-prefilter",
+      "ruleTitle": "Lexical Prefilters for Vector Search",
+      "type": "bad",
+      "code": "// LIMITED: $vectorSearch only supports basic MQL pre-filters\n// Cannot use fuzzy search, phrase matching, or wildcard patterns\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 100,\n      limit: 10,\n      filter: {\n        category: \"electronics\"  // Basic equality only\n        // Cannot do: fuzzy match on \"electronnics\"\n        // Cannot do: phrase match on \"high performance laptop\"\n        // Cannot do: wildcard \"electro*\"\n      }\n    }\n  }\n])",
+      "language": "javascript",
+      "description": "basic $vectorSearch with limited filtering"
+    },
+    {
+      "ruleId": "query-lexical-prefilter",
+      "ruleTitle": "Lexical Prefilters for Vector Search",
+      "type": "good",
+      "code": "// ADVANCED: $search.vectorSearch supports Atlas Search operators\ndb.products.aggregate([\n  {\n    $search: {\n      index: \"search_vector_index\",  // Atlas Search index with vector type\n      vectorSearch: {\n        path: \"embedding\",\n        queryVector: queryEmbedding,\n        numCandidates: 100,\n        limit: 10,\n        filter: {\n          compound: {\n            must: [\n              {\n                text: {\n                  query: \"laptop\",\n                  path: \"description\",\n                  fuzzy: { maxEdits: 1 }  // Fuzzy matching!\n                }\n              }\n            ],\n            should: [\n              {\n                phrase: {\n                  query: \"high performance\",\n                  path: \"title\"  // Phrase matching!\n                }\n              }\n            ]\n          }\n        }\n      }\n    }\n  },\n  {\n    $project: {\n      title: 1,\n      score: { $meta: \"searchScore\" }\n    }\n  }\n])",
+      "language": "javascript",
+      "description": "using $search.vectorSearch with lexical prefilters"
+    },
+    {
+      "ruleId": "query-numcandidates-tuning",
+      "ruleTitle": "numCandidates Tuning (The 20x Rule)",
+      "type": "bad",
+      "code": "// WRONG: numCandidates equal to limit\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 10,  // Same as limit - poor recall!\n      limit: 10\n    }\n  }\n])\n// Result: Misses many relevant documents\n\n// WRONG: numCandidates only slightly higher than limit\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 15,  // Only 1.5x limit - still poor recall\n      limit: 10\n    }\n  }\n])",
+      "language": "javascript",
+      "description": "numCandidates too low"
+    },
+    {
+      "ruleId": "query-numcandidates-tuning",
+      "ruleTitle": "numCandidates Tuning (The 20x Rule)",
+      "type": "good",
+      "code": "// CORRECT: 20x limit (recommended starting point)\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,  // 20 × 10 = 200\n      limit: 10\n    }\n  }\n])\n\n// CORRECT: Higher numCandidates for better recall\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 500,  // 50x limit - excellent recall\n      limit: 10\n    }\n  }\n])",
+      "language": "javascript",
+      "description": "20x rule for numCandidates"
+    },
+    {
+      "ruleId": "query-prefiltering",
+      "ruleTitle": "Pre-Filtering Vector Search",
+      "type": "bad",
+      "code": "// WRONG: Post-filtering with $match\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10\n      // No filter - searches ALL products\n    }\n  },\n  { $match: { category: \"electronics\" } }  // Filters AFTER\n])\n// Problem: May return 0-10 results depending on what matched\n\n// WRONG: Expecting exactly 10 results with post-filter\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10\n    }\n  },\n  { $match: { status: \"active\", inStock: true } }\n])\n// Result: Could return 3 documents if only 3 of top 10 match",
+      "language": "javascript",
+      "description": "post-filtering"
+    },
+    {
+      "ruleId": "query-prefiltering",
+      "ruleTitle": "Pre-Filtering Vector Search",
+      "type": "good",
+      "code": "// CORRECT: Pre-filtering with filter parameter\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10,\n      filter: { category: \"electronics\" }  // Pre-filter: more efficient\n    }\n  }\n])\n// Result: Always returns up to 10 electronics products\n\n// CORRECT: Multiple filter conditions\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10,\n      filter: {\n        $and: [\n          { category: \"electronics\" },\n          { status: \"active\" },\n          { price: { $lte: 500 } }\n        ]\n      }\n    }\n  }\n])",
+      "language": "javascript",
+      "description": "pre-filtering"
+    },
+    {
+      "ruleId": "query-same-embedding-model",
+      "ruleTitle": "Use Same Embedding Model for Data and Query",
+      "type": "bad",
+      "code": "// Data was embedded with OpenAI text-embedding-3-small\n// db.products documents have embeddings from OpenAI\n\n// WRONG: Query using different model (Cohere)\nconst queryEmbedding = await cohereClient.embed({\n  texts: [\"laptop for programming\"],\n  model: \"embed-english-v3.0\"  // WRONG MODEL!\n})\n\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",  // Contains OpenAI embeddings\n      queryVector: queryEmbedding,  // Cohere embedding - INCOMPATIBLE!\n      numCandidates: 200,\n      limit: 10\n    }\n  }\n])\n// Result: Garbage results or no meaningful matches\n\n// WRONG: Using different model version\n// Data embedded with text-embedding-ada-002\nconst queryEmbedding = await openai.embeddings.create({\n  input: \"laptop for programming\",\n  model: \"text-embedding-3-small\"  // Different version!\n})\n// Result: Suboptimal results due to different vector spaces",
+      "language": "javascript",
+      "description": "mismatched models"
+    },
+    {
+      "ruleId": "query-same-embedding-model",
+      "ruleTitle": "Use Same Embedding Model for Data and Query",
+      "type": "good",
+      "code": "// Store model information with documents\n{\n  _id: ObjectId(\"...\"),\n  content: \"Product description...\",\n  embedding: [0.1, 0.2, ...],\n  metadata: {\n    embeddingModel: \"text-embedding-3-small\",\n    embeddingDimensions: 1536,\n    embeddedAt: ISODate(\"2024-01-15\")\n  }\n}\n\n// Check model consistency before querying\nconst sampleDoc = await db.products.findOne(\n  { embedding: { $exists: true } },\n  { \"metadata.embeddingModel\": 1 }\n)\nconsole.log(\"Collection uses:\", sampleDoc.metadata.embeddingModel)\n// Ensure query uses same model",
+      "language": "javascript",
+      "description": "consistent model usage"
+    },
+    {
+      "ruleId": "query-vectorsearch-first",
+      "ruleTitle": "$vectorSearch Must Be First Pipeline Stage",
+      "type": "bad",
+      "code": "// WRONG: $match before $vectorSearch\ndb.products.aggregate([\n  { $match: { status: \"active\" } },  // ERROR: Cannot be before $vectorSearch\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 100,\n      limit: 10\n    }\n  }\n])\n// Error: $vectorSearch is only valid as the first stage in a pipeline\n\n// WRONG: $project before $vectorSearch\ndb.products.aggregate([\n  { $project: { embedding: 1, title: 1 } },\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 100,\n      limit: 10\n    }\n  }\n])\n// Error: $vectorSearch is only valid as the first stage in a pipeline",
+      "language": "javascript",
+      "description": "not first stage"
+    },
+    {
+      "ruleId": "query-vectorsearch-first",
+      "ruleTitle": "$vectorSearch Must Be First Pipeline Stage",
+      "type": "good",
+      "code": "// CORRECT: $vectorSearch first\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 100,\n      limit: 10\n    }\n  },\n  { $match: { status: \"active\" } },  // Post-filter OK\n  { $project: { title: 1, description: 1, score: { $meta: \"vectorSearchScore\" } } }\n])\n\n// CORRECT: Use filter parameter for pre-filtering (NOT $match)\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 100,\n      limit: 10,\n      filter: { status: \"active\" }  // Pre-filter via filter parameter\n    }\n  },\n  { $project: { title: 1, score: { $meta: \"vectorSearchScore\" } } }\n])",
+      "language": "javascript",
+      "description": "$vectorSearch first, then other stages"
+    },
+    {
+      "ruleId": "rag-context-window",
+      "ruleTitle": "Managing LLM Context Window Limits",
+      "type": "bad",
+      "code": "// WRONG: Retrieving too much context\nconst context = await db.ragChunks.aggregate([\n  {\n    $vectorSearch: {\n      index: \"rag_vector_index\",\n      path: \"embedding\",\n      queryVector: queryEmbedding,\n      numCandidates: 200,\n      limit: 50  // 50 chunks × ~500 tokens = 25,000 tokens!\n    }\n  }\n]).toArray()\n\nconst fullContext = context.map(c => c.content).join('\\n\\n')\n// Result: Exceeds GPT-4's context, gets truncated or errors",
+      "language": "javascript",
+      "description": "ignoring limits"
+    },
+    {
+      "ruleId": "rag-context-window",
+      "ruleTitle": "Managing LLM Context Window Limits",
+      "type": "good",
+      "code": "// Token estimation (rough: 1 token ≈ 4 characters for English)\nfunction estimateTokens(text) {\n  return Math.ceil(text.length / 4)\n}\n\n// Context-aware retrieval\nasync function retrieveWithinTokenLimit(query, options = {}) {\n  const {\n    maxContextTokens = 4000,  // Reserve tokens for context\n    maxResponseTokens = 1000, // Reserve for response\n    modelLimit = 8192         // GPT-4 limit\n  } = options\n\n  // Calculate available context budget\n  const queryTokens = estimateTokens(query)\n  const systemPromptTokens = 500  // Estimate for system prompt\n  const availableTokens = modelLimit - queryTokens - systemPromptTokens - maxResponseTokens\n\n  const contextBudget = Math.min(availableTokens, maxContextTokens)\n\n  // Retrieve chunks\n  const queryEmbedding = await embeddingClient.embed(query)\n  const chunks = await db.ragChunks.aggregate([\n    {\n      $vectorSearch: {\n        index: \"rag_vector_index\",\n        path: \"embedding\",\n        queryVector: queryEmbedding,\n        numCandidates: 200,\n        limit: 20  // Get more than needed, then filter\n      }\n    },\n    {\n      $addFields: { score: { $meta: \"vectorSearchScore\" } }\n    },\n    {\n      $project: { content: 1, score: 1, source: 1 }\n    }\n  ]).toArray()\n\n  // Select chunks within budget\n  const selectedChunks = []\n  let usedTokens = 0\n\n  for (const chunk of chunks) {\n    const chunkTokens = estimateTokens(chunk.content)\n    if (usedTokens + chunkTokens <= contextBudget) {\n      selectedChunks.push(chunk)\n      usedTokens += chunkTokens\n    } else {\n      break  // Stop when budget exhausted\n    }\n  }\n\n  return {\n    chunks: selectedChunks,\n    tokensUsed: usedTokens,\n    tokenBudget: contextBudget\n  }\n}",
+      "language": "javascript",
+      "description": "context-aware retrieval"
+    },
+    {
+      "ruleId": "rag-ingestion-pattern",
+      "ruleTitle": "RAG Ingestion Pattern",
+      "type": "bad",
+      "code": "// WRONG: No chunking - dilutes embedding relevance\nawait db.documents.insertOne({\n  content: entireLargeDocument,  // 50,000 words as one chunk!\n  embedding: await embed(entireLargeDocument)\n})\n// Result: Embedding averages over too much content, loses specificity\n\n// WRONG: No metadata - can't filter or trace source\nawait db.documents.insertOne({\n  content: chunk,\n  embedding: await embed(chunk)\n  // No source, date, category, or tracking info\n})",
+      "language": "javascript",
+      "description": "naive ingestion"
+    },
+    {
+      "ruleId": "rag-ingestion-pattern",
+      "ruleTitle": "RAG Ingestion Pattern",
+      "type": "good",
+      "code": "// Proper RAG document schema\nconst ragDocumentSchema = {\n  // Content\n  content: String,        // The chunk text\n  embedding: [Number],    // Vector embedding\n\n  // Source tracking\n  source: {\n    documentId: ObjectId, // Original document\n    fileName: String,\n    url: String,\n    pageNumber: Number\n  },\n\n  // Chunking info\n  chunk: {\n    index: Number,        // Position in original doc\n    totalChunks: Number,\n    startChar: Number,\n    endChar: Number\n  },\n\n  // Metadata for filtering\n  metadata: {\n    category: String,\n    author: String,\n    createdAt: Date,\n    lastUpdated: Date\n  },\n\n  // Embedding info\n  embeddingModel: String,\n  embeddingDimensions: Number\n}\n\n// Complete ingestion function\nasync function ingestDocument(document, embeddingClient) {\n  // Step 1: Chunk the document\n  const chunks = chunkDocument(document.content, {\n    chunkSize: 1000,      // ~1000 characters per chunk\n    overlap: 200          // 200 char overlap for context\n  })\n\n  // Step 2: Generate embeddings for all chunks\n  const embeddings = await embeddingClient.embedBatch(\n    chunks.map(c => c.text)\n  )\n\n  // Step 3: Store with full metadata\n  const docs = chunks.map((chunk, i) => ({\n    content: chunk.text,\n    embedding: embeddings[i],\n\n    source: {\n      documentId: document._id,\n      fileName: document.fileName,\n      url: document.url\n    },\n\n    chunk: {\n      index: i,\n      totalChunks: chunks.length,\n      startChar: chunk.start,\n      endChar: chunk.end\n    },\n\n    metadata: {\n      category: document.category,\n      author: document.author,\n      createdAt: new Date(),\n      lastUpdated: new Date()\n    },\n\n    embeddingModel: \"text-embedding-3-small\",\n    embeddingDimensions: 1536\n  }))\n\n  await db.ragChunks.insertMany(docs)\n}",
+      "language": "javascript",
+      "description": "structured ingestion"
+    },
+    {
+      "ruleId": "rag-metadata-filtering",
+      "ruleTitle": "RAG Metadata Filtering",
+      "type": "bad",
+      "code": "// WRONG: Search entire knowledge base without scoping\nconst context = await db.ragChunks.aggregate([\n  {\n    $vectorSearch: {\n      index: \"rag_vector_index\",\n      path: \"embedding\",\n      queryVector: queryEmbedding,\n      numCandidates: 200,\n      limit: 5\n      // No filter - searches everything\n    }\n  }\n]).toArray()\n// Result: May return outdated docs, wrong department, or unauthorized content",
+      "language": "javascript",
+      "description": "no filtering"
+    },
+    {
+      "ruleId": "rag-metadata-filtering",
+      "ruleTitle": "RAG Metadata Filtering",
+      "type": "good",
+      "code": "// Time-scoped: Recent documents only\nasync function retrieveRecent(query, daysBack = 90) {\n  const cutoffDate = new Date()\n  cutoffDate.setDate(cutoffDate.getDate() - daysBack)\n\n  return await db.ragChunks.aggregate([\n    {\n      $vectorSearch: {\n        index: \"rag_vector_index\",\n        path: \"embedding\",\n        queryVector: await embed(query),\n        numCandidates: 200,\n        limit: 5,\n        filter: {\n          \"metadata.createdAt\": { $gte: cutoffDate }\n        }\n      }\n    }\n  ]).toArray()\n}\n\n// Category-scoped: Specific knowledge domain\nasync function retrieveByCategory(query, category) {\n  return await db.ragChunks.aggregate([\n    {\n      $vectorSearch: {\n        index: \"rag_vector_index\",\n        path: \"embedding\",\n        queryVector: await embed(query),\n        numCandidates: 200,\n        limit: 5,\n        filter: {\n          \"metadata.category\": category\n        }\n      }\n    }\n  ]).toArray()\n}\n\n// Source-scoped: Specific document or collection\nasync function retrieveFromSource(query, sourceId) {\n  return await db.ragChunks.aggregate([\n    {\n      $vectorSearch: {\n        index: \"rag_vector_index\",\n        path: \"embedding\",\n        queryVector: await embed(query),\n        numCandidates: 200,\n        limit: 5,\n        filter: {\n          \"source.documentId\": ObjectId(sourceId)\n        }\n      }\n    }\n  ]).toArray()\n}\n\n// Permission-scoped: User-authorized content\nasync function retrieveAuthorized(query, userId, userRoles) {\n  return await db.ragChunks.aggregate([\n    {\n      $vectorSearch: {\n        index: \"rag_vector_index\",\n        path: \"embedding\",\n        queryVector: await embed(query),\n        numCandidates: 200,\n        limit: 5,\n        filter: {\n          $or: [\n            { \"metadata.visibility\": \"public\" },\n            { \"metadata.authorId\": userId },\n            { \"metadata.allowedRoles\": { $in: userRoles } }\n          ]\n        }\n      }\n    }\n  ]).toArray()\n}",
+      "language": "javascript",
+      "description": "metadata-scoped retrieval"
+    },
+    {
+      "ruleId": "rag-retrieval-pattern",
+      "ruleTitle": "RAG Retrieval Pattern",
+      "type": "bad",
+      "code": "// WRONG: No score filtering - includes low-relevance results\nconst context = await db.ragChunks.aggregate([\n  {\n    $vectorSearch: {\n      index: \"rag_vector_index\",\n      path: \"embedding\",\n      queryVector: queryEmbedding,\n      numCandidates: 100,\n      limit: 10\n    }\n  }\n]).toArray()\n// Result: Context includes irrelevant chunks, confuses LLM\n\n// WRONG: No source tracking - can't cite sources\nconst response = await llm.chat([\n  { role: \"system\", content: context.map(c => c.content).join('\\n') },\n  { role: \"user\", content: userQuery }\n])\n// Result: No way to verify or cite sources",
+      "language": "javascript",
+      "description": "poor retrieval"
+    },
+    {
+      "ruleId": "rag-retrieval-pattern",
+      "ruleTitle": "RAG Retrieval Pattern",
+      "type": "good",
+      "code": "// Complete RAG retrieval function\nasync function retrieveContext(userQuery, options = {}) {\n  const {\n    limit = 5,\n    minScore = 0.7,\n    category = null\n  } = options\n\n  // Step 1: Embed the query\n  const queryEmbedding = await embeddingClient.embed(userQuery)\n\n  // Step 2: Vector search with optional filter\n  const pipeline = [\n    {\n      $vectorSearch: {\n        index: \"rag_vector_index\",\n        path: \"embedding\",\n        queryVector: queryEmbedding,\n        numCandidates: limit * 20,  // 20x rule\n        limit: limit * 2,            // Get extra for score filtering\n        ...(category && { filter: { \"metadata.category\": category } })\n      }\n    },\n    {\n      $addFields: {\n        score: { $meta: \"vectorSearchScore\" }\n      }\n    },\n    {\n      $match: {\n        score: { $gte: minScore }  // Filter low-relevance\n      }\n    },\n    {\n      $limit: limit\n    },\n    {\n      $project: {\n        content: 1,\n        score: 1,\n        source: 1,\n        \"metadata.category\": 1\n      }\n    }\n  ]\n\n  const results = await db.ragChunks.aggregate(pipeline).toArray()\n\n  // Step 3: Format for LLM with source tracking\n  const contextWithSources = results.map((doc, i) => ({\n    index: i + 1,\n    content: doc.content,\n    score: doc.score,\n    source: doc.source?.fileName || \"Unknown\",\n    citation: `[${i + 1}]`\n  }))\n\n  return contextWithSources\n}\n\n// Usage in RAG pipeline\nasync function ragQuery(userQuery) {\n  const context = await retrieveContext(userQuery, {\n    limit: 5,\n    minScore: 0.75\n  })\n\n  // Build prompt with sources\n  const systemPrompt = `You are a helpful assistant. Answer based ONLY on the provided context.\nIf the context doesn't contain relevant information, say \"I don't have information about that.\"\nCite sources using [1], [2], etc.\n\nContext:\n${context.map(c => `${c.citation} ${c.content}`).join('\\n\\n')}\n\nSources:\n${context.map(c => `${c.citation} ${c.source}`).join('\\n')}`\n\n  const response = await llm.chat([\n    { role: \"system\", content: systemPrompt },\n    { role: \"user\", content: userQuery }\n  ])\n\n  return {\n    answer: response,\n    sources: context.map(c => ({ citation: c.citation, source: c.source, score: c.score }))\n  }\n}",
+      "language": "javascript",
+      "description": "quality retrieval"
+    },
+    {
+      "ruleId": "rag-retrieval-pattern",
+      "ruleTitle": "RAG Retrieval Pattern",
+      "type": "good",
+      "code": "// Generate multiple query variations for better retrieval\nasync function multiQueryRetrieval(userQuery) {\n  // Generate query variations\n  const variations = await llm.chat([\n    {\n      role: \"system\",\n      content: \"Generate 3 different phrasings of this question for search. Return as JSON array.\"\n    },\n    { role: \"user\", content: userQuery }\n  ])\n\n  const queries = [userQuery, ...JSON.parse(variations)]\n\n  // Retrieve for each query\n  const allResults = []\n  for (const query of queries) {\n    const results = await retrieveContext(query, { limit: 3 })\n    allResults.push(...results)\n  }\n\n  // Deduplicate and re-rank by score\n  const seen = new Set()\n  return allResults\n    .filter(r => {\n      const key = r.content.substring(0, 100)\n      if (seen.has(key)) return false\n      seen.add(key)\n      return true\n    })\n    .sort((a, b) => b.score - a.score)\n    .slice(0, 5)\n}",
+      "language": "javascript",
+      "description": "Multi-Query Retrieval (Better Recall) example for RAG Retrieval Pattern"
+    }
+  ]
+}

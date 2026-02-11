@@ -9,6 +9,8 @@ tags: hybrid, weights, tuning, rankFusion, scoreFusion
 
 Weights control the contribution of each search method. Tune per-query based on query type.
 
+Current MongoDB 8.2 docs describe fusion stages as Preview features, so keep weights/behavior checks in release upgrade tests.
+
 **Incorrect (static weights for all queries):**
 
 ```javascript
@@ -87,6 +89,9 @@ async function hybridSearch(query) {
               }
             }, { $limit: 20 }]
           },
+          normalization: "none"
+        },
+        combination: {
           weights: weights
         }
       }
@@ -107,6 +112,8 @@ async function hybridSearch(query) {
 | Abstract | "similar products" | 0.8 | 0.2 |
 
 **Using $scoreFusion for Fine Control (MongoDB 8.2+):**
+
+Use release notes as a guardrail during upgrades because fusion capabilities can change between minor lines.
 
 ```javascript
 // $scoreFusion uses actual scores instead of ranks
@@ -130,9 +137,11 @@ db.products.aggregate([
               text: { query: searchTerm, path: "description" }
             }
           }, { $limit: 20 }]
-        },
+        }
+      },
+      combination: {
         weights: { vector: 0.6, text: 0.4 },
-        combination: "sum"  // or "max", "multiply"
+        method: "avg"  // or "expression" with combination.expression
       }
     }
   },
@@ -175,5 +184,11 @@ const testResults = await testWeights(sampleQueries, {
 - Single search method is sufficient
 - Query classification is unreliable
 - Consistent UX is more important than optimization
+
+## Verify with
+
+1. Run the "Correct" index or query example on a staging dataset.
+2. Validate expected behavior and performance using explain and Atlas metrics.
+3. Confirm version-gated behavior on your target MongoDB release before production rollout.
 
 Reference: [MongoDB $rankFusion Weights](https://mongodb.com/docs/atlas/atlas-vector-search/hybrid-search/)

@@ -186,7 +186,7 @@ const downloadStream = bucket.openDownloadStream(videoId)
 - **Bounded arrays with validation**: If you enforce `maxItems: 50`, you're safe.
 - **Read-heavy with controlled writes**: If writes are always small updates.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Set up monitoring for large documents

@@ -1,13 +1,13 @@
 ---
 title: Use bulkWrite for Cross-Collection Batch Operations
 impact: HIGH
-impactDescription: "Single atomic command for operations across multiple collections"
-tags: bulkWrite, batch, cross-collection, MongoDB-8.0, atomic
+impactDescription: "Single request for batched operations across multiple collections"
+tags: bulkWrite, batch, cross-collection, MongoDB-8.0, throughput
 ---
 
 ## Use bulkWrite for Cross-Collection Batch Operations
 
-**MongoDB 8.0 introduced the `bulkWrite` command**, which performs batch inserts, updates, and deletes across multiple collections in a single command. Unlike the collection method `collection.bulkWrite()`, this is a database-level command that works across collections atomically.
+**MongoDB 8.0 introduced the `bulkWrite` command**, which performs batch inserts, updates, and deletes across multiple collections in a single request. Unlike `collection.bulkWrite()`, this is a database-level command that can target multiple namespaces through `nsInfo`.
 
 **Incorrect (multiple separate operations):**
 
@@ -27,10 +27,10 @@ await db.audit.insertOne({
 // Risk: Partial failure leaves inconsistent state
 ```
 
-**Correct (single atomic bulkWrite command):**
+**Correct (single-request cross-collection batch):**
 
 ```javascript
-// MongoDB 8.0+ bulkWrite command - atomic across collections
+// MongoDB 8.0+ bulkWrite command across multiple namespaces
 db.adminCommand({
   bulkWrite: 1,
   ops: [
@@ -59,6 +59,28 @@ db.adminCommand({
   ],
   ordered: true  // Stop on first error (default)
 })
+```
+
+**Need true all-or-nothing behavior? Use a transaction:**
+
+```javascript
+const session = db.getMongo().startSession()
+const orders = session.getDatabase("mydb").orders
+const inventory = session.getDatabase("mydb").inventory
+const audit = session.getDatabase("mydb").audit
+
+session.startTransaction()
+try {
+  orders.insertOne({ orderId: "123", status: "pending" })
+  inventory.updateOne({ productId: "abc" }, { $inc: { quantity: -1 } })
+  audit.insertOne({ action: "order_created", orderId: "123", timestamp: new Date() })
+  session.commitTransaction()
+} catch (e) {
+  session.abortTransaction()
+  throw e
+} finally {
+  session.endSession()
+}
 ```
 
 **Unordered for parallel execution:**
@@ -107,8 +129,15 @@ db.adminCommand({
 **When NOT to use this pattern:**
 
 - **Single collection operations**: Use `collection.bulkWrite()` method instead - it's simpler.
-- **Sharded clusters without transactions**: Cross-shard atomicity requires transactions.
+- **Need cross-collection atomicity**: Use a transaction for all-or-nothing guarantees.
 - **Pre-MongoDB 8.0**: This command doesn't exist in earlier versions.
 - **Need for result per operation**: Response is summarized, not per-document.
+
+
+## Verify with
+
+1. Run representative queries with `explain("executionStats")` before and after applying this rule.
+2. Compare latency and scan efficiency (`totalDocsExamined`, `totalKeysExamined`, `nReturned`).
+3. Confirm workload-level behavior using `$queryStats`, profiler, or Atlas Performance Advisor.
 
 Reference: [bulkWrite Command](https://mongodb.com/docs/manual/reference/command/bulkWrite/)

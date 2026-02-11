@@ -9,6 +9,8 @@ tags: hybrid, rankFusion, scoreFusion, limitations, constraints
 
 `$rankFusion` and `$scoreFusion` have specific constraints. Understanding them prevents errors.
 
+Current MongoDB 8.2 docs describe fusion stages as Preview features. Keep rollout plans conservative and validate on your exact target release.
+
 **Incorrect (violating limitations):**
 
 ```javascript
@@ -141,6 +143,9 @@ db.products.aggregate([
 
 // 6. No storedSource fields from $search
 // Can't use returnStoredSource with $rankFusion
+
+// 7. Release-sensitive behavior
+// Re-check release notes before upgrades because fusion-stage behavior and constraints can evolve.
 ```
 
 **Cross-Collection Alternative:**
@@ -194,5 +199,11 @@ async function crossCollectionSearch(query) {
 - Need cross-collection search (use $unionWith)
 - Need pagination (implement in application layer)
 - Need complex transformations in sub-pipelines
+
+## Verify with
+
+1. Run the "Correct" index or query example on a staging dataset.
+2. Validate expected behavior and performance using explain and Atlas metrics.
+3. Confirm version-gated behavior on your target MongoDB release before production rollout.
 
 Reference: [MongoDB Hybrid Search Limitations](https://mongodb.com/docs/atlas/atlas-vector-search/hybrid-search/#limitations)

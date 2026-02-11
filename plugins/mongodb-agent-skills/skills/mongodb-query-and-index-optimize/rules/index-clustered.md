@@ -38,7 +38,7 @@ db.events.find({ eventId: { $gte: 1000, $lt: 2000 } })
 - **Frequent updates to the clustered key**: Requires document relocation.
 - **Existing collections**: Clustered indexes must be defined at creation time.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Inspect collection options for clusteredIndex

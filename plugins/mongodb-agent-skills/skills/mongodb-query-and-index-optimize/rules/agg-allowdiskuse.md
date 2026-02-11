@@ -190,7 +190,7 @@ db.collection.aggregate(pipeline, { allowDiskUse: true })
 - **Ad-hoc queries**: Exploratory analytics by data team.
 - **Large aggregations with no optimization path**: When you genuinely need all the data.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check if aggregation needs allowDiskUse

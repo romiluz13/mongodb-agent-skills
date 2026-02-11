@@ -173,7 +173,7 @@ db.products.createIndex({ category: 1, rating: -1, reviewCount: -1 })
 - **Post-sort filtering**: If you need to filter after sorting (e.g., `$match` on computed rank), full sort required.
 - **Random sampling**: Use `$sample` instead for random selection (doesn't sort).
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check if coalescence is applied

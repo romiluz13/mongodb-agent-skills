@@ -208,7 +208,7 @@ db.orders.find({
 - **$all with many terms**: Performance degrades with many required terms.
 - **Position-based queries**: `{ "arr.0": value }` can use index, but position queries are uncommon.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Analyze multikey index characteristics

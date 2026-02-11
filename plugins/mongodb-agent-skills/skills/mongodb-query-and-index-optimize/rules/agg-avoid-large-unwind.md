@@ -254,7 +254,7 @@ calculateUnwindExplosion("posts", "comments", { featured: true })
 - **Extracting array subset**: Use $slice, $filter, $arrayElemAt.
 - **Production real-time queries**: Unpredictable memory usage = unpredictable latency.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Test if $unwind will cause problems

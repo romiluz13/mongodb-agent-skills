@@ -314,4 +314,11 @@ function analyzeSlowQueries(thresholdMs = 100, minutes = 60) {
 analyzeSlowQueries(100, 60)  // Queries >100ms in last hour
 ```
 
+
+## Verify with
+
+1. Run representative queries with `explain("executionStats")` before and after applying this rule.
+2. Compare latency and scan efficiency (`totalDocsExamined`, `totalKeysExamined`, `nReturned`).
+3. Confirm workload-level behavior using `$queryStats`, profiler, or Atlas Performance Advisor.
+
 Reference: [Database Profiler](https://mongodb.com/docs/manual/tutorial/manage-the-database-profiler/)

@@ -229,7 +229,7 @@ db.sessions.createIndex(
 - **Large batch deletes**: If millions expire simultaneously, TTL can cause load. Consider partitioning.
 - **Capped collections**: TTL indexes can't be created on capped collections.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check TTL index configuration

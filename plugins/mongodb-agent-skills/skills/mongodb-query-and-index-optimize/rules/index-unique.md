@@ -37,7 +37,7 @@ db.users.insertOne({ email: "ada@example.com" })
 - **Duplicates are valid**: If the field is not a true identifier.
 - **Existing duplicates**: Clean up data before creating the index.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Find duplicates before adding the index

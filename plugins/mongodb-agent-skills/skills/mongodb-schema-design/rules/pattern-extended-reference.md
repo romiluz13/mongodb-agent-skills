@@ -131,7 +131,7 @@ if (!order.customerCache ||
 - **Sensitive data segregation**: Don't copy PII into collections with different access controls.
 - **Writes >> Reads**: If you write 100× more than read, caching adds overhead.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Find $lookup-heavy aggregations in profile

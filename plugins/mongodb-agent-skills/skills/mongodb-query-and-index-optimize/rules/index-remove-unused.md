@@ -120,7 +120,7 @@ db.products.dropIndex("category_1")       // Redundant with compound
 - **Unique constraints**: Even if rarely queried, enforces data integrity.
 - **TTL indexes**: May show low ops but handle expiration automatically.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Complete index audit script

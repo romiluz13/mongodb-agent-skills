@@ -216,7 +216,7 @@ db.orders.createIndex(
 - **Memory constrained**: Index build buffer competes with working set.
 - **Active OLTP workload**: High write throughput can slow builds significantly.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Pre-build assessment

@@ -170,7 +170,7 @@ db.screenings.aggregate([
 - **Complex multi-collection joins**: Some computations are too complex to maintain incrementally.
 - **Strong consistency required**: Computed values may be slightly stale.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Find expensive aggregations that should be pre-computed

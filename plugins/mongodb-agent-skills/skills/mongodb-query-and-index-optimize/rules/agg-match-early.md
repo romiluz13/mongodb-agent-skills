@@ -172,7 +172,7 @@ db.orders.aggregate([
 - **Filtering on computed fields**: `$match: { computedField: x }` must come after the stage that creates it.
 - **$graphLookup**: Graph traversal can't be pre-filtered in the same way.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check if $match uses index

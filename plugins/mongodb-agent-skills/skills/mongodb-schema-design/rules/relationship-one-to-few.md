@@ -132,7 +132,7 @@ db.users.updateOne(
 | Access pattern | Always with parent | Sometimes independent |
 | Update frequency | Rare | Frequent |
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check embedded array sizes

@@ -123,7 +123,7 @@ This isn't denormalization—it's proper document modeling. Orders are self-cont
 - **Data is accessed in different contexts**: Same address entity used for shipping, billing, user profile—keep it separate.
 - **Regulatory requirements**: Some industries require normalized data for audit trails.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Count your collections

@@ -303,7 +303,7 @@ db.runCommand({
 - **Additive-only changes**: If you only add optional fields, versioning is overkill.
 - **Event sourcing**: If using event sourcing, version the events instead.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Schema version health check

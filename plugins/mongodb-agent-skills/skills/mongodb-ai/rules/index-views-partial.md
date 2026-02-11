@@ -160,7 +160,7 @@ Source Collection (products)
             └── Vector Index: vector_index_archived
 ```
 
-**Allowed Stages in View Definition (MongoDB 8.1+):**
+**Allowed Stages in View Definition:**
 
 | Stage | Support |
 |-------|---------|
@@ -173,14 +173,21 @@ Source Collection (products)
 
 1. Index uses View name, not source collection name
 2. Views must be on same database as source collection
-3. $vectorSearch on views requires MongoDB 8.0+
-4. View definition cannot include $vectorSearch stage itself
-5. MongoDB 8.1+ adds support for `$addFields`, `$set`, and `$match` with `$expr`
+3. On MongoDB 8.0, run `$vectorSearch` against the source collection using the View-backed index
+4. On MongoDB 8.1+, you can run `$vectorSearch` directly against the View
+5. View definition cannot include `$vectorSearch` stage itself
+6. MongoDB 8.1+ adds `createSearchIndex()` / `updateSearchIndex()` / `dropSearchIndex()` / `$listSearchIndexes` support on Views in mongosh and drivers
 
 **When NOT to use this pattern:**
 
 - Need to search all documents regardless of status
 - View filter is too restrictive (returns very few documents)
-- MongoDB version < 8.0 (limited view support)
+- MongoDB version < 8.0 (feature unavailable)
+
+## Verify with
+
+1. Run the "Correct" index or query example on a staging dataset.
+2. Validate expected behavior and performance using explain and Atlas metrics.
+3. Confirm version-gated behavior on your target MongoDB release before production rollout.
 
 Reference: [MongoDB Views with Vector Search](https://mongodb.com/docs/atlas/atlas-vector-search/view-support/)

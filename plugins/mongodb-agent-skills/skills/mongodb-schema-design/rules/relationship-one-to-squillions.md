@@ -54,7 +54,7 @@ db.user_activities.createIndex({ userId: 1, ts: -1 })
 - **Small, bounded child sets**: Embed for simplicity and atomic reads.
 - **Always-accessed-together data**: Embedding may be faster.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Ensure parent doc stays small

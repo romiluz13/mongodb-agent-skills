@@ -1,0 +1,16 @@
+skill,prefix,rule_count
+mongodb-schema-design,antipattern,6
+mongodb-schema-design,fundamental,5
+mongodb-schema-design,pattern,10
+mongodb-schema-design,relationship,6
+mongodb-schema-design,validation,3
+mongodb-query-and-index-optimize,agg,8
+mongodb-query-and-index-optimize,index,20
+mongodb-query-and-index-optimize,perf,8
+mongodb-query-and-index-optimize,query,10
+mongodb-ai,agent,3
+mongodb-ai,hybrid,4
+mongodb-ai,index,9
+mongodb-ai,perf,6
+mongodb-ai,query,7
+mongodb-ai,rag,4

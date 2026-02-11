@@ -36,7 +36,7 @@ db.orders.aggregate([
 - **Small datasets**: Memory limits are unlikely to be hit.
 - **You actually need full documents**: Consider a $lookup after grouping.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check if aggregation spills to disk

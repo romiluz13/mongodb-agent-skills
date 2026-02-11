@@ -11,6 +11,20 @@ A structured repository for creating and maintaining MongoDB Schema Design best 
 - __`AGENTS.md`__ - Compiled output (generated)
 - __`test-cases.json`__ - Test cases for LLM evaluation (generated)
 
+## Installation (End Users)
+
+### Agent Skills CLI (recommended)
+```bash
+npx skills add romiluz13/mongodb-agent-skills --skill mongodb-schema-design -a claude-code -a codex -a cursor
+```
+
+### Manual fallback
+```bash
+cp -r mongodb-schema-design ~/.claude/skills/
+cp -r mongodb-schema-design ~/.codex/skills/
+cp -r mongodb-schema-design ~/.cursor/skills/
+```
+
 ## Getting Started
 
 1. Install dependencies:

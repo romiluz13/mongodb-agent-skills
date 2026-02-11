@@ -160,4 +160,10 @@ async function vectorSearchForTenant(query, tenantId) {
 - Regulatory requirements mandate physical data separation
 - Legacy systems requiring separate collections
 
+## Verify with
+
+1. Run the "Correct" index or query example on a staging dataset.
+2. Validate expected behavior and performance using explain and Atlas metrics.
+3. Confirm version-gated behavior on your target MongoDB release before production rollout.
+
 Reference: [MongoDB Multi-Tenant Architecture](https://mongodb.com/docs/atlas/atlas-vector-search/multi-tenant-architecture/)

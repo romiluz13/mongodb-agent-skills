@@ -107,4 +107,10 @@ db.products.aggregate([
 - `dotProduct` with non-normalized vectors (results will be wrong)
 - Changing similarity on existing index (requires rebuild)
 
+## Verify with
+
+1. Run the "Correct" index or query example on a staging dataset.
+2. Validate expected behavior and performance using explain and Atlas metrics.
+3. Confirm version-gated behavior on your target MongoDB release before production rollout.
+
 Reference: [MongoDB Vector Search Similarity](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/#std-label-avs-types-vector-similarity)

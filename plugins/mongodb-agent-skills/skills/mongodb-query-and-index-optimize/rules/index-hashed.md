@@ -36,7 +36,7 @@ db.users.find({ userId: 123456 })
 - **Range queries or sorting**: Hashed indexes do not preserve order.
 - **Prefix searches**: Hashed values break prefix scans.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Confirm equality query uses IXSCAN

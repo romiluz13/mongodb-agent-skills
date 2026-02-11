@@ -36,6 +36,14 @@ export const SECTION_MAPS: Record<string, Record<string, number>> = {
     agg: 4,           // Aggregation Optimization (HIGH)
     perf: 5,          // Performance Diagnostics (MEDIUM)
   },
+  'mongodb-ai': {
+    index: 1,         // Vector Index Creation
+    query: 2,         // $vectorSearch Queries
+    perf: 3,          // Performance Tuning
+    rag: 4,           // RAG Patterns
+    hybrid: 5,        // Hybrid Search
+    agent: 6,         // AI Agent Integration
+  },
 }
 
 // Index prefix subsection mapping (for separating essentials from specialized)

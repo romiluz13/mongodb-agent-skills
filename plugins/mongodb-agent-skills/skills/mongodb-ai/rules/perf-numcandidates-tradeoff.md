@@ -159,4 +159,10 @@ numCandidates | Recall | Latency | Notes
 - Very small datasets (< 1000 vectors) - minimal impact
 - When latency doesn't matter - just use high value
 
+## Verify with
+
+1. Run the "Correct" index or query example on a staging dataset.
+2. Validate expected behavior and performance using explain and Atlas metrics.
+3. Confirm version-gated behavior on your target MongoDB release before production rollout.
+
 Reference: [MongoDB $vectorSearch Performance](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-stage/)

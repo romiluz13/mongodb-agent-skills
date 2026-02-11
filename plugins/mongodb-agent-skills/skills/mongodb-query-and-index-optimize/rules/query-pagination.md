@@ -192,7 +192,7 @@ async function getPreviousPage(cursor, limit) {
 - **Real-time data with high insert rate**: New items between pages may cause duplicates or gaps.
 - **Total count needed**: Range-based pagination makes counting total results expensive.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Compare pagination methods

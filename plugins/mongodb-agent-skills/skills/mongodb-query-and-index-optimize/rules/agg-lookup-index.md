@@ -227,7 +227,7 @@ db.users.aggregate([
 - **Already joining on _id**: The _id index always exists.
 - **$graphLookup special case**: Uses different optimization strategies; still benefits from indexes.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check if $lookup uses index on foreign collection

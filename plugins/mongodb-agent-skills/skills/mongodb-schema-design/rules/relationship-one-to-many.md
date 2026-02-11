@@ -133,7 +133,7 @@ db.publishers.updateOne(
 - **Always accessed together**: Order line items should be embedded in order.
 - **No independent queries**: If you never query children without parent, consider embedding.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check for missing indexes on reference fields

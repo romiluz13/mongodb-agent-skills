@@ -1,0 +1,6 @@
+task_id,status,completed_at,evidence_file,evidence_note
+FIX-049,DONE,2026-02-11,36-sprint-10-execution-log.md,Pulled and audited latest vercel-labs skills and agent-skills repositories including CLI internals
+FIX-050,DONE,2026-02-11,36-sprint-10-execution-log.md,Top-level README installation section migrated from deprecated add-skill to skills add workflow
+FIX-051,DONE,2026-02-11,36-sprint-10-execution-log.md,AGENTS and mongodb-ai README expanded with Claude Codex Cursor install guidance
+FIX-052,DONE,2026-02-11,36-sprint-10-execution-log.md,Live npx skills add --list validation confirmed discovery of 3 MongoDB skills
+FIX-053,DONE,2026-02-11,36-sprint-10-execution-log.md,Sprint-10 audit and status artifacts added to corpus and indices

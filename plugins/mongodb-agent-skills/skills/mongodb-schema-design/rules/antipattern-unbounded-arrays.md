@@ -76,7 +76,7 @@ Bucket pattern reduces document count 10-100× while keeping arrays bounded by t
 - **Low-volume applications**: If a user generates <100 events total lifetime, an embedded array may be simpler than a separate collection.
 - **Read-heavy with rare writes**: If you read the full array constantly but rarely add to it, embedding avoids $lookup overhead.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check document sizes in collection

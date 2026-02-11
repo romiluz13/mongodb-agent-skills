@@ -211,7 +211,7 @@ estimatePipelineMemory(10000, 500, 500)
 - **$facet pipelines**: Each facet starts fresh from input documents; project in each facet.
 - **Dynamic field access**: If later stages use `$objectToArray` or dynamic paths, project can break them.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check pipeline memory usage

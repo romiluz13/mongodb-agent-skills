@@ -39,7 +39,7 @@ db.orders.find({ status: "shipped" }).sort({ createdAt: -1 })
 - **Queries only filter on one field**: A single-field index may be enough.
 - **Write-heavy collections**: Extra indexes increase write cost.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check for SORT stage in explain

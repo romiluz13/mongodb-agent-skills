@@ -9,6 +9,10 @@ tags: hybrid, scoreFusion, vector-search, text-search, MongoDB-8.2, normalizatio
 
 `$scoreFusion` (MongoDB 8.2+) combines multiple search pipelines using actual scores rather than ranks, with support for normalization and custom combination expressions.
 
+As documented in current MongoDB 8.2 docs, fusion stages are Preview features. Re-validate behavior and compatibility assumptions on every release upgrade.
+
+**Feature maturity note:** validate behavior against current release notes before production rollout because fusion-stage capabilities can evolve between MongoDB release lines.
+
 **$scoreFusion vs $rankFusion:**
 
 | Feature | $rankFusion | $scoreFusion |
@@ -176,5 +180,11 @@ db.products.aggregate([
 - Simple hybrid search without score tuning needs
 - Rank-based fusion is sufficient for your use case
 - Performance-critical with minimal complexity needs
+
+## Verify with
+
+1. Run the "Correct" index or query example on a staging dataset.
+2. Validate expected behavior and performance using explain and Atlas metrics.
+3. Confirm version-gated behavior on your target MongoDB release before production rollout.
 
 Reference: [MongoDB $scoreFusion](https://mongodb.com/docs/manual/reference/operator/aggregation/scoreFusion/)

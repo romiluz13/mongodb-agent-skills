@@ -106,7 +106,7 @@ db.posts.updateOne(
 - **Arrays of primitives**: `tags: ["a", "b", "c"]` is much cheaper than array of objects.
 - **Infrequent writes**: If array is updated once per day, 200ms writes may be acceptable.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Find documents with large arrays

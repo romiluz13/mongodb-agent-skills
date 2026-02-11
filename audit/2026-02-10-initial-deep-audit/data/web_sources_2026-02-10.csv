@@ -1,0 +1,17 @@
+source_id,url,domain,topic,key_assertion,last_checked_date
+SRC-001,https://www.mongodb.com/docs/atlas/atlas-vector-search/changelog/,mongodb.com,Atlas Vector Search changelog,Nov 24 2025 lexical prefilter preview; Jun 25 2025 views+8.1; Mar 30 2025 8192 dimensions,2026-02-10
+SRC-002,https://www.mongodb.com/docs/atlas/atlas-search/changelog/,mongodb.com,Atlas Search changelog,Contains recent search platform release updates including 2026 entries,2026-02-10
+SRC-003,https://www.mongodb.com/docs/atlas/atlas-vector-search/hybrid-search/vector-search-with-rankfusion/,mongodb.com,Hybrid rank fusion tutorial,States vectorSearch in rankFusion input pipeline starts in v8.1,2026-02-10
+SRC-004,https://www.mongodb.com/docs/manual/reference/operator/aggregation/rankFusion/,mongodb.com,Manual rankFusion stage,rankFusion availability baseline is MongoDB 8.0+,2026-02-10
+SRC-005,https://www.mongodb.com/docs/manual/reference/operator/aggregation/scoreFusion/,mongodb.com,Manual scoreFusion stage,scoreFusion availability baseline is MongoDB 8.2+,2026-02-10
+SRC-006,https://www.mongodb.com/docs/manual/reference/operator/aggregation/vectorSearch/,mongodb.com,Manual vectorSearch stage,States vectorSearch can be used in unionWith starting MongoDB 8.0,2026-02-10
+SRC-007,https://www.mongodb.com/docs/atlas/atlas-search/operators-collectors/vectorSearch/,mongodb.com,Search vectorSearch operator,Documents lexical prefilter-capable vectorSearch operator under search,2026-02-10
+SRC-008,https://www.mongodb.com/docs/manual/release-notes/8.0/,mongodb.com,MongoDB 8.0 release notes,Introduces query settings; updateOne/replaceOne sort option; bulkWrite command,2026-02-10
+SRC-009,https://www.mongodb.com/docs/manual/release-notes/8.1-compatibility/,mongodb.com,MongoDB 8.1 compatibility,Includes queryStats count/distinct note and errorAndLog downgrade caution,2026-02-10
+SRC-010,https://www.mongodb.com/docs/manual/reference/command/setQuerySettings/,mongodb.com,setQuerySettings command,comment field available starting in 8.1 and 8.0.4,2026-02-10
+SRC-011,https://www.mongodb.com/docs/manual/reference/operator/aggregation/querySettings/,mongodb.com,querySettings stage,Examples call out comment field availability in 8.1 and 8.0.4,2026-02-10
+SRC-012,https://www.mongodb.com/docs/manual/reference/command/bulkWrite/,mongodb.com,bulkWrite command,Defines cross-collection batch command semantics without cross-collection atomicity guarantee,2026-02-10
+SRC-013,https://www.mongodb.com/docs/manual/core/schema-validation/handle-invalid-documents/,mongodb.com,Schema validation action,errorAndLog introduced in 8.1 and operational behavior for invalid docs,2026-02-10
+SRC-014,https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/,mongodb.com,Vector index type,HNSW parameter bounds/defaults and vector index field constraints,2026-02-10
+SRC-015,https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-stage/,mongodb.com,Vector search stage behavior,First-stage behavior guidance and vector-search query semantics,2026-02-10
+SRC-016,https://www.mongodb.com/docs/manual/reference/operator/query/or/,mongodb.com,Query operator reference,Canonical per-operator query URL pattern for stable rule references,2026-02-10

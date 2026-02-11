@@ -124,4 +124,10 @@ db.runCommand({
 - Already using pre-quantized embeddings from model
 - Testing/development environments
 
+## Verify with
+
+1. Run the "Correct" index or query example on a staging dataset.
+2. Validate expected behavior and performance using explain and Atlas metrics.
+3. Confirm version-gated behavior on your target MongoDB release before production rollout.
+
 Reference: [MongoDB Vector Quantization](https://mongodb.com/docs/atlas/atlas-vector-search/vector-quantization/)

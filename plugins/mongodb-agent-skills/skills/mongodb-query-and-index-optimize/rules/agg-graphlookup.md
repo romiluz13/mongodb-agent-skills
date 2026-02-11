@@ -233,7 +233,7 @@ db.collection.aggregate([
 - **Huge graphs without limits**: Millions of connected nodes without `maxDepth` = memory explosion.
 - **Strict trees**: For hierarchies with single parent, materialized paths or nested sets are more efficient for common operations.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Test $graphLookup performance

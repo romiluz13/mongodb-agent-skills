@@ -135,7 +135,7 @@ db.sensor_data.insertOne({
 - **Low volume**: <1000 events/day per entity doesn't justify bucketing complexity.
 - **Varied event sizes**: Bucketing works best when events are uniform size.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check document counts - should be low for time-series

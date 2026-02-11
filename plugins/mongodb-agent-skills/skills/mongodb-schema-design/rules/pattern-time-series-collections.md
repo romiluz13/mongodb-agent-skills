@@ -237,7 +237,7 @@ sh.shardCollection("mydb.sensor_data", { "metadata.region": 1 })
 - **Need transactions**: Time series collections don't support multi-document transactions.
 - **Complex queries on measurements**: If you mostly query by non-time fields, regular collections may be better.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Analyze time series collection efficiency

@@ -148,7 +148,7 @@ db.system.profile.aggregate([
 - **$where and $text without index**: These have special requirements.
 - **Negation operators alone**: `{ field: { $ne: value } }` rarely uses indexes well.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Quick check: Is my query using an index?

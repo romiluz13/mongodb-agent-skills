@@ -261,7 +261,7 @@ db.stores.aggregate([
 - **Text location**: If locations are addresses (not coordinates), you need geocoding first.
 - **Very high precision required**: Geospatial indexes have precision limits.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Analyze geospatial index and query

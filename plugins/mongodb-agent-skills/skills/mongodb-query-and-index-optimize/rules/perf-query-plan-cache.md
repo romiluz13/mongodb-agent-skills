@@ -9,6 +9,34 @@ tags: performance, query-plan, cache, optimization, planCacheStats, explain
 
 **MongoDB caches query plans to avoid re-evaluating indexes for every query.** The query planner evaluates candidate plans during a trial period, selects the most efficient one, and caches it for subsequent queries with the same shape. Understanding cache behavior helps you diagnose unexpected plan changes and performance regressions.
 
+**Incorrect (blindly clearing cache and forcing replanning):**
+
+```javascript
+// Clearing entire cache on every deploy or incident
+db.orders.getPlanCache().clear()
+// Problem: forces expensive replanning for all query shapes
+// and can create avoidable latency spikes
+```
+
+**Correct (inspect first, then clear only when justified):**
+
+```javascript
+// 1) Inspect current cached state for this collection
+db.orders.aggregate([{ $planCacheStats: {} }])
+
+// 2) Verify actual winning plan for the problem query
+db.orders.find({ status: "pending" })
+  .sort({ createdAt: -1 })
+  .explain("executionStats")
+
+// 3) If needed, clear only the affected query shape
+db.orders.getPlanCache().clearPlansByQuery(
+  { status: "pending" },
+  { createdAt: -1 },
+  { _id: 1, status: 1, total: 1 }
+)
+```
+
 **How the plan cache works:**
 
 ```javascript
@@ -200,7 +228,7 @@ db.orders.find({ status: "pending" }).sort({ createdAt: -1 }).explain()
 - **Infrequent queries**: One-off queries don't benefit from caching.
 - **After intentional index changes**: Cache invalidation is expected.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Comprehensive plan cache analysis

@@ -5,20 +5,28 @@
   "type": "module",
   "scripts": {
     "build": "pnpm build-agents && pnpm extract-tests",
-    "build-agents": "pnpm build-schema && pnpm build-query",
+    "build-agents": "pnpm build-schema && pnpm build-query && pnpm build-ai",
     "build-schema": "tsx src/build.ts mongodb-schema-design",
     "build-query": "tsx src/build.ts mongodb-query-and-index-optimize",
-    "extract-tests": "pnpm extract-tests-schema && pnpm extract-tests-query",
+    "build-ai": "tsx src/build.ts mongodb-ai",
+    "extract-tests": "pnpm extract-tests-schema && pnpm extract-tests-query && pnpm extract-tests-ai",
     "extract-tests-schema": "tsx src/extract-tests.ts mongodb-schema-design",
     "extract-tests-query": "tsx src/extract-tests.ts mongodb-query-and-index-optimize",
+    "extract-tests-ai": "tsx src/extract-tests.ts mongodb-ai",
+    "check-links": "tsx src/check-links.ts",
+    "check-version-claims": "tsx src/check-version-claims.ts",
+    "check-semantic-invariants": "tsx src/check-semantic-invariants.ts",
+    "check-release-watch": "tsx src/check-release-watch.ts",
     "validate": "tsx src/validate.ts",
-    "dev": "pnpm build && pnpm validate"
+    "dev": "pnpm build && pnpm validate && pnpm check-version-claims && pnpm check-semantic-invariants && pnpm check-release-watch"
   },
   "keywords": [
     "mongodb",
     "schema-design",
     "query-optimization",
     "indexing",
+    "vector-search",
+    "retrieval-augmented-generation",
     "llm",
     "agents"
   ],

@@ -67,7 +67,7 @@ db.runCommand({
 |--------|----------|----------|
 | `error` | Reject invalid documents | Production, data integrity critical |
 | `warn` | Allow but log warning | Discovery phase, monitoring |
-| `errorAndLog` (v8.1+) | Reject AND log | Production with audit trail |
+| `errorAndLog` (v8.1+) | Reject AND log | Production with audit trail (plan downgrade path) |
 
 **Migration workflow—adding validation to existing collection:**
 
@@ -162,6 +162,20 @@ db.adminCommand({ getLog: "global" }).log.filter(
 )
 ```
 
+**Downgrade caution for `errorAndLog`:**
+
+```javascript
+// If a collection uses validationAction: "errorAndLog",
+// downgrade to older versions is blocked until you:
+// 1) change validationAction to a supported mode (error/warn), or
+// 2) drop the collection.
+
+db.runCommand({
+  collMod: "users",
+  validationAction: "error" // or "warn"
+})
+```
+
 **Bypassing validation (use sparingly):**
 
 ```javascript
@@ -224,7 +238,7 @@ db.users.insertOne({ schemaVersion: 2, firstName: "Bob", lastName: "Smith" })  /
 - **Legacy systems integration**: External data may not conform.
 - **Feature flag rollouts**: New fields may be optional initially.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check current validation settings

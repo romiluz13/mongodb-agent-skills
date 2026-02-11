@@ -225,7 +225,7 @@ measurePartialIndexSavings(
 - **Small percentage excluded**: If only 10% excluded, complexity may not be worth the savings.
 - **Date-based filters**: Static dates in partialFilterExpression don't auto-update.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check if query uses partial index

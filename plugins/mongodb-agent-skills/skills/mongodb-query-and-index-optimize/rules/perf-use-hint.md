@@ -34,7 +34,7 @@ db.orders.find({
 - **Unknown query patterns**: Hints can lock in a bad plan.
 - **Rapidly changing indexes**: Hints break if the index is removed.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Compare plans with and without hint

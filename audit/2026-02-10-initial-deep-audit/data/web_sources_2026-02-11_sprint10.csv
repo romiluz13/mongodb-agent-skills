@@ -1,0 +1,7 @@
+source_url,area,claim_verified,checked_at_utc
+https://github.com/vercel-labs/skills,agent-installation,skills CLI is the canonical multi-agent installation tool,2026-02-11T09:40:00Z
+https://github.com/vercel-labs/skills/blob/main/README.md,agent-installation,CLI supports Claude Code Codex Cursor and explicit --agent targeting with npx skills add,2026-02-11T09:40:00Z
+https://github.com/vercel-labs/skills/blob/main/src/agents.ts,agent-installation,Agent path mapping includes Claude Code Codex Cursor project/global directories,2026-02-11T09:40:00Z
+https://github.com/vercel-labs/skills/blob/main/src/installer.ts,agent-installation,Installer uses canonical .agents/skills model with symlink-first copy-fallback semantics,2026-02-11T09:40:00Z
+https://github.com/vercel-labs/skills/blob/main/src/plugin-manifest.ts,agent-installation,Plugin manifest compatibility includes .claude-plugin marketplace and plugin manifests,2026-02-11T09:40:00Z
+https://github.com/vercel-labs/agent-skills,reference-skills,Vercel reference skills repository remains current install source used by skills CLI examples,2026-02-11T09:40:00Z

@@ -33,7 +33,7 @@ db.orders.find({ status: "pending", createdAt: { $gte: ISODate("2025-01-01") } }
 - **Not on Atlas**: Use profiler and explain() instead.
 - **Synthetic workloads only**: Advisor needs real traffic to be effective.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // After creating suggested index, confirm plan improves

@@ -141,7 +141,7 @@ db.users.find(
 - **Frequent schema changes**: Projection breaks if fields are renamed; exclusion mode is safer.
 - **Covered query optimization**: You might need specific fields in index for coverage.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Compare response sizes

@@ -1,0 +1,10 @@
+source_url,area,claim_verified,checked_at_utc
+https://www.mongodb.com/docs/manual/release-notes/8.2/,release-line,Patch release list includes 8.2.1 (Oct 3 2025) through 8.2.5 (Feb 10 2026),2026-02-10T00:00:00Z
+https://www.mongodb.com/docs/manual/reference/operator/aggregation/rankFusion/,mongodb-ai,rankFusion is available on MongoDB deployments v8.0+,2026-02-10T00:00:00Z
+https://www.mongodb.com/docs/manual/reference/operator/aggregation/scoreFusion/,mongodb-ai,scoreFusion is available on MongoDB deployments v8.2+,2026-02-10T00:00:00Z
+https://www.mongodb.com/docs/atlas/atlas-vector-search/changelog/,mongodb-ai,Atlas Vector Search changelog includes lexical prefilters in Public Preview (Nov 2025),2026-02-10T00:00:00Z
+https://www.mongodb.com/docs/manual/reference/operator/aggregation/queryStats/,query-index,queryStats docs include 8.2 CPU and delinquency metrics guidance (cpuNanos and delinquency fields),2026-02-10T00:00:00Z
+https://www.mongodb.com/docs/manual/reference/command/setQuerySettings/,query-index,setQuerySettings comment field is version-gated (8.1 and 8.0.4+),2026-02-10T00:00:00Z
+https://agentskills.io/llms.txt,agent-skills,Agent Skills docs entrypoints include specification and integration docs,2026-02-10T00:00:00Z
+https://agentskills.io/specification,agent-skills,Specification defines SKILL.md requirements and optional scripts/references/assets folders,2026-02-10T00:00:00Z
+https://agentskills.io/integrate-skills,agent-skills,Integration docs define installation and local skills loading paths,2026-02-10T00:00:00Z

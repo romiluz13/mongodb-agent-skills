@@ -239,4 +239,10 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
 - Complex computed filters (use post-filter with larger limit)
 - Filtering on nested arrays (not supported in pre-filter)
 
+## Verify with
+
+1. Run the "Correct" index or query example on a staging dataset.
+2. Validate expected behavior and performance using explain and Atlas metrics.
+3. Confirm version-gated behavior on your target MongoDB release before production rollout.
+
 Reference: [MongoDB $vectorSearch Filter](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-stage/#std-label-vectorSearch-filter)

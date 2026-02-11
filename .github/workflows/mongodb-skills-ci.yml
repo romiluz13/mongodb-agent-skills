@@ -4,13 +4,15 @@ on:
   push:
     branches: [main]
     paths:
-      - 'skills/**'
-      - 'packages/**'
+      - 'plugins/mongodb-agent-skills/skills/**'
+      - 'packages/mongodb-skills-build/**'
+      - '.github/workflows/mongodb-skills-ci.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'skills/**'
-      - 'packages/**'
+      - 'plugins/mongodb-agent-skills/skills/**'
+      - 'packages/mongodb-skills-build/**'
+      - '.github/workflows/mongodb-skills-ci.yml'
 
 jobs:
   validate:
@@ -36,26 +38,34 @@ jobs:
         working-directory: packages/mongodb-skills-build
         run: pnpm install
 
-      - name: Validate mongodb-schema-design
+      - name: Validate all skills
         working-directory: packages/mongodb-skills-build
-        run: pnpm validate mongodb-schema-design
+        run: pnpm validate
 
-      - name: Validate mongodb-query-and-index-optimize
+      - name: Build AGENTS and test-cases for all skills
         working-directory: packages/mongodb-skills-build
-        run: pnpm validate mongodb-query-and-index-optimize
+        run: pnpm build
 
-      - name: Build mongodb-schema-design
+      - name: Check reference link health
         working-directory: packages/mongodb-skills-build
-        run: pnpm build-schema
+        run: pnpm check-links
 
-      - name: Build mongodb-query-and-index-optimize
+      - name: Check version-sensitive claims
         working-directory: packages/mongodb-skills-build
-        run: pnpm build-query
+        run: pnpm check-version-claims
+
+      - name: Check high-risk semantic invariants
+        working-directory: packages/mongodb-skills-build
+        run: pnpm check-semantic-invariants
+
+      - name: Check release-line drift
+        working-directory: packages/mongodb-skills-build
+        run: pnpm check-release-watch
 
       - name: Check for uncommitted changes
         run: |
           if [ -n "$(git status --porcelain)" ]; then
-            echo "::error::AGENTS.md files are out of sync. Run 'pnpm build' and commit the changes."
+            echo "::error::Generated artifacts are out of sync. Run 'pnpm --dir packages/mongodb-skills-build build' and commit the changes."
             git diff
             exit 1
           fi

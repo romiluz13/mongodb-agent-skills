@@ -166,4 +166,10 @@ db.longTermMemory.createIndex({ userId: 1, importance: -1 })
 - Privacy-sensitive applications (implement appropriate data handling)
 - Single-session interactions only
 
+## Verify with
+
+1. Run the "Correct" index or query example on a staging dataset.
+2. Validate expected behavior and performance using explain and Atlas metrics.
+3. Confirm version-gated behavior on your target MongoDB release before production rollout.
+
 Reference: [MongoDB AI Agents](https://mongodb.com/docs/atlas/atlas-vector-search/ai-agents/)

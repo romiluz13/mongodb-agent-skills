@@ -145,4 +145,10 @@ const recall = matches / ennResults.length  // Should be > 0.9
 - numCandidates > 10,000 (MongoDB maximum)
 - When latency is more important than recall
 
+## Verify with
+
+1. Run the "Correct" index or query example on a staging dataset.
+2. Validate expected behavior and performance using explain and Atlas metrics.
+3. Confirm version-gated behavior on your target MongoDB release before production rollout.
+
 Reference: [MongoDB $vectorSearch numCandidates](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-stage/#std-label-vectorSearch-numCandidates)

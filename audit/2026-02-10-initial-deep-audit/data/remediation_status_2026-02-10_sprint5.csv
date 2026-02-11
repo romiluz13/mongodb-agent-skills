@@ -1,0 +1,5 @@
+task_id,status,completed_at,evidence_file,evidence_note
+FIX-028,DONE,2026-02-10,27-sprint-5-execution-log.md,All Query/Schema rules normalized to include `## Verify with`
+FIX-029,DONE,2026-02-10,27-sprint-5-execution-log.md,Expanded check-version-claims to enforce verify+preview safeguards
+FIX-030,DONE,2026-02-10,27-sprint-5-execution-log.md,Corrected section-level drift in query and AI _sections summaries
+FIX-031,DONE,2026-02-10,27-sprint-5-execution-log.md,Updated version reconciliation and refreshed compatibility-source evidence

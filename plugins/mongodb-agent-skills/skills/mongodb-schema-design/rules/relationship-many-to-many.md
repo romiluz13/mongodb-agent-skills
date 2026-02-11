@@ -155,7 +155,7 @@ session.withTransaction(async () => {
 - **Frequently changing relationships**: If students change classes hourly, overhead of updating both sides is high.
 - **No primary query direction**: If truly 50/50 query split, consider hybrid approach.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Check array sizes in many-to-many relationships

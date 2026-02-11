@@ -84,7 +84,7 @@ db.customers.updateOne(
 - **Unbounded relationships**: User with 10,000 orders should NOT embed all orders.
 - **Regulatory requirements**: Some compliance rules require normalized audit trails.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Count your collections vs expected entities

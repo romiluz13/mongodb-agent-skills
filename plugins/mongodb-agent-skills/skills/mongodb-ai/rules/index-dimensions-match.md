@@ -35,6 +35,16 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
     similarity: "cosine"
   }]
 })
+
+// WRONG: Exceeding maximum supported dimensions
+db.products.createSearchIndex("vector_index", "vectorSearch", {
+  fields: [{
+    type: "vector",
+    path: "embedding",
+    numDimensions: 9000,  // Exceeds maximum supported (8192)
+    similarity: "cosine"
+  }]
+})
 ```
 
 **Correct (matching model dimensions):**
@@ -126,5 +136,11 @@ db.products.getSearchIndexes()
 
 - Using variable-length sparse vectors (not supported)
 - Changing embedding models (requires re-embedding all data)
+
+## Verify with
+
+1. Run the "Correct" index or query example on a staging dataset.
+2. Validate expected behavior and performance using explain and Atlas metrics.
+3. Confirm version-gated behavior on your target MongoDB release before production rollout.
 
 Reference: [MongoDB Vector Index Definition](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/#std-label-avs-types-vector-numDimensions)

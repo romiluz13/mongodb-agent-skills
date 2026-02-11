@@ -9,6 +9,8 @@ tags: schema, validation, rollout, migration, validationAction, validationLevel
 
 **Introduce validation in phases on existing collections.** Start with `validationAction: "warn"` so you can identify invalid documents without breaking writes, then backfill and switch to `"error"` when clean.
 
+If you use `validationAction: "errorAndLog"` (MongoDB 8.1+), include a downgrade rollback step in your runbook.
+
 **Incorrect (enable strict validation immediately):**
 
 ```javascript
@@ -44,12 +46,23 @@ db.runCommand({
 })
 ```
 
+**Rollback/downgrade safety step for `errorAndLog`:**
+
+```javascript
+// Before downgrading to versions that do not support errorAndLog,
+// switch validationAction back to error or warn.
+db.runCommand({
+  collMod: "users",
+  validationAction: "error"
+})
+```
+
 **When NOT to use this pattern:**
 
 - **Brand new collections**: Use `validationAction: "error"` immediately.
 - **Offline maintenance windows**: You can fix data first and enable strict mode directly.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Inspect current validation settings

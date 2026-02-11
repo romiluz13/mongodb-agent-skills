@@ -18,9 +18,24 @@ This skill bridges that knowledge gap with accurate, up-to-date guidance.
 
 ## Installation
 
-### Claude Code
+### Agent Skills CLI (recommended)
+```bash
+npx skills add romiluz13/mongodb-agent-skills --skill mongodb-ai -a claude-code -a codex -a cursor
+```
+
+### Manual Claude Code
 ```bash
 cp -r mongodb-ai ~/.claude/skills/
+```
+
+### Manual Codex
+```bash
+cp -r mongodb-ai ~/.codex/skills/
+```
+
+### Manual Cursor
+```bash
+cp -r mongodb-ai ~/.cursor/skills/
 ```
 
 ### Claude.ai

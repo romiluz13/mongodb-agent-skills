@@ -232,7 +232,7 @@ db.products.insertOne({ name: "", price: -5 })
 - **Schema-less by design**: Some applications intentionally allow arbitrary fields.
 - **Very complex cross-field logic**: Use query operators or application validation instead.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // View existing validation rules

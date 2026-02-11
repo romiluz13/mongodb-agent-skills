@@ -9,6 +9,8 @@ tags: querySettings, hint, plan, index, MongoDB-8.0, optimization
 
 **MongoDB 8.0 introduced Query Settings**, a way to persistently associate index hints and other settings with query shapes. Unlike `hint()` which requires application code changes, query settings apply automatically to matching queries cluster-wide.
 
+Starting in MongoDB 8.0, query settings are the preferred replacement for deprecated index filters.
+
 **Incorrect (hardcoding hints in application):**
 
 ```javascript
@@ -35,7 +37,8 @@ db.adminCommand({
     indexHints: {
       ns: { db: "mydb", coll: "orders" },
       allowedIndexes: [{ status: 1, region: 1, createdAt: -1 }]
-    }
+    },
+    comment: "force compound index for regional order-status query shape"
   }
 })
 
@@ -43,6 +46,52 @@ db.adminCommand({
 db.orders.find({ status: "pending", region: "us-east" })  // Uses hint
 db.orders.find({ status: "shipped", region: "eu-west" })   // Uses hint
 // No application code changes needed
+```
+
+**Version note for `settings.comment`:**
+
+```javascript
+// `settings.comment` is available starting in MongoDB 8.1
+// and in MongoDB 8.0.4+ patch releases
+db.adminCommand({
+  setQuerySettings: {
+    find: "orders",
+    filter: { status: { $eq: {} } },
+    $db: "mydb"
+  },
+  settings: {
+    reject: false,
+    comment: { reason: "temporary routing during index rollout", owner: "db-team" }
+  }
+})
+```
+
+**Migrate from index filters to query settings:**
+
+```javascript
+// Legacy (deprecated in MongoDB 8.0): plan cache index filters
+db.runCommand({
+  planCacheSetFilter: "orders",
+  query: { status: { $exists: true } },
+  sort: { createdAt: -1 },
+  indexes: ["status_1_createdAt_-1"]
+})
+
+// Preferred: persistent, cluster-scoped query settings
+db.adminCommand({
+  setQuerySettings: {
+    find: "orders",
+    filter: { status: { $eq: {} } },
+    sort: { createdAt: -1 },
+    $db: "mydb"
+  },
+  settings: {
+    indexHints: {
+      ns: { db: "mydb", coll: "orders" },
+      allowedIndexes: ["status_1_createdAt_-1"]
+    }
+  }
+})
 ```
 
 **Query shapes use placeholders:**
@@ -123,5 +172,13 @@ db.logs.find({})  // Error: query rejected by query settings
 - **Temporary testing**: Use `hint()` for one-time testing instead.
 - **Dynamic query patterns**: Query shapes must be predictable.
 - **Instead of proper indexing**: Fix the index strategy first; settings are a workaround.
+- **Using legacy index filters by default**: Prefer query settings (index filters are deprecated).
+
+
+## Verify with
+
+1. Run representative queries with `explain("executionStats")` before and after applying this rule.
+2. Compare latency and scan efficiency (`totalDocsExamined`, `totalKeysExamined`, `nReturned`).
+3. Confirm workload-level behavior using `$queryStats`, profiler, or Atlas Performance Advisor.
 
 Reference: [Query Settings](https://mongodb.com/docs/manual/reference/command/setQuerySettings/)

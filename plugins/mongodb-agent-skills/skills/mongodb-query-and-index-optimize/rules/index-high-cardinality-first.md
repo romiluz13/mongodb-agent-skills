@@ -133,7 +133,7 @@ db.users.createIndex({ tenantId: 1, role: 1, status: 1 })
 - **Covered query requirements**: Projection fields may need specific index positions.
 - **Near-equal cardinality**: If fields have similar cardinality, prefer the one queried more often as leading field.
 
-**Verify with:**
+## Verify with
 
 ```javascript
 // Compare index efficiency for different orderings

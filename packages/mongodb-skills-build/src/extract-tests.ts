@@ -5,9 +5,12 @@
  * Usage:
  *   npx tsx src/extract-tests.ts mongodb-schema-design
  *   npx tsx src/extract-tests.ts mongodb-query-and-index-optimize
+ *   npx tsx src/extract-tests.ts mongodb-ai
  *
  * Or via npm scripts:
- *   pnpm extract-tests mongodb-schema-design
+ *   pnpm extract-tests-schema
+ *   pnpm extract-tests-query
+ *   pnpm extract-tests-ai
  */
 
 import { readdir, writeFile } from 'fs/promises'
