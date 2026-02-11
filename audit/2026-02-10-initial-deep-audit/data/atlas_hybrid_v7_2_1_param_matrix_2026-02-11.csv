@@ -1,0 +1,16 @@
+parameter_id,parameter,upstream_evidence,skill_rule,status,action
+P01,unified_search_vector_operator,"lib/pipelineStages.js uses $search.vectorSearch","mongodb-ai/rules/query-lexical-prefilter.md",covered,none
+P02,lexical_prefilters_fuzzy_phrase_compound,"vectorSearch.filter compound text/phrase patterns","mongodb-ai/rules/query-lexical-prefilter.md",covered,none
+P03,rank_fusion,"components/rrf.js uses $rankFusion","mongodb-ai/rules/hybrid-rankfusion.md",covered,none
+P04,score_fusion,"components/rsf.js and steering.js use $scoreFusion","mongodb-ai/rules/hybrid-scorefusion.md",covered,none
+P05,hybrid_weights,"rrf/rsf weighted blending controls","mongodb-ai/rules/hybrid-weights.md",covered,none
+P06,custom_expression_combination,"rsf.js and steering.js use method=expression","mongodb-ai/rules/hybrid-scorefusion.md",covered,none
+P07,score_details,"rrf.js and rsf.js request scoreDetails","mongodb-ai/rules/hybrid-rankfusion.md;mongodb-ai/rules/hybrid-scorefusion.md",covered,none
+P08,field_level_filter_composition,"filter-fields.js with any/all behavior","mongodb-ai/rules/query-lexical-prefilter.md",covered,none
+P09,prefilter_before_vector,"vectorSearch.filter candidate narrowing","mongodb-ai/rules/query-prefiltering.md",covered,none
+P10,score_meta_semantics,"$meta:searchScore projection after $search","mongodb-ai/rules/query-lexical-prefilter.md;mongodb-ai/rules/query-get-scores.md",covered,none
+P11,version_gating_80_81_82,"README compatibility matrix + fusion code","mongodb-ai/rules/hybrid-rankfusion.md;mongodb-ai/rules/hybrid-scorefusion.md",covered,none
+P12,subpipeline_stage_allowlist,"MongoDB docs + fusion implementations","mongodb-ai/rules/hybrid-limitations.md",fixed,added_skip_and_rankfusion_sample_note
+P13,cross_collection_strategy,"union-style fallback patterns","mongodb-ai/rules/hybrid-limitations.md",covered,none
+P14,perf_explainability,"tunable configs and explain requirement","mongodb-ai/rules/perf-explain-vectorsearch.md",covered,none
+P15,security_patch_signal,"v7.2.1 axios dependency bump","release_audit_process",covered,none

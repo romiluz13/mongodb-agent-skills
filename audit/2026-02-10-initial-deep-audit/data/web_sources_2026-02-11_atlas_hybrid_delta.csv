@@ -1,0 +1,8 @@
+source_id,url,topic,used_for,date_checked
+AHD-001,https://github.com/JohnGUnderwood/atlas-hybrid-search/compare/v7.2...v7.2.1,upstream-diff,verify exact delta scope and changed surface,2026-02-11
+AHD-002,https://github.com/JohnGUnderwood/atlas-hybrid-search,upstream-repo,inspect implementation-level hybrid/vector patterns,2026-02-11
+AHD-003,https://www.mongodb.com/docs/manual/reference/operator/aggregation/rankFusion/,rankfusion-docs,verify stage availability and sub-pipeline allowlist,2026-02-11
+AHD-004,https://www.mongodb.com/docs/manual/reference/operator/aggregation/scoreFusion/,scorefusion-docs,verify normalization/combination/stage constraints,2026-02-11
+AHD-005,https://www.mongodb.com/docs/atlas/atlas-search/operators-collectors/vectorSearch/,lexical-prefilter-docs,validate $search.vectorSearch operator behavior and preview caveats,2026-02-11
+AHD-006,https://www.mongodb.com/docs/atlas/atlas-vector-search/hybrid-search/,hybrid-tutorial,cross-check practical hybrid constraints guidance,2026-02-11
+AHD-007,https://www.mongodb.com/docs/manual/release-notes/8.2-changelog/,release-line,confirm 8.2.5 baseline remains current in audit context,2026-02-11

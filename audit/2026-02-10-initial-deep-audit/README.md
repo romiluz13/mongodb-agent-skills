@@ -50,6 +50,8 @@
 41. `40-final-validation-sprint12.md`
 42. `41-sprint-13-release-readiness-log.md`
 43. `42-final-web-validation-release.md`
+44. `43-atlas-hybrid-search-v7-2-1-deep-delta-audit.md`
+45. `44-atlas-hybrid-search-repo-deep-dive.md`
 
 ## Data Artifacts
 
@@ -89,6 +91,10 @@
 - `data/transactions_docs_coverage_2026-02-11.csv`
 - `data/web_sources_2026-02-11_sprint13.csv`
 - `data/release_version_matrix_2026-02-11.csv`
+- `data/atlas_hybrid_v7_2_1_param_matrix_2026-02-11.csv`
+- `data/web_sources_2026-02-11_atlas_hybrid_delta.csv`
+- `data/atlas_hybrid_repo_findings_2026-02-11.csv`
+- `data/web_sources_2026-02-11_atlas_hybrid_repo_deep.csv`
 
 ## Severity Legend
 

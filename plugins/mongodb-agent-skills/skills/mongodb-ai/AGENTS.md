@@ -4673,7 +4673,11 @@ db.products.aggregate([
 
 | `$sort` | Yes | Re-order results |
 
-| `$limit` | Yes | Limit results |
+| `$sample` | Yes* | Random sampling in sub-pipelines |
+
+| `$skip` | Yes | Candidate paging inside sub-pipelines |
+
+| `$limit` | Yes | Limit candidate/results per sub-pipeline |
 
 | `$geoNear` | Yes | Geographic search |
 
@@ -4684,6 +4688,8 @@ db.products.aggregate([
 | `$lookup` | **No** | Same collection only |
 
 | `$unwind` | **No** | Not supported |
+
+`*` `$sample` support is documented for `$rankFusion`; verify `$scoreFusion` support on your target MongoDB patch release before production rollout.
 
 **Key Limitations:**
 
@@ -4704,9 +4710,10 @@ db.products.aggregate([
   }
 }
 
-// 4. No pagination support
-// Can't use skip/limit across fused results
-// Workaround: Request more results and paginate in application
+// 4. No stable global pagination across fused output
+// You can use $skip/$limit in each sub-pipeline to control candidates,
+// but end-to-end paging over fused/merged output is release-sensitive.
+// Workaround: Request a larger window and paginate in application code.
 
 // 5. Same collection only
 // For cross-collection, use $unionWith separately
