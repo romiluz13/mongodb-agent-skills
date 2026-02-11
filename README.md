@@ -139,55 +139,7 @@ db.logs.aggregate([{ $group: ... }])            // Memory exhaustion, no $match
 
 ## `=>  Installation`
 
-### Option 1: Project CLI (Strict, Recommended)
-
-Use the repo script when you want deterministic installs for just `claude-code`, `codex`, and `cursor` without automatic extra agent selection.
-
-```bash
-# From this repository root
-./scripts/mongodb-skills-cli.sh install-all
-
-# Install selected skills only
-./scripts/mongodb-skills-cli.sh install-select --skills mongodb-ai,mongodb-schema-design
-
-# Uninstall selected skills only
-./scripts/mongodb-skills-cli.sh uninstall-select --skills mongodb-ai
-
-# Uninstall all MongoDB skills from target agents
-./scripts/mongodb-skills-cli.sh uninstall-all
-
-# Clean reinstall from scratch (uninstall all + install all)
-./scripts/mongodb-skills-cli.sh reset
-
-# Inspect current installation state
-./scripts/mongodb-skills-cli.sh list
-```
-
-Optional target override:
-
-```bash
-# Default agents are: claude-code,codex,cursor
-./scripts/mongodb-skills-cli.sh install-all --agents claude-code,codex
-```
-
-### Option 2: Agent Skills CLI
-
-Works with **Claude Code, Codex, Cursor, and 35+ other agents**.
-
-```bash
-# Install all MongoDB skills into Claude Code + Codex + Cursor (project scope)
-npx skills add romiluz13/mongodb-agent-skills --skill '*' -a claude-code -a codex -a cursor
-
-# Install globally (available across all projects)
-npx skills add romiluz13/mongodb-agent-skills -g --skill '*' -a claude-code -a codex -a cursor
-
-# Optional: install one skill only
-npx skills add romiluz13/mongodb-agent-skills --skill mongodb-ai -a claude-code -a codex -a cursor
-```
-
-*Use `npx skills check` and `npx skills update` to keep installed skills fresh.*
-
-### Option 3: Claude Code Plugin
+### Option 1: Claude Code Plugin (Easiest)
 
 ```bash
 # Add marketplace
@@ -197,13 +149,25 @@ npx skills add romiluz13/mongodb-agent-skills --skill mongodb-ai -a claude-code 
 /plugin install mongodb-agent-skills@mongodb-agent-skills
 ```
 
+### Option 2: MongoDB Skills CLI
+
+Works with **Claude Code, Codex, Cursor, and 35+ other agents**.
+
+```bash
+# Install all MongoDB skills
+npx skills add romiluz13/mongodb-agent-skills --skill '*' -a claude-code -a codex -a cursor
+
+# Install one skill only
+npx skills add romiluz13/mongodb-agent-skills --skill mongodb-ai -a claude-code -a codex -a cursor
+
+# Remove all installed skills from this repo (if needed)
+npx skills remove romiluz13/mongodb-agent-skills --skill '*' -a claude-code -a codex -a cursor -y
+```
+
 ### Verify Installation
 
 ```bash
-# Show installed skills for target agents (strict project CLI)
-./scripts/mongodb-skills-cli.sh list
-
-# Show installed skills for target agents (Agent Skills CLI)
+# Show installed skills for target agents
 npx skills list -a claude-code -a codex -a cursor
 
 # Check for updates later

@@ -97,33 +97,16 @@ Skills are loaded on-demand — only the skill name and description are loaded a
 
 Document these installation methods for users:
 
-**Project CLI (strict install target control, recommended):**
+**Claude Code plugin (put first in docs):**
 ```bash
-./scripts/mongodb-skills-cli.sh install-all
-./scripts/mongodb-skills-cli.sh install-select --skills mongodb-ai,mongodb-schema-design
-./scripts/mongodb-skills-cli.sh uninstall-all
-./scripts/mongodb-skills-cli.sh reset
-./scripts/mongodb-skills-cli.sh list
+/plugin marketplace add <owner>/<repo>
+/plugin install <plugin-name>@<plugin-name>
 ```
 
-**Agent Skills CLI (multi-agent ecosystem):**
+**Agent Skills CLI (second option in docs):**
 ```bash
+npx skills add <owner>/<repo> --skill '*' -a claude-code -a codex -a cursor
 npx skills add <owner>/<repo> --skill <skill-name> -a claude-code -a codex -a cursor
-```
-
-**Manual Claude Code fallback:**
-```bash
-cp -r skills/{skill-name} ~/.claude/skills/
-```
-
-**Manual Codex fallback:**
-```bash
-cp -r skills/{skill-name} ~/.codex/skills/
-```
-
-**Manual Cursor fallback:**
-```bash
-cp -r skills/{skill-name} ~/.cursor/skills/
 ```
 
 **claude.ai / web agents:**
