@@ -28,6 +28,45 @@
 
 ---
 
+## `=>  Installation`
+
+### Option 1: Claude Code Plugin (Easiest)
+
+```bash
+# Add marketplace
+/plugin marketplace add romiluz13/mongodb-agent-skills
+
+# Install
+/plugin install mongodb-agent-skills@mongodb-agent-skills
+```
+
+### Option 2: MongoDB Skills CLI
+
+Works with **Claude Code, Codex, Cursor, and 35+ other agents**.
+
+```bash
+# Install all MongoDB skills
+npx skills add romiluz13/mongodb-agent-skills --skill '*' -a claude-code -a codex -a cursor
+
+# Install one skill only
+npx skills add romiluz13/mongodb-agent-skills --skill mongodb-ai -a claude-code -a codex -a cursor
+
+# Remove all installed skills from this repo (if needed)
+npx skills remove romiluz13/mongodb-agent-skills --skill '*' -a claude-code -a codex -a cursor -y
+```
+
+### Verify Installation
+
+```bash
+# Show installed skills for target agents
+npx skills list -a claude-code -a codex -a cursor
+
+# Check for updates later
+npx skills check
+```
+
+---
+
 ## `>_ The Problem`
 
 ```javascript
@@ -134,45 +173,6 @@ db.logs.aggregate([{ $group: ... }])            // Memory exhaustion, no $match
 </td>
 </tr>
 </table>
-
----
-
-## `=>  Installation`
-
-### Option 1: Claude Code Plugin (Easiest)
-
-```bash
-# Add marketplace
-/plugin marketplace add romiluz13/mongodb-agent-skills
-
-# Install
-/plugin install mongodb-agent-skills@mongodb-agent-skills
-```
-
-### Option 2: MongoDB Skills CLI
-
-Works with **Claude Code, Codex, Cursor, and 35+ other agents**.
-
-```bash
-# Install all MongoDB skills
-npx skills add romiluz13/mongodb-agent-skills --skill '*' -a claude-code -a codex -a cursor
-
-# Install one skill only
-npx skills add romiluz13/mongodb-agent-skills --skill mongodb-ai -a claude-code -a codex -a cursor
-
-# Remove all installed skills from this repo (if needed)
-npx skills remove romiluz13/mongodb-agent-skills --skill '*' -a claude-code -a codex -a cursor -y
-```
-
-### Verify Installation
-
-```bash
-# Show installed skills for target agents
-npx skills list -a claude-code -a codex -a cursor
-
-# Check for updates later
-npx skills check
-```
 
 ---
 
