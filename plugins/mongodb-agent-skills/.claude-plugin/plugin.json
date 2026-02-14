@@ -22,5 +22,6 @@
     "data-modeling",
     "best-practices",
     "claude-code"
-  ]
+  ],
+  "skills": "./skills/"
 }

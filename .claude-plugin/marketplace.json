@@ -6,7 +6,7 @@
     "url": "https://github.com/romiluz13"
   },
   "metadata": {
-    "description": "MongoDB schema, query/index, AI/vector, and transaction consistency skills for AI coding agents",
+    "description": "MongoDB best practices skills for AI coding agents: schema design, query/index optimization, AI/vector search, and transaction consistency.",
     "version": "1.1.0"
   },
   "plugins": [
@@ -36,7 +36,13 @@
         "claude-code"
       ],
       "category": "database",
-      "source": "./plugins/mongodb-agent-skills"
+      "source": "./plugins/mongodb-agent-skills",
+      "skills": [
+        "./skills/mongodb-schema-design",
+        "./skills/mongodb-query-and-index-optimize",
+        "./skills/mongodb-ai",
+        "./skills/mongodb-transactions-consistency"
+      ]
     }
   ]
 }
