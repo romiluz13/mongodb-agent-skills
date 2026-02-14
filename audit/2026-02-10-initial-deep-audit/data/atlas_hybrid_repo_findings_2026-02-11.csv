@@ -1,9 +1,0 @@
-id,severity,area,file,line,issue,risk,recommended_action
-AHR-001,P1,config,/tmp/atlas-hybrid-search.2b1Omi/config.mjs,18,"default searchFields uses single string 'cast, genres'","field mapping/query path mismatch in default schema","split into two entries: cast and genres"
-AHR-002,P1,ingestion,/tmp/atlas-hybrid-search.2b1Omi/embed-data.mjs,83,"wait(250) not awaited","rate-limit mitigation ineffective during bulk embedding","use await wait(250)"
-AHR-003,P1,api-validation,/tmp/atlas-hybrid-search.2b1Omi/pages/api/rerank/index.js,7,"body validation uses && instead of ||","invalid payload may pass to rerank execution","validate each required field explicitly and return 400"
-AHR-004,P1,ui-security,/tmp/atlas-hybrid-search.2b1Omi/components/results.js,169,"dangerouslySetInnerHTML used for highlight rendering","possible XSS with untrusted indexed content","sanitize HTML or render tokenized fragments safely"
-AHR-005,P2,cache-write,/tmp/atlas-hybrid-search.2b1Omi/pages/api/embed/index.js,33,"query_cache updateOne not awaited","silent cache-write failures","await updateOne and optionally handle write errors"
-AHR-006,P2,ux-load,/tmp/atlas-hybrid-search.2b1Omi/components/home.js,66,"cache lookup on every keystroke without debounce","excess API chatter and UI jitter","debounce input or query only on idle/enter"
-AHR-007,P2,middleware-coupling,/tmp/atlas-hybrid-search.2b1Omi/middleware/router.js,8,"global model middleware chained for all routes","embedding model init failure can block unrelated routes","split route groups or lazy-attach model middleware only where needed"
-AHR-008,P2,tooling,/tmp/atlas-hybrid-search.2b1Omi/package.json,9,"lint command requires interactive setup (no committed eslint config)","no deterministic lint gate","commit eslint config and use non-interactive lint runner"

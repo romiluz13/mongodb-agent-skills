@@ -1,7 +1,0 @@
-source_id,url,topic,used_for,date_checked
-S13-001,https://www.mongodb.com/docs/manual/release-notes/8.2-changelog/,release-line,confirm latest 8.2 patch baseline for release-watch,2026-02-11
-S13-002,https://www.mongodb.com/docs/manual/release-notes/,release-index,verify current stable minor guidance and upgrade paths,2026-02-11
-S13-003,https://www.mongodb.com/docs/upcoming/release-notes/8.3/,future-line,confirm 8.3 is upcoming/not available and does not invalidate 8.2.5 stable baseline,2026-02-11
-S13-004,https://www.mongodb.com/docs/manual/core/transactions/,transactions-core,final semantics revalidation for release notes,2026-02-11
-S13-005,https://www.mongodb.com/docs/manual/core/transactions-in-applications/,transactions-app,final retry/error label revalidation,2026-02-11
-S13-006,https://www.mongodb.com/docs/manual/core/transactions-production-consideration/,transactions-ops,final production caveat revalidation,2026-02-11

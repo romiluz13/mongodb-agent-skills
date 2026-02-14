@@ -1,5 +1,0 @@
-url,http_status,final_url,finding
-https://mongodb.com/docs/atlas/sizing-tier-selection/,200,https://www.mongodb.com/docs/atlas/sizing-tier-selection/,Replacement for broken cluster-tier-overview link in perf-index-in-memory.md
-https://mongodb.com/docs/manual/reference/operator/query/ne/,200,https://www.mongodb.com/docs/manual/reference/operator/query/ne/,Replacement for generic query operator index link in query-avoid-ne-nin.md
-https://mongodb.com/docs/manual/reference/operator/query/nin/,200,https://www.mongodb.com/docs/manual/reference/operator/query/nin/,Additional specific operator reference for query-avoid-ne-nin.md
-ALL_SKILL_REFERENCES,200,N/A,pnpm check-links passed for all 94 unique reference URLs

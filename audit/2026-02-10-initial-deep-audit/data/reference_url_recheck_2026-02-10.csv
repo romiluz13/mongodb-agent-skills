@@ -1,4 +1,0 @@
-url,http_status,final_url,finding
-https://mongodb.com/docs/atlas/cluster-tier-overview/,404,https://www.mongodb.com/docs/atlas/cluster-tier-overview/,Broken reference in perf-index-in-memory.md
-https://mongodb.com/docs/manual/reference/operator/query/,404,https://www.mongodb.com/docs/manual/reference/operator/query/,Broken reference in query-avoid-ne-nin.md
-https://mongodb.com/docs/manual/reference/operator/query/or/,200,https://www.mongodb.com/docs/manual/reference/operator/query/or/,Canonical per-operator URL pattern works

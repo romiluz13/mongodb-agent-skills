@@ -1,6 +1,0 @@
-artifact,field,observed_value,expected_or_related_value
-mongodb-schema-design/SKILL.md,Design Patterns rules count,9,10 (quick reference + rule files)
-mongodb-schema-design/AGENTS.md,Abstract rule count,29,30 (rule files)
-mongodb-query-and-index-optimize/AGENTS.md,Version,2.1.0,2.3.0 (SKILL.md + metadata.json)
-mongodb-query-and-index-optimize/AGENTS.md,Abstract rule count,39,46 (rule files)
-mongodb-ai/AGENTS.md,Format,condensed manual guide,compiled per-rule guide parity with other skills

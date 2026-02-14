@@ -1,5 +1,0 @@
-task_id,status,completed_at,evidence_file,evidence_note
-FIX-024,DONE,2026-02-10,26-sprint-4-execution-log.md,Added release-sensitivity caveats across hybrid fusion rules
-FIX-025,DONE,2026-02-10,26-sprint-4-execution-log.md,Added queryStats stability caveat and strict-parser warning
-FIX-026,DONE,2026-02-10,26-sprint-4-execution-log.md,Added 8.2.x web revalidation audit artifact and refreshed web evidence CSV
-FIX-027,DONE,2026-02-10,26-sprint-4-execution-log.md,Added check-version-claims script and CI gate for critical version-sensitive assertions

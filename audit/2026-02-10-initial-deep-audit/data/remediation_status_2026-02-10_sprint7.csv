@@ -1,5 +1,0 @@
-task_id,status,completed_at,evidence_file,evidence_note
-FIX-036,DONE,2026-02-10,30-sprint-7-execution-log.md,Expanded registry guardrails for lexical prefilter HNSW dimensions queryStats and bulkWrite invariants
-FIX-037,DONE,2026-02-10,30-sprint-7-execution-log.md,Added 8.2.x release-line reconciliation memo and refreshed source evidence CSV
-FIX-038,DONE,2026-02-10,30-sprint-7-execution-log.md,Captured agentskills.io specification/integration references in sprint research evidence
-FIX-039,DONE,2026-02-10,30-sprint-7-execution-log.md,Updated sprint backlog and remediation trackers for Sprint 7 closure

@@ -1,7 +1,0 @@
-source_id,url,topic,used_for,date_checked
-AHRD-001,https://github.com/JohnGUnderwood/atlas-hybrid-search,repository,full architecture and code-surface review baseline,2026-02-11
-AHRD-002,https://github.com/JohnGUnderwood/atlas-hybrid-search/compare/v7.2...v7.2.1,delta,patch-scope validation and changelog reconciliation,2026-02-11
-AHRD-003,https://www.mongodb.com/docs/manual/reference/operator/aggregation/rankFusion/,rankfusion-docs,verify constraints and stage behavior claims,2026-02-11
-AHRD-004,https://www.mongodb.com/docs/manual/reference/operator/aggregation/scoreFusion/,scorefusion-docs,verify constraints and normalization/combination claims,2026-02-11
-AHRD-005,https://www.mongodb.com/docs/atlas/atlas-search/operators-collectors/vectorSearch/,search-operator-docs,confirm lexical prefilter operator semantics,2026-02-11
-AHRD-006,https://www.mongodb.com/docs/atlas/atlas-vector-search/hybrid-search/,hybrid-guidance,cross-check hybrid implementation assumptions,2026-02-11

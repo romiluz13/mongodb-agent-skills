@@ -1,7 +1,0 @@
-source_url,area,claim_verified,checked_at_utc
-https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/,mongodb-ai,Self-managed automated embedding path is Preview and uses autoEmbed syntax,2026-02-10T00:00:00Z
-https://www.mongodb.com/docs/atlas/atlas-vector-search/crud-embeddings/create-embeddings-automatic/,mongodb-ai,Automated embedding tutorial documents Community Edition 8.2+ prerequisites and query.text usage,2026-02-10T00:00:00Z
-https://www.mongodb.com/docs/atlas/atlas-vector-search/automated-embedding/,mongodb-ai,Atlas automated embedding page remains private-preview track with M10+ and voyage-3 model set guidance,2026-02-10T00:00:00Z
-https://www.mongodb.com/docs/manual/release-notes/8.2/,release-line,8.2 release line remains current with patch updates through 8.2.5,2026-02-10T00:00:00Z
-https://www.mongodb.com/docs/manual/reference/operator/aggregation/rankFusion/,mongodb-ai,rankFusion remains available in 8.0+ track,2026-02-10T00:00:00Z
-https://www.mongodb.com/docs/manual/reference/operator/aggregation/scoreFusion/,mongodb-ai,scoreFusion remains available in 8.2+ track,2026-02-10T00:00:00Z

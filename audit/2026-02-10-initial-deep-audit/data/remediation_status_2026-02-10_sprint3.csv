@@ -1,7 +1,0 @@
-task_id,status,completed_at,evidence_file,evidence_note
-FIX-013,DONE,2026-02-10,24-sprint-3-execution-log.md,Added mongodb-ai build and test extraction scripts
-FIX-014,DONE,2026-02-10,24-sprint-3-execution-log.md,Added mongodb-ai section/display mapping in build config
-FIX-015,DONE,2026-02-10,24-sprint-3-execution-log.md,Regenerated AGENTS and test-case artifacts for all skills
-FIX-016,DONE,2026-02-10,24-sprint-3-execution-log.md,Replaced previously broken reference URLs
-FIX-017,DONE,2026-02-10,24-sprint-3-execution-log.md,Added CI gates for validate/build/link health and artifact sync
-FIX-018,DONE,2026-02-10,24-sprint-3-execution-log.md,Added recurring docs-drift audit runbook
