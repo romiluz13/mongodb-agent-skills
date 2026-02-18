@@ -106,7 +106,7 @@ Every operation participates in the same transactional outcome.
 
 3. Enable command logging in lower environments and check session IDs.
 
-Reference: [https://www.mongodb.com/docs/manual/core/transactions-in-applications/](https://www.mongodb.com/docs/manual/core/transactions-in-applications/)
+Reference: [https://www.mongodb.com/docs/manual/core/transactions-in-applications.md](https://www.mongodb.com/docs/manual/core/transactions-in-applications.md)
 
 ### 1.2 Run One Active Transaction Per Session
 
@@ -164,7 +164,7 @@ Use a separate session if you truly need parallel independent work.
 
 3. Track transaction abort/error metrics after concurrency changes.
 
-Reference: [https://www.mongodb.com/docs/manual/core/transactions-in-applications/](https://www.mongodb.com/docs/manual/core/transactions-in-applications/)
+Reference: [https://www.mongodb.com/docs/manual/core/transactions-in-applications.md](https://www.mongodb.com/docs/manual/core/transactions-in-applications.md)
 
 ### 1.3 Set Transaction Write Concern Intentionally
 
@@ -213,7 +213,7 @@ This makes durability intent explicit and reviewable.
 
 3. Run failover tests and confirm post-failover data state.
 
-Reference: [https://www.mongodb.com/docs/manual/core/transactions/#transactions-and-write-concern](https://www.mongodb.com/docs/manual/core/transactions/#transactions-and-write-concern)
+Reference: [https://www.mongodb.com/docs/manual/core/transactions.md#transactions-and-write-concern](https://www.mongodb.com/docs/manual/core/transactions.md#transactions-and-write-concern)
 
 ### 1.4 Use Primary Read Preference for Transactions
 
@@ -265,7 +265,7 @@ This keeps transaction behavior predictable under failover and replication lag.
 
 3. Validate no service overrides transaction read preference unexpectedly.
 
-Reference: [https://www.mongodb.com/docs/manual/core/transactions-in-applications/](https://www.mongodb.com/docs/manual/core/transactions-in-applications/)
+Reference: [https://www.mongodb.com/docs/manual/core/transactions-in-applications.md](https://www.mongodb.com/docs/manual/core/transactions-in-applications.md)
 
 ### 1.5 Use Transactions When You Need Multi-Document Atomicity
 
@@ -330,7 +330,7 @@ This protects a cross-document business invariant (order status, inventory decre
 
 3. Measure transaction duration and abort rate before broad rollout.
 
-Reference: [https://www.mongodb.com/docs/manual/core/transactions/](https://www.mongodb.com/docs/manual/core/transactions/)
+Reference: [https://www.mongodb.com/docs/manual/core/transactions.md](https://www.mongodb.com/docs/manual/core/transactions.md)
 
 ---
 
@@ -387,7 +387,7 @@ This narrows rollback exposure for acknowledged transactions.
 
 3. Run controlled failover drills and inspect post-failover state.
 
-Reference: [https://www.mongodb.com/docs/manual/core/transactions/#transactions-and-write-concern](https://www.mongodb.com/docs/manual/core/transactions/#transactions-and-write-concern)
+Reference: [https://www.mongodb.com/docs/manual/core/transactions.md#transactions-and-write-concern](https://www.mongodb.com/docs/manual/core/transactions.md#transactions-and-write-concern)
 
 ### 2.2 Choose Read Concern by Business Guarantee, Not Habit
 
@@ -437,7 +437,7 @@ Match guarantee strength to business correctness needs.
 
 3. Load-test with target concerns and validate SLA impact.
 
-Reference: [https://www.mongodb.com/docs/manual/core/transactions/#transactions-and-read-concern](https://www.mongodb.com/docs/manual/core/transactions/#transactions-and-read-concern)
+Reference: [https://www.mongodb.com/docs/manual/core/transactions.md#transactions-and-read-concern](https://www.mongodb.com/docs/manual/core/transactions.md#transactions-and-read-concern)
 
 ### 2.3 Pair Majority Read and Write Concerns for Causal Consistency
 
@@ -492,7 +492,7 @@ This better aligns behavior with causal consistency expectations.
 
 3. Test under primary failover and validate invariant preservation.
 
-Reference: [https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency/](https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency/)
+Reference: [https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency.md](https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency.md)
 
 ### 2.4 Understand Snapshot Read Concern Requirements
 
@@ -547,7 +547,7 @@ This makes consistency and durability assumptions explicit.
 
 3. Validate behavior in replica set failover tests.
 
-Reference: [https://www.mongodb.com/docs/manual/core/transactions/#transactions-and-read-concern](https://www.mongodb.com/docs/manual/core/transactions/#transactions-and-read-concern)
+Reference: [https://www.mongodb.com/docs/manual/core/transactions.md#transactions-and-read-concern](https://www.mongodb.com/docs/manual/core/transactions.md#transactions-and-read-concern)
 
 ---
 
@@ -616,7 +616,7 @@ Handle duplicate-key as a deterministic contention path.
 
 3. Verify no retry assumption remains in error handling code.
 
-Reference: [https://www.mongodb.com/docs/manual/core/transactions-in-applications/](https://www.mongodb.com/docs/manual/core/transactions-in-applications/)
+Reference: [https://www.mongodb.com/docs/manual/core/transactions-in-applications.md](https://www.mongodb.com/docs/manual/core/transactions-in-applications.md)
 
 ### 3.2 Retry Commit on UnknownTransactionCommitResult
 
@@ -669,7 +669,7 @@ Retrying commit resolves uncertainty without re-executing the transaction body.
 
 3. Track unknown-commit incidents in telemetry.
 
-Reference: [https://www.mongodb.com/docs/manual/core/transactions-in-applications/](https://www.mongodb.com/docs/manual/core/transactions-in-applications/)
+Reference: [https://www.mongodb.com/docs/manual/core/transactions-in-applications.md](https://www.mongodb.com/docs/manual/core/transactions-in-applications.md)
 
 ### 3.3 Retry the Entire Transaction on TransientTransactionError
 
@@ -723,7 +723,7 @@ Driver callback APIs handle full-transaction retries correctly.
 
 3. Monitor retry frequency to detect lock/contention hotspots.
 
-Reference: [https://www.mongodb.com/docs/manual/core/transactions-in-applications/](https://www.mongodb.com/docs/manual/core/transactions-in-applications/)
+Reference: [https://www.mongodb.com/docs/manual/core/transactions-in-applications.md](https://www.mongodb.com/docs/manual/core/transactions-in-applications.md)
 
 ### 3.4 Treat TransactionTooLargeForCache as a Redesign Signal
 
@@ -774,7 +774,7 @@ Reshape workload into smaller transactions with explicit batch boundaries.
 
 3. Validate redesigned chunk size under production-like load.
 
-Reference: [https://www.mongodb.com/docs/manual/core/transactions-in-applications/](https://www.mongodb.com/docs/manual/core/transactions-in-applications/)
+Reference: [https://www.mongodb.com/docs/manual/core/transactions-in-applications.md](https://www.mongodb.com/docs/manual/core/transactions-in-applications.md)
 
 ---
 
@@ -831,7 +831,7 @@ Constrain each transaction to narrower shard-key scope where possible.
 
 3. Measure abort rates and lock wait under peak distributed load.
 
-Reference: [https://www.mongodb.com/docs/manual/core/transactions-production-consideration/](https://www.mongodb.com/docs/manual/core/transactions-production-consideration/)
+Reference: [https://www.mongodb.com/docs/manual/core/transactions-production-consideration.md](https://www.mongodb.com/docs/manual/core/transactions-production-consideration.md)
 
 ### 4.2 Avoid Unsupported or Restricted Operations in Transactions
 
@@ -876,7 +876,7 @@ Keep transaction scope focused on supported document writes/reads.
 
 3. Add integration tests for command-level transaction failures.
 
-Reference: [https://www.mongodb.com/docs/manual/core/transactions-operations/](https://www.mongodb.com/docs/manual/core/transactions-operations/)
+Reference: [https://www.mongodb.com/docs/manual/core/transactions-operations.md](https://www.mongodb.com/docs/manual/core/transactions-operations.md)
 
 ### 4.3 Keep Transactions Short and Within Lifetime Limits
 
@@ -935,7 +935,7 @@ Keep each transaction bounded by time and operation count.
 
 3. Tune batch sizes so transactions stay comfortably below limits.
 
-Reference: [https://www.mongodb.com/docs/manual/core/transactions-production-consideration/](https://www.mongodb.com/docs/manual/core/transactions-production-consideration/)
+Reference: [https://www.mongodb.com/docs/manual/core/transactions-production-consideration.md](https://www.mongodb.com/docs/manual/core/transactions-production-consideration.md)
 
 ### 4.4 Tune maxTransactionLockRequestTimeoutMillis for Contention Profiles
 
@@ -984,7 +984,7 @@ Tune lock timeout together with retry strategy and SLA.
 
 3. Test under peak contention with realistic concurrency.
 
-Reference: [https://www.mongodb.com/docs/manual/reference/parameters/#mongodb-parameter-param.maxTransactionLockRequestTimeoutMillis](https://www.mongodb.com/docs/manual/reference/parameters/#mongodb-parameter-param.maxTransactionLockRequestTimeoutMillis)
+Reference: [https://www.mongodb.com/docs/manual/reference/parameters.md#mongodb-parameter-param.maxTransactionLockRequestTimeoutMillis](https://www.mongodb.com/docs/manual/reference/parameters.md#mongodb-parameter-param.maxTransactionLockRequestTimeoutMillis)
 
 ---
 
@@ -1040,7 +1040,7 @@ Use Core API only when you intentionally need deeper control.
 
 3. Keep one documented standard per service where possible.
 
-Reference: [https://www.mongodb.com/docs/manual/core/transactions-in-applications/](https://www.mongodb.com/docs/manual/core/transactions-in-applications/)
+Reference: [https://www.mongodb.com/docs/manual/core/transactions-in-applications.md](https://www.mongodb.com/docs/manual/core/transactions-in-applications.md)
 
 ### 5.2 Instrument Transaction Outcomes, Retries, and Abort Causes
 
@@ -1090,7 +1090,7 @@ Pair app metrics with server-side diagnostics during incident review.
 
 3. Build alert thresholds for retry spikes and abort-rate changes.
 
-Reference: [https://www.mongodb.com/docs/manual/core/transactions-production-consideration/](https://www.mongodb.com/docs/manual/core/transactions-production-consideration/)
+Reference: [https://www.mongodb.com/docs/manual/core/transactions-production-consideration.md](https://www.mongodb.com/docs/manual/core/transactions-production-consideration.md)
 
 ### 5.3 Make Transaction Bodies Idempotent Under Retries
 
@@ -1144,15 +1144,15 @@ Idempotent keys keep retries safe.
 
 3. Ensure unique indexes enforce idempotency keys.
 
-Reference: [https://www.mongodb.com/docs/manual/core/transactions-in-applications/](https://www.mongodb.com/docs/manual/core/transactions-in-applications/)
+Reference: [https://www.mongodb.com/docs/manual/core/transactions-in-applications.md](https://www.mongodb.com/docs/manual/core/transactions-in-applications.md)
 
 ---
 
 ## References
 
-1. [https://www.mongodb.com/docs/manual/core/transactions/](https://www.mongodb.com/docs/manual/core/transactions/)
-2. [https://www.mongodb.com/docs/manual/core/transactions-in-applications/](https://www.mongodb.com/docs/manual/core/transactions-in-applications/)
-3. [https://www.mongodb.com/docs/manual/core/transactions-production-consideration/](https://www.mongodb.com/docs/manual/core/transactions-production-consideration/)
-4. [https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency/](https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency/)
-5. [https://www.mongodb.com/docs/manual/reference/parameters/#mongodb-parameter-param.maxTransactionLockRequestTimeoutMillis](https://www.mongodb.com/docs/manual/reference/parameters/#mongodb-parameter-param.maxTransactionLockRequestTimeoutMillis)
-6. [https://www.mongodb.com/docs/manual/release-notes/8.2-changelog/](https://www.mongodb.com/docs/manual/release-notes/8.2-changelog/)
+1. [https://www.mongodb.com/docs/manual/core/transactions.md](https://www.mongodb.com/docs/manual/core/transactions.md)
+2. [https://www.mongodb.com/docs/manual/core/transactions-in-applications.md](https://www.mongodb.com/docs/manual/core/transactions-in-applications.md)
+3. [https://www.mongodb.com/docs/manual/core/transactions-production-consideration.md](https://www.mongodb.com/docs/manual/core/transactions-production-consideration.md)
+4. [https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency.md](https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency.md)
+5. [https://www.mongodb.com/docs/manual/reference/parameters.md#mongodb-parameter-param.maxTransactionLockRequestTimeoutMillis](https://www.mongodb.com/docs/manual/reference/parameters.md#mongodb-parameter-param.maxTransactionLockRequestTimeoutMillis)
+6. [https://www.mongodb.com/docs/manual/release-notes/8.2-changelog.md](https://www.mongodb.com/docs/manual/release-notes/8.2-changelog.md)

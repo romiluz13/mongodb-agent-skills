@@ -69,4 +69,4 @@ Handle duplicate-key as a deterministic contention path.
 2. Confirm duplicate-key path is handled explicitly in app logic.
 3. Verify no retry assumption remains in error handling code.
 
-Reference: [Transactions in Applications](https://www.mongodb.com/docs/manual/core/transactions-in-applications/)
+Reference: [Transactions in Applications](https://www.mongodb.com/docs/manual/core/transactions-in-applications.md)

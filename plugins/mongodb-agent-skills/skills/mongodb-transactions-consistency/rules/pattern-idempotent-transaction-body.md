@@ -55,4 +55,4 @@ Idempotent keys keep retries safe.
 2. Confirm outbox/event tables do not duplicate for same business key.
 3. Ensure unique indexes enforce idempotency keys.
 
-Reference: [Transactions in Applications](https://www.mongodb.com/docs/manual/core/transactions-in-applications/)
+Reference: [Transactions in Applications](https://www.mongodb.com/docs/manual/core/transactions-in-applications.md)

@@ -49,4 +49,4 @@ This narrows rollback exposure for acknowledged transactions.
 2. Audit concern levels in each class.
 3. Run controlled failover drills and inspect post-failover state.
 
-Reference: [Transactions and Write Concern](https://www.mongodb.com/docs/manual/core/transactions/#transactions-and-write-concern)
+Reference: [Transactions and Write Concern](https://www.mongodb.com/docs/manual/core/transactions.md#transactions-and-write-concern)

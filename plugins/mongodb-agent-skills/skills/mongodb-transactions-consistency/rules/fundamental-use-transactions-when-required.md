@@ -64,4 +64,4 @@ This protects a cross-document business invariant (order status, inventory decre
 2. Confirm invariant failure impact if only a subset succeeds.
 3. Measure transaction duration and abort rate before broad rollout.
 
-Reference: [Transactions](https://www.mongodb.com/docs/manual/core/transactions/)
+Reference: [Transactions](https://www.mongodb.com/docs/manual/core/transactions.md)

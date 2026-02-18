@@ -83,4 +83,4 @@ Pair app metrics with server-side diagnostics during incident review.
 2. Correlate transaction latency with lock/contention metrics.
 3. Build alert thresholds for retry spikes and abort-rate changes.
 
-Reference: [Transactions Production Considerations](https://www.mongodb.com/docs/manual/core/transactions-production-consideration/)
+Reference: [Transactions Production Considerations](https://www.mongodb.com/docs/manual/core/transactions-production-consideration.md)

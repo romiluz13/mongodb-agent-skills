@@ -53,4 +53,4 @@ Retrying commit resolves uncertainty without re-executing the transaction body.
 2. Confirm no duplicate outbox/ledger side effects appear.
 3. Track unknown-commit incidents in telemetry.
 
-Reference: [Transactions in Applications](https://www.mongodb.com/docs/manual/core/transactions-in-applications/)
+Reference: [Transactions in Applications](https://www.mongodb.com/docs/manual/core/transactions-in-applications.md)

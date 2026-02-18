@@ -55,4 +55,4 @@ This makes consistency and durability assumptions explicit.
 2. Ensure write concern and failover behavior match recovery requirements.
 3. Validate behavior in replica set failover tests.
 
-Reference: [Transactions and Read Concern](https://www.mongodb.com/docs/manual/core/transactions/#transactions-and-read-concern)
+Reference: [Transactions and Read Concern](https://www.mongodb.com/docs/manual/core/transactions.md#transactions-and-read-concern)

@@ -54,4 +54,4 @@ Tune lock timeout together with retry strategy and SLA.
 2. Correlate timeout settings with transaction latency and success rate.
 3. Test under peak contention with realistic concurrency.
 
-Reference: [maxTransactionLockRequestTimeoutMillis](https://www.mongodb.com/docs/manual/reference/parameters/#mongodb-parameter-param.maxTransactionLockRequestTimeoutMillis)
+Reference: [maxTransactionLockRequestTimeoutMillis](https://www.mongodb.com/docs/manual/reference/parameters.md#mongodb-parameter-param.maxTransactionLockRequestTimeoutMillis)

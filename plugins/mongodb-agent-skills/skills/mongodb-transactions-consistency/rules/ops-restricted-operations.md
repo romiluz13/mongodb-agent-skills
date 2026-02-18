@@ -60,4 +60,4 @@ Keep transaction scope focused on supported document writes/reads.
 2. Compare against supported operations docs before deployment.
 3. Add integration tests for command-level transaction failures.
 
-Reference: [Operations in Transactions](https://www.mongodb.com/docs/manual/core/transactions-operations/)
+Reference: [Operations in Transactions](https://www.mongodb.com/docs/manual/core/transactions-operations.md)

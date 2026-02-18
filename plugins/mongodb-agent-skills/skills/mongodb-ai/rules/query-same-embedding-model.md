@@ -261,5 +261,5 @@ db.products.findOne({}, { "metadata.embeddingModel": 1 })
 
 Reference:
 - [MongoDB Vector Search Troubleshooting](https://mongodb.com/docs/atlas/atlas-vector-search/troubleshooting/)
-- [Voyage Text Embeddings](https://www.mongodb.com/docs/voyageai/models/text-embeddings/)
-- [Voyage API Quickstart](https://www.mongodb.com/docs/voyageai/quickstart/)
+- [Voyage Text Embeddings](https://www.mongodb.com/docs/voyageai/models/text-embeddings.md)
+- [Voyage API Quickstart](https://www.mongodb.com/docs/voyageai/quickstart.md)

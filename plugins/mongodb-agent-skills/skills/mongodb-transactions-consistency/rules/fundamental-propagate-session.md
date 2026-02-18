@@ -54,4 +54,4 @@ Every operation participates in the same transactional outcome.
 2. Add tests that force abort paths and verify no side effects persist.
 3. Enable command logging in lower environments and check session IDs.
 
-Reference: [Transactions in Applications](https://www.mongodb.com/docs/manual/core/transactions-in-applications/)
+Reference: [Transactions in Applications](https://www.mongodb.com/docs/manual/core/transactions-in-applications.md)

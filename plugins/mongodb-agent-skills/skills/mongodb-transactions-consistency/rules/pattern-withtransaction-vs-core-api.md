@@ -49,4 +49,4 @@ Use Core API only when you intentionally need deeper control.
 2. Ensure core API paths fully implement label-based retry semantics.
 3. Keep one documented standard per service where possible.
 
-Reference: [Transactions in Applications](https://www.mongodb.com/docs/manual/core/transactions-in-applications/)
+Reference: [Transactions in Applications](https://www.mongodb.com/docs/manual/core/transactions-in-applications.md)

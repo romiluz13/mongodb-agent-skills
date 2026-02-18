@@ -148,4 +148,4 @@ db.products.getSearchIndexes()
 
 Reference:
 - [MongoDB Vector Index Definition](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/#std-label-avs-types-vector-numDimensions)
-- [Voyage Text Embeddings Models](https://www.mongodb.com/docs/voyageai/models/text-embeddings/)
+- [Voyage Text Embeddings Models](https://www.mongodb.com/docs/voyageai/models/text-embeddings.md)

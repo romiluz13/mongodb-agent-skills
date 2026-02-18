@@ -57,4 +57,4 @@ Constrain each transaction to narrower shard-key scope where possible.
 2. Confirm shard key filters are as selective as possible.
 3. Measure abort rates and lock wait under peak distributed load.
 
-Reference: [Transactions in Sharded Clusters](https://www.mongodb.com/docs/manual/core/transactions-sharded-clusters/)
+Reference: [Transactions in Sharded Clusters](https://www.mongodb.com/docs/manual/core/transactions-sharded-clusters.md)

@@ -58,4 +58,4 @@ Use a separate session if you truly need parallel independent work.
 2. Add tests for concurrency paths to confirm only one active transaction per session.
 3. Track transaction abort/error metrics after concurrency changes.
 
-Reference: [Transactions in Applications](https://www.mongodb.com/docs/manual/core/transactions-in-applications/)
+Reference: [Transactions in Applications](https://www.mongodb.com/docs/manual/core/transactions-in-applications.md)

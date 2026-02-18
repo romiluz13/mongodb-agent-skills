@@ -52,4 +52,4 @@ This keeps transaction behavior predictable under failover and replication lag.
 2. Confirm integration tests pass under failover with primary-only transaction reads.
 3. Validate no service overrides transaction read preference unexpectedly.
 
-Reference: [Transactions in Applications](https://www.mongodb.com/docs/manual/core/transactions-in-applications/)
+Reference: [Transactions in Applications](https://www.mongodb.com/docs/manual/core/transactions-in-applications.md)

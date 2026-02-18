@@ -54,4 +54,4 @@ Driver callback APIs handle full-transaction retries correctly.
 2. Confirm no partial side effects escape on retry paths.
 3. Monitor retry frequency to detect lock/contention hotspots.
 
-Reference: [Transactions in Applications](https://www.mongodb.com/docs/manual/core/transactions-in-applications/)
+Reference: [Transactions in Applications](https://www.mongodb.com/docs/manual/core/transactions-in-applications.md)

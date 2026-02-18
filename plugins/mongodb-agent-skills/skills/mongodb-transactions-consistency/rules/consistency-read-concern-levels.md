@@ -50,4 +50,4 @@ Match guarantee strength to business correctness needs.
 2. Confirm options in code match that requirement.
 3. Load-test with target concerns and validate SLA impact.
 
-Reference: [Transactions and Read Concern](https://www.mongodb.com/docs/manual/core/transactions/#transactions-and-read-concern)
+Reference: [Transactions and Read Concern](https://www.mongodb.com/docs/manual/core/transactions.md#transactions-and-read-concern)

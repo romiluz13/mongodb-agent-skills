@@ -55,4 +55,4 @@ This better aligns behavior with causal consistency expectations.
 2. Confirm both read and write concern settings in those code paths.
 3. Test under primary failover and validate invariant preservation.
 
-Reference: [Read Isolation, Consistency, and Recency](https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency/)
+Reference: [Read Isolation, Consistency, and Recency](https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency.md)

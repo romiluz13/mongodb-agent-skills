@@ -59,4 +59,4 @@ Keep each transaction bounded by time and operation count.
 2. Track abort reasons and timeout-related errors.
 3. Tune batch sizes so transactions stay comfortably below limits.
 
-Reference: [Production Considerations](https://www.mongodb.com/docs/manual/core/transactions-production-consideration/)
+Reference: [Production Considerations](https://www.mongodb.com/docs/manual/core/transactions-production-consideration.md)

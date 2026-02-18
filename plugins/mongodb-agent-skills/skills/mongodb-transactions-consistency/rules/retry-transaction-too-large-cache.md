@@ -51,4 +51,4 @@ Reshape workload into smaller transactions with explicit batch boundaries.
 2. Track error code incidence by transaction type.
 3. Validate redesigned chunk size under production-like load.
 
-Reference: [Transactions in Applications](https://www.mongodb.com/docs/manual/core/transactions-in-applications/)
+Reference: [Transactions in Applications](https://www.mongodb.com/docs/manual/core/transactions-in-applications.md)

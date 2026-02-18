@@ -49,4 +49,4 @@ This makes durability intent explicit and reviewable.
 2. Validate business critical paths use explicit write concern.
 3. Run failover tests and confirm post-failover data state.
 
-Reference: [Transactions and Write Concern](https://www.mongodb.com/docs/manual/core/transactions/#transactions-and-write-concern)
+Reference: [Transactions and Write Concern](https://www.mongodb.com/docs/manual/core/transactions.md#transactions-and-write-concern)
