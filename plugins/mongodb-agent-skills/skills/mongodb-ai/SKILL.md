@@ -178,6 +178,34 @@ Each rule file contains:
 - How to verify
 - Performance impact
 
+For release-sensitive behavior and fast official-doc routing, also read:
+
+```
+references/docs-navigation.md
+```
+
+## Docs Quick Map (Release-Sensitive)
+
+| Need | Canonical Doc |
+|------|---------------|
+| Vector index definition (`vector` / `autoEmbed`) | [Atlas Vector Search Type](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/) |
+| Query stage syntax and operator support | [Atlas `$vectorSearch` Stage](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-stage/) |
+| Hybrid overview and limitations | [Atlas Hybrid Search](https://mongodb.com/docs/atlas/atlas-vector-search/hybrid-search/) |
+| `$vectorSearch` in `$rankFusion` input | [Vector Search with `$rankFusion`](https://mongodb.com/docs/atlas/atlas-vector-search/hybrid-search/vector-search-with-rankfusion/) |
+| Fusion stage availability | [MongoDB `$rankFusion`](https://mongodb.com/docs/manual/reference/operator/aggregation/rankFusion/) and [MongoDB `$scoreFusion`](https://mongodb.com/docs/manual/reference/operator/aggregation/scoreFusion/) |
+| Voyage model behavior and `input_type` | [Voyage Quickstart](https://mongodb.com/docs/voyageai/quickstart/) and [Voyage Text Embeddings](https://mongodb.com/docs/voyageai/models/text-embeddings/) |
+| Voyage reranker model docs | [Voyage Rerankers](https://mongodb.com/docs/voyageai/models/rerankers/) |
+| Latest feature/release shifts | [Atlas Vector Search Changelog](https://mongodb.com/docs/atlas/atlas-vector-search/changelog/) |
+
+## Production Readiness Checklist
+
+- Confirm deployment path first (Atlas vs self-managed) and avoid mixing syntax between tracks.
+- Confirm version gates for every hybrid/fusion flow before implementation.
+- Confirm embedding contract: same space/family, correct `input_type`, and exact dimensions.
+- Confirm index readiness (`READY`) and filter-field declarations before query tuning.
+- Confirm retrieval settings with benchmark + explain (quality/latency/cost together).
+- Confirm operational controls: least-privilege credentials, observability, and rollback-safe rollout plan.
+
 ---
 
 ## MongoDB MCP Integration

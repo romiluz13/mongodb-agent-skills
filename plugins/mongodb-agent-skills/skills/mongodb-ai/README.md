@@ -60,6 +60,18 @@ Add the skill to project knowledge or paste `SKILL.md` contents into the convers
 - Hybrid search with $rankFusion
 - AI agent memory schemas
 
+### Docs Quick Map
+
+When behavior is release-sensitive, verify in official docs first:
+
+- [Atlas Vector Search Stage](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-stage/)
+- [Atlas Vector Search Type](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/)
+- [Atlas Hybrid Search](https://mongodb.com/docs/atlas/atlas-vector-search/hybrid-search/)
+- [MongoDB `$rankFusion`](https://mongodb.com/docs/manual/reference/operator/aggregation/rankFusion/)
+- [MongoDB `$scoreFusion`](https://mongodb.com/docs/manual/reference/operator/aggregation/scoreFusion/)
+- [Voyage Quickstart](https://mongodb.com/docs/voyageai/quickstart/)
+- [Voyage Text Embeddings](https://mongodb.com/docs/voyageai/models/text-embeddings/)
+
 ## Usage
 
 When you're working on MongoDB AI features, the skill triggers automatically on keywords like:
@@ -98,6 +110,8 @@ mongodb-ai/
   AGENTS.md          # Full compiled guide
   metadata.json      # Skill metadata
   README.md          # This file
+  references/
+    docs-navigation.md # Docs routing + release-gate verification map
   rules/
     _sections.md     # Section definitions
     index-*.md       # Vector index rules

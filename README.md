@@ -57,6 +57,18 @@ npx skills add romiluz13/mongodb-agent-skills --skill mongodb-ai -a claude-code 
 npx skills remove romiluz13/mongodb-agent-skills --skill '*' -a claude-code -a codex -a cursor -y
 ```
 
+### Option 3: Manual / Any Agent (File-Based)
+
+If your agent can read markdown files, copy the skill folder directly:
+
+```bash
+# Example: copy one skill for a custom/local agent setup
+cp -r plugins/mongodb-agent-skills/skills/mongodb-ai /path/to/agent/skills/mongodb-ai
+
+# Minimal fallback: provide SKILL.md only
+cp plugins/mongodb-agent-skills/skills/mongodb-ai/SKILL.md /path/to/project/
+```
+
 ### Verify Installation
 
 ```bash
