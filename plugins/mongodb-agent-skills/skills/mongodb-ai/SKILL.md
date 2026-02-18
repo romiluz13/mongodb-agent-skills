@@ -188,14 +188,14 @@ references/docs-navigation.md
 
 | Need | Canonical Doc |
 |------|---------------|
-| Vector index definition (`vector` / `autoEmbed`) | [Atlas Vector Search Type](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/) |
-| Query stage syntax and operator support | [Atlas `$vectorSearch` Stage](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-stage/) |
-| Hybrid overview and limitations | [Atlas Hybrid Search](https://mongodb.com/docs/atlas/atlas-vector-search/hybrid-search/) |
-| `$vectorSearch` in `$rankFusion` input | [Vector Search with `$rankFusion`](https://mongodb.com/docs/atlas/atlas-vector-search/hybrid-search/vector-search-with-rankfusion/) |
-| Fusion stage availability | [MongoDB `$rankFusion`](https://mongodb.com/docs/manual/reference/operator/aggregation/rankFusion/) and [MongoDB `$scoreFusion`](https://mongodb.com/docs/manual/reference/operator/aggregation/scoreFusion/) |
-| Voyage model behavior and `input_type` | [Voyage Quickstart](https://mongodb.com/docs/voyageai/quickstart/) and [Voyage Text Embeddings](https://mongodb.com/docs/voyageai/models/text-embeddings/) |
-| Voyage reranker model docs | [Voyage Rerankers](https://mongodb.com/docs/voyageai/models/rerankers/) |
-| Latest feature/release shifts | [Atlas Vector Search Changelog](https://mongodb.com/docs/atlas/atlas-vector-search/changelog/) |
+| Vector index definition (`vector` / `autoEmbed`) | [Atlas Vector Search Type](https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-type.md) |
+| Query stage syntax and operator support | [Atlas `$vectorSearch` Stage](https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-stage.md) |
+| Hybrid overview and limitations | [Atlas Hybrid Search](https://www.mongodb.com/docs/atlas/atlas-vector-search/hybrid-search.md) |
+| `$vectorSearch` in `$rankFusion` input | [Vector Search with `$rankFusion`](https://www.mongodb.com/docs/atlas/atlas-vector-search/hybrid-search/vector-search-with-rankfusion.md) |
+| Fusion stage availability | [MongoDB `$rankFusion`](https://www.mongodb.com/docs/manual/reference/operator/aggregation/rankFusion.md) and [MongoDB `$scoreFusion`](https://www.mongodb.com/docs/manual/reference/operator/aggregation/scoreFusion.md) |
+| Voyage model behavior and `input_type` | [Voyage Quickstart](https://www.mongodb.com/docs/voyageai/quickstart.md) and [Voyage Text Embeddings](https://www.mongodb.com/docs/voyageai/models/text-embeddings.md) |
+| Voyage reranker model docs | [Voyage Rerankers](https://www.mongodb.com/docs/voyageai/models/rerankers.md) |
+| Latest feature/release shifts | [Atlas Vector Search Changelog](https://www.mongodb.com/docs/atlas/atlas-vector-search/changelog.md) |
 
 ## Production Readiness Checklist
 

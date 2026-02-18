@@ -64,13 +64,13 @@ Add the skill to project knowledge or paste `SKILL.md` contents into the convers
 
 When behavior is release-sensitive, verify in official docs first:
 
-- [Atlas Vector Search Stage](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-stage/)
-- [Atlas Vector Search Type](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/)
-- [Atlas Hybrid Search](https://mongodb.com/docs/atlas/atlas-vector-search/hybrid-search/)
-- [MongoDB `$rankFusion`](https://mongodb.com/docs/manual/reference/operator/aggregation/rankFusion/)
-- [MongoDB `$scoreFusion`](https://mongodb.com/docs/manual/reference/operator/aggregation/scoreFusion/)
-- [Voyage Quickstart](https://mongodb.com/docs/voyageai/quickstart/)
-- [Voyage Text Embeddings](https://mongodb.com/docs/voyageai/models/text-embeddings/)
+- [Atlas Vector Search Stage](https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-stage.md)
+- [Atlas Vector Search Type](https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-type.md)
+- [Atlas Hybrid Search](https://www.mongodb.com/docs/atlas/atlas-vector-search/hybrid-search.md)
+- [MongoDB `$rankFusion`](https://www.mongodb.com/docs/manual/reference/operator/aggregation/rankFusion.md)
+- [MongoDB `$scoreFusion`](https://www.mongodb.com/docs/manual/reference/operator/aggregation/scoreFusion.md)
+- [Voyage Quickstart](https://www.mongodb.com/docs/voyageai/quickstart.md)
+- [Voyage Text Embeddings](https://www.mongodb.com/docs/voyageai/models/text-embeddings.md)
 
 ## Usage
 
