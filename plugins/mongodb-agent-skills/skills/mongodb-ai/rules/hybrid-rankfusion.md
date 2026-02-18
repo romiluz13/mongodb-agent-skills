@@ -9,13 +9,13 @@ tags: hybrid, rankFusion, vector-search, text-search, MongoDB-8.0, RRF
 
 `$rankFusion` (MongoDB 8.0+) combines ranked pipeline results using Reciprocal Rank Fusion (RRF).
 
-As documented in current MongoDB 8.2 docs, fusion stages are Preview features. Treat output shape and behavior as release-sensitive and re-validate during upgrades.
+Treat fusion behavior and output contracts as release-sensitive and re-validate during upgrades.
 
 Version gates to apply:
 
 - `\$rankFusion` stage availability: **MongoDB 8.0+**
 - `\$vectorSearch` inside `\$rankFusion.input.pipelines`: **MongoDB 8.1+**
-- `\$rankFusion` on **views**: **MongoDB 8.2+**
+- `\$rankFusion` on **views**: **MongoDB 8.0+**
 - **Feature maturity:** treat hybrid fusion capabilities as release-sensitive; re-check release notes during upgrades before relying on strict output contracts.
 
 **$rankFusion vs $scoreFusion:**
@@ -223,16 +223,16 @@ RRF = 0.7 × (1/61) + 0.3 × (1/63) = 0.01148 + 0.00476 = 0.01624
 
 | Type | Allowed Stages |
 |------|----------------|
-| Search | `$vectorSearch`, `$search`, `$match`, `$geoNear`, `$sample` |
+| Search | `$vectorSearch`, `$search`, `$match`, `$geoNear` |
 | Ordering | `$sort` |
-| Pagination | `$skip`, `$limit` |
+| Pagination | `$limit` |
 
 **Key Behaviors:**
 
 - **De-duplication**: Documents appear at most once in output, even if matched by multiple pipelines
 - **Single collection only**: Cannot span multiple collections (use `$unionWith` for cross-collection)
 - **Pipeline names**: Cannot start with `$`, cannot contain `.` or null character
-- **Views support**: `$rankFusion` on views is available starting in MongoDB 8.2
+- **Views support**: `$rankFusion` can run on views on MongoDB 8.0+ (but can't run inside a view definition)
 
 **When to use $rankFusion over $scoreFusion:**
 
@@ -240,7 +240,7 @@ RRF = 0.7 × (1/61) + 0.3 × (1/63) = 0.01148 + 0.00476 = 0.01624
 - Position/rank matters more than score magnitude
 - Simpler hybrid search without normalization needs
 - Established RRF algorithm behavior desired
-- Need view support only if cluster is MongoDB 8.2+
+- Need view support on MongoDB 8.0+ with documented view limitations
 
 **When NOT to use this pattern:**
 

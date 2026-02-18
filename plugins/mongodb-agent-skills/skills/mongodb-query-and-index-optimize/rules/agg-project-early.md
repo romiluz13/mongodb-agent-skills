@@ -1,13 +1,13 @@
 ---
 title: Use $project Early to Reduce Document Size
 impact: HIGH
-impactDescription: "500KB docs → 500 bytes: 1000× less memory, avoids 100MB limit and disk spills"
+impactDescription: "Use $project intentionally to control shape; don't assume early placement alone improves performance"
 tags: aggregation, project, memory, optimization, pipeline, addFields
 ---
 
 ## Use $project Early to Reduce Document Size
 
-**Every stage processes entire documents—drop unnecessary fields early to stay in RAM.** Aggregation pipelines have a 100MB memory limit per stage. If you're processing 10,000 articles at 500KB each (5GB), you'll spill to disk immediately. Project to the 3 fields you need (500 bytes each = 5MB) and the entire pipeline runs in memory, 100× faster.
+**Use `$project` to control output shape, but don't assume that putting it early always improves performance.** MongoDB's optimizer already prunes unused fields in many pipelines. Place `$project` where it improves correctness/readability or where you intentionally shrink payloads before expensive fan-out operations (for example inside `$lookup` sub-pipelines).
 
 **Incorrect (carrying full documents through pipeline):**
 
@@ -42,7 +42,6 @@ db.articles.aggregate([
   { $sort: { publishedAt: -1 } },
   // 5GB SORT OPERATION
   // Exceeds 100MB limit → spills to disk
-  // Disk sort: 10-100× slower than in-memory
 
   { $limit: 10 },
 
@@ -56,14 +55,14 @@ db.articles.aggregate([
 // - Time: 45 seconds
 ```
 
-**Correct ($project immediately after $match):**
+**Correct (project intentionally, and project inside `$lookup` when needed):**
 
 ```javascript
 db.articles.aggregate([
   { $match: { status: "published" } },
   // 10,000 docs enter pipeline
 
-  // IMMEDIATELY reduce to needed fields
+  // Optional projection for readability / explicit schema shaping
   {
     $project: {
       title: 1,
@@ -73,7 +72,7 @@ db.articles.aggregate([
       // 500KB → 200 bytes per doc
     }
   },
-  // Now: 10,000 × 200 bytes = 2MB (not 5GB!)
+  // Result shape is explicit before downstream stages
 
   {
     $lookup: {
@@ -87,21 +86,18 @@ db.articles.aggregate([
       ]
     }
   },
-  // 2MB + 100 bytes per author = still ~2MB
+  // Keep joined payload bounded with inner pipeline projection
 
   { $unwind: "$author" },
-  // 2MB
+  // Reduced payload through unwind
 
   { $sort: { publishedAt: -1 } },
-  // 2MB sort - fits in memory easily
+  // Sort operates on trimmed documents
 
   { $limit: 10 }
 ])
 
-// Pipeline stats:
-// - Memory used: ~2MB (well under 100MB)
-// - Disk spills: None
-// - Time: 200ms (225× faster)
+// Validate impact with explain() and real workload metrics
 ```
 
 **Project inside $lookup (critical for joins):**
@@ -163,16 +159,18 @@ db.articles.aggregate([
 
 ```javascript
 // Aggregation has 100MB per-stage memory limit
-// Stages affected: $sort, $group, $bucket, $facet
+// Stages commonly affected: $sort, $group, $bucket, $setWindowFields
 
 // When exceeded without allowDiskUse:
 // Error: "Sort exceeded memory limit of 104857600 bytes"
 
 // With allowDiskUse:
 db.collection.aggregate([...], { allowDiskUse: true })
-// Works, but 10-100× slower due to disk I/O
+// Allows disk spill where supported
 
-// BETTER: Project early so you never hit the limit
+// NOTE: $facet has a hard 100MB per-stage limit and can't spill to disk.
+
+// One option: project/shape payload before memory-heavy stages when it measurably helps
 // 100MB limit ÷ document size = max docs in memory
 // - 500KB docs: 200 docs before disk spill
 // - 500 byte docs: 200,000 docs before disk spill
@@ -203,9 +201,10 @@ estimatePipelineMemory(10000, 500, 500)
 // Memory reduction: 99%
 ```
 
-**When NOT to use early $project:**
+**When NOT to rely on early `$project` as a performance fix:**
 
-- **Document already small**: <1KB documents, projection overhead isn't worth it.
+- **General case optimization**: MongoDB often already performs field-pruning automatically.
+- **Document already small**: projection overhead can be negligible vs other bottlenecks.
 - **Need most fields later**: If you're projecting 80% of fields, $unset the 20% instead.
 - **Covered query possible**: Sometimes keeping all fields in projection allows index-only queries.
 - **$facet pipelines**: Each facet starts fresh from input documents; project in each facet.

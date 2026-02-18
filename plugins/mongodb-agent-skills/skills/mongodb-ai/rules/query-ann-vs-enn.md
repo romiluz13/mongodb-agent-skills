@@ -24,7 +24,7 @@ db.products.aggregate([
     }
   }
 ])
-// Result: 500ms+ latency on large datasets
+// Result: Higher latency risk on large, unfiltered datasets
 
 // WRONG: Using low numCandidates ANN for critical searches
 db.legalDocs.aggregate([
@@ -56,7 +56,7 @@ db.products.aggregate([
     }
   }
 ])
-// Result: ~10ms latency, ~90%+ recall
+// Result: Low-latency ANN behavior for interactive workloads
 
 // ENN: Batch processing / critical searches (accurate)
 db.legalDocs.aggregate([
@@ -70,7 +70,7 @@ db.legalDocs.aggregate([
     }
   }
 ])
-// Result: ~500ms latency, 100% recall
+// Result: Exact-recall behavior with higher compute cost
 
 // ENN: Measuring recall accuracy of ANN
 db.products.aggregate([
@@ -91,8 +91,8 @@ db.products.aggregate([
 | Aspect | ANN | ENN |
 |--------|-----|-----|
 | Parameter | `numCandidates: N` | `exact: true` |
-| Speed | Fast (10-50ms) | Slower (100ms-1s+) |
-| Recall | ~90-99% | 100% |
+| Speed | Lower latency | Higher latency |
+| Recall | Approximate | Exact |
 | Scaling | Scales well | Linear with data size |
 | Use Case | Real-time search | Batch, critical, testing |
 
@@ -129,7 +129,8 @@ db.products.aggregate([
 // - Scientific research
 // - Measuring ANN accuracy
 // - Batch processing
-// - Small datasets (< 10K vectors)
+// - Collections with < 10,000 candidate docs
+// - Highly selective pre-filters (for example, <5% of data matches filter)
 // - Perfect recall required
 ```
 
@@ -154,7 +155,7 @@ db.products.aggregate([
 
 **When NOT to use this pattern:**
 
-- ENN on > 100K vectors without filtering (too slow)
+- ENN on large, broad, unfiltered candidate sets (high latency risk)
 - ANN with very low numCandidates (poor recall)
 - Both parameters together (mutually exclusive)
 

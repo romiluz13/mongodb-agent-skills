@@ -21,22 +21,54 @@ await session.withTransaction(async () => {
 
 Operational risk stays hidden.
 
-**Correct (capture outcome and retry metrics):**
+**Correct (capture outcome and real retry metrics):**
 
 ```javascript
 const startedAt = Date.now()
-let retries = 0
+let attempts = 0
+const session = client.startSession()
 
-await session.withTransaction(async () => {
-  await runBusinessOps(session)
-}, {
-  readPreference: "primary",
-  writeConcern: { w: "majority" }
-})
+try {
+  while (true) {
+    attempts += 1
+    session.startTransaction({
+      readPreference: "primary",
+      readConcern: { level: "snapshot" },
+      writeConcern: { w: "majority" }
+    })
 
-metrics.increment("tx.success")
-metrics.observe("tx.duration_ms", Date.now() - startedAt)
-metrics.observe("tx.retries", retries)
+    try {
+      await runBusinessOps(session)
+
+      while (true) {
+        try {
+          await session.commitTransaction()
+          metrics.increment("tx.success")
+          metrics.observe("tx.duration_ms", Date.now() - startedAt)
+          metrics.observe("tx.retries", attempts - 1)
+          return
+        } catch (e) {
+          if (e.hasErrorLabel?.("UnknownTransactionCommitResult")) {
+            metrics.increment("tx.commit_retry")
+            continue
+          }
+          throw e
+        }
+      }
+    } catch (e) {
+      await session.abortTransaction().catch(() => {})
+      if (e.hasErrorLabel?.("TransientTransactionError")) {
+        metrics.increment("tx.retry")
+        continue
+      }
+      metrics.increment("tx.abort")
+      metrics.increment(`tx.abort_code.${e.code ?? "unknown"}`)
+      throw e
+    }
+  }
+} finally {
+  await session.endSession()
+}
 ```
 
 Pair app metrics with server-side diagnostics during incident review.

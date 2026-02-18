@@ -7,7 +7,7 @@ tags: performance, profiler, slow-queries, diagnostics, monitoring, optimization
 
 ## Use Slow Query Log to Find Performance Issues
 
-**MongoDB's database profiler captures slow operations, revealing which queries need optimization.** Instead of guessing which queries are slow, enable profiling to capture operations exceeding a threshold (e.g., 100ms). The system.profile collection stores query patterns, execution times, and documents examined—everything you need to prioritize optimization work.
+**MongoDB's database profiler captures slow operations, revealing which queries need optimization.** Instead of guessing which queries are slow, enable profiling with a threshold or filter. The `system.profile` collection stores query patterns, execution details, and scan behavior so you can prioritize high-impact fixes.
 
 **Incorrect (guessing which queries are slow):**
 
@@ -64,9 +64,21 @@ db.getProfilingStatus()
 db.setProfilingLevel(1, { slowms: 100, sampleRate: 0.5 })
 // Logs 50% of slow operations (reduces overhead)
 
+// MongoDB 8.0+: filter by workingMillis for CPU/work-based thresholds
+db.setProfilingLevel(1, {
+  filter: { workingMillis: { $gte: 200 } }
+})
+// When filter is set, slowms and sampleRate are ignored
+
 // Disable profiling
 db.setProfilingLevel(0)
 ```
+
+**MongoDB 8.0+ timing semantics:**
+
+- Slow-operation analysis uses `workingMillis` (time MongoDB actively spends working), not only end-to-end latency.
+- `durationMillis` can still be useful for understanding total latency (including waits).
+- If you set `filter`, `slowms` and `sampleRate` do not control profiler/slow-log capture.
 
 **Query the profiler collection:**
 
@@ -116,6 +128,8 @@ db.system.profile.find({
   "docsExamined": 150,                     // Documents examined
   "nreturned": 100,                        // Results returned
   "millis": 245,                           // Execution time (ms)
+  "workingMillis": 180,                    // Active MongoDB processing time
+  "durationMillis": 245,                   // End-to-end latency (includes waits)
   "ts": ISODate("2024-01-15T10:30:00Z"),  // Timestamp
   "client": "192.168.1.100",               // Client IP
   "appName": "myapp",                      // Application name

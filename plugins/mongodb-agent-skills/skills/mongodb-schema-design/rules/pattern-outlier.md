@@ -1,13 +1,13 @@
 ---
 title: Use Outlier Pattern for Exceptional Documents
 impact: MEDIUM
-impactDescription: "Prevents 95% of queries from being slowed by 5% of outlier documents"
+impactDescription: "Isolates unusually large documents so hot-path queries stay optimized for typical cases"
 tags: schema, patterns, outlier, arrays, performance, edge-cases
 ---
 
 ## Use Outlier Pattern for Exceptional Documents
 
-**Isolate atypical documents with large arrays to prevent them from degrading performance for typical queries.** When 95% of documents have 50 items but 5% have 5,000, those outliers dominate query time. Split the excess into a separate collection and flag the document.
+**Isolate atypical documents with large arrays to prevent them from degrading performance for typical queries.** When a small subset of documents is much larger than the rest, those outliers can dominate memory, index, and query costs. Split overflow data into a separate collection and flag the document.
 
 **Problem scenario:**
 
@@ -80,7 +80,7 @@ if (book.hasExtras) {
 }
 ```
 
-**Implementation with threshold:**
+**Implementation with threshold (example; tune per workload):**
 
 ```javascript
 const CUSTOMER_THRESHOLD = 50
@@ -101,7 +101,7 @@ async function addCustomer(bookId, customerId) {
   } else {
     // Outlier case - add to overflow collection
     await db.book_customers_extra.updateOne(
-      { bookId: bookId, count: { $lt: 1000 } },  // Batch limit
+      { bookId: bookId, count: { $lt: 1000 } },  // Example batch limit
       {
         $push: { customers: customerId },
         $inc: { count: 1 },
@@ -133,12 +133,12 @@ db.book_customers_extra.createIndex({ customers: 1 })
 
 **When to use outlier pattern:**
 
-| Scenario | Threshold | Example |
-|----------|-----------|---------|
-| Book customers | 50-100 | Bestsellers vs. typical books |
-| Social followers | 1,000 | Celebrities vs. regular users |
-| Product reviews | 100 | Viral products vs. typical |
-| Event attendees | 500 | Major events vs. small meetups |
+| Scenario | What to measure | Example |
+|----------|-----------------|---------|
+| Book customers | Array-size distribution and long tail | Bestsellers vs. typical books |
+| Social followers | Growth rate and read-path impact | Celebrities vs. regular users |
+| Product reviews | Index fan-out and read locality | Viral products vs. typical |
+| Event attendees | Outlier frequency vs. implementation complexity | Major events vs. small meetups |
 
 **When NOT to use this pattern:**
 
@@ -170,7 +170,7 @@ db.books.aggregate([
     output: { count: { $sum: 1 } }
   }}
 ])
-// If 95% are <100 and 5% are >1000, use outlier pattern
+// Look for a long-tail distribution where a small subset is far above median/p95
 
 // Check index sizes
 db.books.stats().indexSizes

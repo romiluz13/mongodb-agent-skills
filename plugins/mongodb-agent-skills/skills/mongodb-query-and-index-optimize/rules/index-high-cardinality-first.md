@@ -1,177 +1,79 @@
 ---
-title: Put High-Cardinality Fields First in Equality Conditions
+title: Use Cardinality as a Tiebreaker for Equality Fields
 impact: HIGH
-impactDescription: "6,000× fewer keys examined—low cardinality first scans millions, high cardinality first scans hundreds"
+impactDescription: "For pure equality predicates, field order is usually chosen by query shape; cardinality is a secondary tiebreaker"
 tags: index, cardinality, selectivity, compound-index, performance, equality
 ---
 
-## Put High-Cardinality Fields First in Equality Conditions
+## Use Cardinality as a Tiebreaker for Equality Fields
 
-**For multiple equality fields, put the highest cardinality (most unique values) field first.** Cardinality determines how quickly the index narrows results. A field with 100,000 unique values eliminates 99.999% of documents on first lookup; a field with 5 values only eliminates 80%. This ordering can mean the difference between scanning 500 index entries vs 3 million.
+**For queries that constrain all equality fields, MongoDB can use either equality field order.** In compound indexes, exact-match fields do not need a strict internal order. Prefer ordering that best supports your broader query set (prefix reuse, sort/range requirements), then use cardinality as a tiebreaker.
 
-**Incorrect (low cardinality first—scans millions):**
+**Incorrect (treating cardinality as an absolute rule):**
 
 ```javascript
-// Query: Find orders by status and customerId
+// Query always constrains BOTH fields:
 db.orders.find({ status: "completed", customerId: "cust123" })
 
-// BAD index: status first (only 5 distinct values)
+// These two indexes are often equivalent for this exact predicate:
 db.orders.createIndex({ status: 1, customerId: 1 })
-
-// What happens on 10M orders:
-// 1. Jump to status="completed" → matches 3M documents (30% of collection)
-// 2. Within those 3M, scan for customerId="cust123" → finds 500 matches
-// Result: totalKeysExamined = 3,000,000 to find 500 documents
-
-// explain() shows:
-{
-  "totalKeysExamined": 3000000,   // Scanned 3M index entries!
-  "totalDocsExamined": 500,
-  "nReturned": 500,
-  "executionTimeMillis": 1200     // Over a second
-}
-```
-
-**Correct (high cardinality first—scans hundreds):**
-
-```javascript
-// GOOD index: customerId first (100K distinct values)
 db.orders.createIndex({ customerId: 1, status: 1 })
 
-// What happens:
-// 1. Jump to customerId="cust123" → matches 500 documents (0.005% of collection)
-// 2. Within those 500, filter status="completed" → finds 350 matches
-// Result: totalKeysExamined = 500 to find 350 documents
-
-// explain() shows:
-{
-  "totalKeysExamined": 500,       // Only 500 index entries!
-  "totalDocsExamined": 350,
-  "nReturned": 350,
-  "executionTimeMillis": 2        // 2 milliseconds
-}
-
-// Same query, 600× fewer keys examined, 600× faster
+// Creating both only for "high-cardinality-first" usually adds write/memory cost
+// without helping this query shape.
 ```
 
-**Understanding selectivity (the math):**
+**Correct (choose order by workload first, cardinality second):**
 
 ```javascript
-// Selectivity = 1 / number of distinct values
-// Higher selectivity = better for leading position
+// If you also run queries on { status: ... } only:
+db.orders.createIndex({ status: 1, customerId: 1 })
 
-// Example with 10M orders:
-// status: 5 distinct → selectivity = 0.2 → matches ~2M docs
-// customerId: 100K distinct → selectivity = 0.00001 → matches ~100 docs
-// orderId: 10M distinct (unique) → selectivity = 0.0000001 → matches 1 doc
+// If you also sort by createdAt after equality:
+db.orders.createIndex({ status: 1, customerId: 1, createdAt: -1 })
 
-// Rule: Put highest selectivity (lowest match count) first
+// If both candidates satisfy workload shape equally, cardinality can break the tie.
 ```
 
-**Cardinality reference table:**
+**Practical ordering rules:**
 
-| Field Type | Example Field | Typical Cardinality | Selectivity |
-|------------|--------------|---------------------|-------------|
-| Unique ID | `_id`, `orderId` | = doc count | Perfect |
-| User identifier | `userId`, `email` | High (100K+) | Excellent |
-| Timestamp | `createdAt` | High | Excellent |
-| Category | `category`, `department` | Medium (10-1000) | Good |
-| Status | `status`, `state` | Low (3-10) | Poor |
-| Boolean | `isActive`, `isDeleted` | Very low (2) | Very poor |
-| Constant | `type: "order"` | 1 | Useless |
+- Put equality fields first (ESR guideline).
+- Place sort fields next when sort support is required.
+- Place range fields after equality/sort as needed.
+- Use cardinality as a tiebreaker only when candidate index shapes are otherwise equivalent.
 
-**Measuring cardinality:**
+**When cardinality still matters:**
 
 ```javascript
-// Quick cardinality check
-db.orders.distinct("status").length        // 5
-db.orders.distinct("customerId").length    // 100000
-db.orders.distinct("region").length        // 12
+// Suppose many queries only specify ONE equality field:
+// - db.orders.find({ status: "completed" })
+// - db.orders.find({ customerId: "cust123" })
 
-// For very large collections, estimate with aggregation
-db.orders.aggregate([
-  { $group: { _id: "$status" } },
-  { $count: "distinctCount" }
-])  // { distinctCount: 5 }
-
-// Full cardinality analysis for multiple fields
-db.orders.aggregate([
-  { $facet: {
-    status: [{ $group: { _id: "$status" } }, { $count: "n" }],
-    customerId: [{ $group: { _id: "$customerId" } }, { $count: "n" }],
-    region: [{ $group: { _id: "$region" } }, { $count: "n" }]
-  }}
-])
-// Returns: { status: [{n: 5}], customerId: [{n: 100000}], region: [{n: 12}] }
-// Order: customerId > region > status
+// Then leading-field choice controls prefix usability.
+// Pick the leading field that better matches your frequent standalone predicates.
 ```
-
-**Real-world example—multi-tenant SaaS:**
-
-```javascript
-// Query: Find active users for a tenant
-db.users.find({
-  tenantId: "tenant123",     // ~1000 distinct (1000 customers)
-  status: "active",          // ~3 distinct (active/inactive/pending)
-  role: "admin"              // ~5 distinct (admin/user/viewer/etc)
-})
-
-// Calculate expected matches at each level (100K total users):
-// tenantId first: 100K / 1000 = 100 users → then filter status/role
-// status first: 100K / 3 = 33,333 users → then filter tenantId/role
-// role first: 100K / 5 = 20,000 users → then filter tenantId/status
-
-// Best index order (highest cardinality first):
-db.users.createIndex({ tenantId: 1, role: 1, status: 1 })
-// Narrows to ~100 on first lookup, then ~20, then ~15
-```
-
-**When NOT to put high cardinality first:**
-
-- **ESR rule takes precedence**: If you have Sort in query, ESR order (Equality→Sort→Range) beats pure cardinality optimization.
-- **Index reuse across queries**: If one query needs `{status}` alone and another needs `{status, customerId}`, putting status first serves both.
-- **Covered query requirements**: Projection fields may need specific index positions.
-- **Near-equal cardinality**: If fields have similar cardinality, prefer the one queried more often as leading field.
 
 ## Verify with
 
 ```javascript
-// Compare index efficiency for different orderings
-function compareIndexOrder(collection, query, index1, index2) {
-  // Create both indexes
-  db[collection].createIndex(index1, { name: "test_order_1" })
-  db[collection].createIndex(index2, { name: "test_order_2" })
+function compareIndexOrder(collection, query, indexA, indexB) {
+  db[collection].createIndex(indexA, { name: "idx_a" })
+  db[collection].createIndex(indexB, { name: "idx_b" })
 
-  // Test with first index
-  const explain1 = db[collection].find(query)
-    .hint("test_order_1")
-    .explain("executionStats")
+  const a = db[collection].find(query).hint("idx_a").explain("executionStats")
+  const b = db[collection].find(query).hint("idx_b").explain("executionStats")
 
-  // Test with second index
-  const explain2 = db[collection].find(query)
-    .hint("test_order_2")
-    .explain("executionStats")
+  print("Index A:", JSON.stringify(indexA))
+  print("  keysExamined:", a.executionStats.totalKeysExamined)
+  print("  docsExamined:", a.executionStats.totalDocsExamined)
 
-  print("Index 1:", JSON.stringify(index1))
-  print("  Keys examined:", explain1.executionStats.totalKeysExamined)
-  print("  Time:", explain1.executionStats.executionTimeMillis, "ms")
+  print("Index B:", JSON.stringify(indexB))
+  print("  keysExamined:", b.executionStats.totalKeysExamined)
+  print("  docsExamined:", b.executionStats.totalDocsExamined)
 
-  print("Index 2:", JSON.stringify(index2))
-  print("  Keys examined:", explain2.executionStats.totalKeysExamined)
-  print("  Time:", explain2.executionStats.executionTimeMillis, "ms")
-
-  // Cleanup
-  db[collection].dropIndex("test_order_1")
-  db[collection].dropIndex("test_order_2")
+  db[collection].dropIndex("idx_a")
+  db[collection].dropIndex("idx_b")
 }
-
-// Usage
-compareIndexOrder(
-  "orders",
-  { status: "completed", customerId: "cust123" },
-  { status: 1, customerId: 1 },    // Low cardinality first
-  { customerId: 1, status: 1 }     // High cardinality first
-)
 ```
 
-Reference: [Index Selectivity](https://mongodb.com/docs/manual/tutorial/create-queries-that-ensure-selectivity/)
+Reference: [Compound Indexes](https://mongodb.com/docs/manual/core/indexes/index-types/index-compound/)

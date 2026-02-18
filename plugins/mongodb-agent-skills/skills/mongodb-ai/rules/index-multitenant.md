@@ -76,6 +76,10 @@ db.products.aggregate([
 
 **Handling Large Tenants (Views Pattern):**
 
+For view-backed indexing, apply version gates:
+- MongoDB 8.0: create/manage view indexes via Atlas UI/Admin API, then query the source collection.
+- MongoDB 8.1+: you can create/manage view indexes in mongosh/drivers and query views directly.
+
 ```javascript
 // For large tenants (top 1%), create dedicated views
 // Step 1: Create view for large tenant
@@ -86,6 +90,7 @@ db.createView(
 )
 
 // Step 2: Create dedicated index on view
+// Direct mongosh view index-management is MongoDB 8.1+
 db.products_tenant_large.createSearchIndex(
   "vector_index_large",
   "vectorSearch",
@@ -124,7 +129,8 @@ async function vectorSearchForTenant(query, tenantId) {
   const isLargeTenant = await isLargeTenant(tenantId)
 
   if (isLargeTenant) {
-    // Use dedicated view/index for large tenants
+    // Use dedicated view/index for large tenants (direct view query is 8.1+)
+    // On 8.0, query source collection with the view-backed index instead.
     return db.products_tenant_large.aggregate([
       {
         $vectorSearch: {

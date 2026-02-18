@@ -1,13 +1,21 @@
 ---
-title: Handle Duplicate-Key Upsert Retry Behavior in MongoDB 8.1+
+title: Handle Duplicate-Key Upsert Retry Behavior in Transactions
 impact: HIGH
 impactDescription: "Prevents incorrect assumptions about automatic retry behavior"
-tags: upsert, duplicate-key, retry, MongoDB-8.1
+tags: upsert, duplicate-key, retry, MongoDB-7.0.22, MongoDB-8.0.11, MongoDB-8.1
 ---
 
-## Handle Duplicate-Key Upsert Retry Behavior in MongoDB 8.1+
+## Handle Duplicate-Key Upsert Retry Behavior in Transactions
 
-Starting in **MongoDB 8.1**, if an `upsert` inside a multi-document transaction encounters a duplicate-key error, the upsert is not automatically retried. Treat this as an explicit conflict path.
+In current supported branches, if an `upsert` inside a multi-document transaction encounters a duplicate-key error, the upsert is not automatically retried. Treat this as an explicit conflict path.
+
+**Version coverage:**
+
+| Branch | Behavior starts |
+|--------|-----------------|
+| 7.0 | 7.0.22+ |
+| 8.0 | 8.0.11+ |
+| 8.1+ | 8.1+ |
 
 **Incorrect (assuming automatic retry will resolve duplicate key):**
 

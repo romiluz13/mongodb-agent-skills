@@ -14,15 +14,15 @@ tags: lexical-prefilter, vectorSearch-operator, $search, fuzzy, phrase, wildcard
 | Feature | `$vectorSearch` Stage | `$search.vectorSearch` Operator |
 |---------|----------------------|--------------------------------|
 | Pipeline Position | First stage in aggregation | Inside `$search` stage |
-| Pre-filter Type | MQL filters only | Atlas Search operators (fuzzy, phrase, geo, etc.) |
+| Pre-filter Type | MQL prefilters (`$eq/$ne`, range, `$in/$nin`, `$exists`, logical) | Atlas Search operators (fuzzy, phrase, geo, wildcard, etc.) |
 | Index Type | `vectorSearch` type | Atlas Search index with `vector` field type |
 | Use Case | Basic filtering | Advanced lexical + semantic search |
 
-**Incorrect (basic $vectorSearch with limited filtering):**
+**Incorrect (trying to use analyzed-text prefilters in `$vectorSearch` stage):**
 
 ```javascript
-// LIMITED: $vectorSearch only supports basic MQL pre-filters
-// Cannot use fuzzy search, phrase matching, or wildcard patterns
+// LIMITED FOR ANALYZED TEXT: $vectorSearch filter supports MQL prefilters
+// but does NOT support Atlas Search analyzed-text operators.
 db.products.aggregate([
   {
     $vectorSearch: {
@@ -32,7 +32,12 @@ db.products.aggregate([
       numCandidates: 100,
       limit: 10,
       filter: {
-        category: "electronics"  // Basic equality only
+        $and: [
+          { category: "electronics" },
+          { price: { $gte: 500 } },
+          { status: { $ne: "archived" } }
+        ]
+        // Still cannot do fuzzy, phrase, wildcard, or geoWithin here.
         // Cannot do: fuzzy match on "electronnics"
         // Cannot do: phrase match on "high performance laptop"
         // Cannot do: wildcard "electro*"
@@ -40,6 +45,20 @@ db.products.aggregate([
     }
   }
 ])
+```
+
+**What `$vectorSearch` Stage Prefilters Do Support:**
+
+```javascript
+// MQL filters are broad, as long as fields are indexed as type: "filter"
+{
+  $and: [
+    { category: { $in: ["electronics", "computers"] } },
+    { price: { $gte: 500, $lte: 2500 } },
+    { discount: { $exists: true } },
+    { status: { $not: { $eq: "archived" } } }
+  ]
+}
 ```
 
 **Correct (using $search.vectorSearch with lexical prefilters):**

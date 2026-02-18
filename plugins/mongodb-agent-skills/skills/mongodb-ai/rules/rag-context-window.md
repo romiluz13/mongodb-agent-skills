@@ -26,7 +26,7 @@ const context = await db.ragChunks.aggregate([
 ]).toArray()
 
 const fullContext = context.map(c => c.content).join('\n\n')
-// Result: Exceeds GPT-4's context, gets truncated or errors
+// Result: Exceeds model context limit, gets truncated or errors
 ```
 
 **Correct (context-aware retrieval):**
@@ -42,7 +42,7 @@ async function retrieveWithinTokenLimit(query, options = {}) {
   const {
     maxContextTokens = 4000,  // Reserve tokens for context
     maxResponseTokens = 1000, // Reserve for response
-    modelLimit = 8192         // GPT-4 limit
+    modelLimit = 8192         // Supply your model's current context limit
   } = options
 
   // Calculate available context budget
@@ -94,15 +94,11 @@ async function retrieveWithinTokenLimit(query, options = {}) {
 }
 ```
 
-**Model Token Limits:**
+**Model Limit Source of Truth:**
 
-| Model | Context Limit | Safe Context Budget |
-|-------|---------------|---------------------|
-| GPT-3.5-turbo | 16,384 | 12,000 |
-| GPT-4 | 8,192 | 6,000 |
-| GPT-4-turbo | 128,000 | 100,000 |
-| Claude 3 Sonnet | 200,000 | 150,000 |
-| Claude 3 Opus | 200,000 | 150,000 |
+- Pull context/token limits from your LLM provider's current docs at runtime or deploy-time.
+- Avoid hard-coding model limits in long-lived code paths; providers change limits over time.
+- Keep a safety buffer for system prompt + tool output + response tokens.
 
 **Dynamic Context Sizing:**
 

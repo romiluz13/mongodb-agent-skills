@@ -1,10 +1,10 @@
 {
   "skill": "mongodb-ai",
   "generatedAt": "2026-02-11T12:23:35.634Z",
-  "totalTestCases": 67,
+  "totalTestCases": 72,
   "summary": {
-    "badExamples": 33,
-    "goodExamples": 34
+    "badExamples": 34,
+    "goodExamples": 38
   },
   "testCases": [
     {
@@ -152,6 +152,14 @@
       "description": "matching model dimensions"
     },
     {
+      "ruleId": "index-dimensions-match",
+      "ruleTitle": "numDimensions Must Match Embedding Model",
+      "type": "good",
+      "code": "// CORRECT: Voyage 4 with explicit output dimension\n// If embeddings are generated at 2048 dims, index must use 2048\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 2048,\n    similarity: \"cosine\"\n  }]\n})\n\n// Example provider call must align with index dims\n// model: \"voyage-4-large\", output_dimension: 2048",
+      "language": "javascript",
+      "description": "voyage output_dimension alignment"
+    },
+    {
       "ruleId": "index-filter-fields",
       "ruleTitle": "Index Filter Fields for Pre-Filtering",
       "type": "bad",
@@ -283,7 +291,7 @@
       "ruleId": "perf-index-in-memory",
       "ruleTitle": "Vector Index Must Fit in RAM",
       "type": "bad",
-      "code": "// WRONG: Large index on small instance\n// 2M vectors × 1536 dims = ~12GB index\n// Running on M30 with 8GB RAM = spillover to disk\n\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\"\n    // No quantization on 2M vectors = 12GB needed\n  }]\n})\n// Result: Query latency goes from 50ms to 5000ms",
+      "code": "// WRONG: Large index on small instance\n// 2M vectors \u00d7 1536 dims = ~12GB index\n// Running on M30 with 8GB RAM = spillover to disk\n\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\"\n    // No quantization on 2M vectors = 12GB needed\n  }]\n})\n// Result: Query latency goes from 50ms to 5000ms",
       "language": "javascript",
       "description": "index exceeds available RAM"
     },
@@ -291,7 +299,7 @@
       "ruleId": "perf-index-in-memory",
       "ruleTitle": "Vector Index Must Fit in RAM",
       "type": "good",
-      "code": "// Option 1: Enable quantization to reduce RAM\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\",\n    quantization: \"binary\"  // Reduces to ~0.5GB\n  }]\n})\n\n// Option 2: Upgrade cluster tier\n// M30 (8GB) → M40 (16GB) → M50 (32GB)\n\n// Option 3: Use partial indexing approach\n// Only index active/recent documents\ndb.products.createSearchIndex(\"active_vector_index\", \"vectorSearch\", {\n  fields: [\n    {\n      type: \"vector\",\n      path: \"embedding\",\n      numDimensions: 1536,\n      similarity: \"cosine\"\n    },\n    {\n      type: \"filter\",\n      path: \"status\"\n    }\n  ]\n})\n// Then always filter: filter: { status: \"active\" }",
+      "code": "// Option 1: Enable quantization to reduce RAM\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\",\n    quantization: \"binary\"  // Reduces to ~0.5GB\n  }]\n})\n\n// Option 2: Upgrade cluster tier\n// M30 (8GB) \u2192 M40 (16GB) \u2192 M50 (32GB)\n\n// Option 3: Use partial indexing approach\n// Only index active/recent documents\ndb.products.createSearchIndex(\"active_vector_index\", \"vectorSearch\", {\n  fields: [\n    {\n      type: \"vector\",\n      path: \"embedding\",\n      numDimensions: 1536,\n      similarity: \"cosine\"\n    },\n    {\n      type: \"filter\",\n      path: \"status\"\n    }\n  ]\n})\n// Then always filter: filter: { status: \"active\" }",
       "language": "javascript",
       "description": "size index to fit RAM"
     },
@@ -323,7 +331,7 @@
       "ruleId": "perf-prefilter-narrow",
       "ruleTitle": "Pre-filter to Narrow Candidate Set",
       "type": "good",
-      "code": "// Filter by category first\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10,\n      filter: { category: \"electronics\" }  // 1M → 100K candidates\n    }\n  }\n])\n\n// Multi-filter for targeted search\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10,\n      filter: {\n        $and: [\n          { category: \"electronics\" },\n          { brand: \"Apple\" },\n          { inStock: true }\n        ]\n      }\n    }\n  }\n])\n// 1M → 5K candidates = 200x fewer comparisons",
+      "code": "// Filter by category first\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10,\n      filter: { category: \"electronics\" }  // 1M \u2192 100K candidates\n    }\n  }\n])\n\n// Multi-filter for targeted search\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10,\n      filter: {\n        $and: [\n          { category: \"electronics\" },\n          { brand: \"Apple\" },\n          { inStock: true }\n        ]\n      }\n    }\n  }\n])\n// 1M \u2192 5K candidates = 200x fewer comparisons",
       "language": "javascript",
       "description": "strategic pre-filtering"
     },
@@ -355,7 +363,7 @@
       "ruleId": "perf-search-nodes",
       "ruleTitle": "Dedicated Search Nodes for Production",
       "type": "good",
-      "code": "Production Architecture:\n┌─────────────────┐     ┌─────────────────┐\n│  Database Node  │     │   Search Node   │\n│     (mongod)    │────▶│    (mongot)     │\n│    M40 tier     │     │    S30 tier     │\n└─────────────────┘     └─────────────────┘\n        │                       │\n   Database ops           Vector Search\n   (reads/writes)          (queries)",
+      "code": "Production Architecture:\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510     \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  Database Node  \u2502     \u2502   Search Node   \u2502\n\u2502     (mongod)    \u2502\u2500\u2500\u2500\u2500\u25b6\u2502    (mongot)     \u2502\n\u2502    M40 tier     \u2502     \u2502    S30 tier     \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518     \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n        \u2502                       \u2502\n   Database ops           Vector Search\n   (reads/writes)          (queries)",
       "language": "javascript",
       "description": "dedicated Search Nodes"
     },
@@ -419,7 +427,7 @@
       "ruleId": "query-numcandidates-tuning",
       "ruleTitle": "numCandidates Tuning (The 20x Rule)",
       "type": "good",
-      "code": "// CORRECT: 20x limit (recommended starting point)\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,  // 20 × 10 = 200\n      limit: 10\n    }\n  }\n])\n\n// CORRECT: Higher numCandidates for better recall\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 500,  // 50x limit - excellent recall\n      limit: 10\n    }\n  }\n])",
+      "code": "// CORRECT: 20x limit (recommended starting point)\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,  // 20 \u00d7 10 = 200\n      limit: 10\n    }\n  }\n])\n\n// CORRECT: Higher numCandidates for better recall\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 500,  // 50x limit - excellent recall\n      limit: 10\n    }\n  }\n])",
       "language": "javascript",
       "description": "20x rule for numCandidates"
     },
@@ -456,6 +464,14 @@
       "description": "consistent model usage"
     },
     {
+      "ruleId": "query-same-embedding-model",
+      "ruleTitle": "Use Same Embedding Model for Data and Query",
+      "type": "good",
+      "code": "// CORRECT: Provider-documented compatible family (Voyage 4 series)\n// Data was embedded with voyage-4\nconst queryEmbedding = await voyageClient.embed({\n  input: [\"laptop for programming\"],\n  model: \"voyage-4-lite\",\n  input_type: \"query\"\n})\n\n// Ensure dimensions still match your index configuration\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: queryEmbedding.data[0].embedding,\n      numCandidates: 200,\n      limit: 10\n    }\n  }\n])",
+      "language": "javascript",
+      "description": "voyage 4 compatible model-family query"
+    },
+    {
       "ruleId": "query-vectorsearch-first",
       "ruleTitle": "$vectorSearch Must Be First Pipeline Stage",
       "type": "bad",
@@ -475,7 +491,7 @@
       "ruleId": "rag-context-window",
       "ruleTitle": "Managing LLM Context Window Limits",
       "type": "bad",
-      "code": "// WRONG: Retrieving too much context\nconst context = await db.ragChunks.aggregate([\n  {\n    $vectorSearch: {\n      index: \"rag_vector_index\",\n      path: \"embedding\",\n      queryVector: queryEmbedding,\n      numCandidates: 200,\n      limit: 50  // 50 chunks × ~500 tokens = 25,000 tokens!\n    }\n  }\n]).toArray()\n\nconst fullContext = context.map(c => c.content).join('\\n\\n')\n// Result: Exceeds GPT-4's context, gets truncated or errors",
+      "code": "// WRONG: Retrieving too much context\nconst context = await db.ragChunks.aggregate([\n  {\n    $vectorSearch: {\n      index: \"rag_vector_index\",\n      path: \"embedding\",\n      queryVector: queryEmbedding,\n      numCandidates: 200,\n      limit: 50  // 50 chunks \u00d7 ~500 tokens = 25,000 tokens!\n    }\n  }\n]).toArray()\n\nconst fullContext = context.map(c => c.content).join('\\n\\n')\n// Result: Exceeds GPT-4's context, gets truncated or errors",
       "language": "javascript",
       "description": "ignoring limits"
     },
@@ -483,7 +499,7 @@
       "ruleId": "rag-context-window",
       "ruleTitle": "Managing LLM Context Window Limits",
       "type": "good",
-      "code": "// Token estimation (rough: 1 token ≈ 4 characters for English)\nfunction estimateTokens(text) {\n  return Math.ceil(text.length / 4)\n}\n\n// Context-aware retrieval\nasync function retrieveWithinTokenLimit(query, options = {}) {\n  const {\n    maxContextTokens = 4000,  // Reserve tokens for context\n    maxResponseTokens = 1000, // Reserve for response\n    modelLimit = 8192         // GPT-4 limit\n  } = options\n\n  // Calculate available context budget\n  const queryTokens = estimateTokens(query)\n  const systemPromptTokens = 500  // Estimate for system prompt\n  const availableTokens = modelLimit - queryTokens - systemPromptTokens - maxResponseTokens\n\n  const contextBudget = Math.min(availableTokens, maxContextTokens)\n\n  // Retrieve chunks\n  const queryEmbedding = await embeddingClient.embed(query)\n  const chunks = await db.ragChunks.aggregate([\n    {\n      $vectorSearch: {\n        index: \"rag_vector_index\",\n        path: \"embedding\",\n        queryVector: queryEmbedding,\n        numCandidates: 200,\n        limit: 20  // Get more than needed, then filter\n      }\n    },\n    {\n      $addFields: { score: { $meta: \"vectorSearchScore\" } }\n    },\n    {\n      $project: { content: 1, score: 1, source: 1 }\n    }\n  ]).toArray()\n\n  // Select chunks within budget\n  const selectedChunks = []\n  let usedTokens = 0\n\n  for (const chunk of chunks) {\n    const chunkTokens = estimateTokens(chunk.content)\n    if (usedTokens + chunkTokens <= contextBudget) {\n      selectedChunks.push(chunk)\n      usedTokens += chunkTokens\n    } else {\n      break  // Stop when budget exhausted\n    }\n  }\n\n  return {\n    chunks: selectedChunks,\n    tokensUsed: usedTokens,\n    tokenBudget: contextBudget\n  }\n}",
+      "code": "// Token estimation (rough: 1 token \u2248 4 characters for English)\nfunction estimateTokens(text) {\n  return Math.ceil(text.length / 4)\n}\n\n// Context-aware retrieval\nasync function retrieveWithinTokenLimit(query, options = {}) {\n  const {\n    maxContextTokens = 4000,  // Reserve tokens for context\n    maxResponseTokens = 1000, // Reserve for response\n    modelLimit = 8192         // GPT-4 limit\n  } = options\n\n  // Calculate available context budget\n  const queryTokens = estimateTokens(query)\n  const systemPromptTokens = 500  // Estimate for system prompt\n  const availableTokens = modelLimit - queryTokens - systemPromptTokens - maxResponseTokens\n\n  const contextBudget = Math.min(availableTokens, maxContextTokens)\n\n  // Retrieve chunks\n  const queryEmbedding = await embeddingClient.embed(query)\n  const chunks = await db.ragChunks.aggregate([\n    {\n      $vectorSearch: {\n        index: \"rag_vector_index\",\n        path: \"embedding\",\n        queryVector: queryEmbedding,\n        numCandidates: 200,\n        limit: 20  // Get more than needed, then filter\n      }\n    },\n    {\n      $addFields: { score: { $meta: \"vectorSearchScore\" } }\n    },\n    {\n      $project: { content: 1, score: 1, source: 1 }\n    }\n  ]).toArray()\n\n  // Select chunks within budget\n  const selectedChunks = []\n  let usedTokens = 0\n\n  for (const chunk of chunks) {\n    const chunkTokens = estimateTokens(chunk.content)\n    if (usedTokens + chunkTokens <= contextBudget) {\n      selectedChunks.push(chunk)\n      usedTokens += chunkTokens\n    } else {\n      break  // Stop when budget exhausted\n    }\n  }\n\n  return {\n    chunks: selectedChunks,\n    tokensUsed: usedTokens,\n    tokenBudget: contextBudget\n  }\n}",
       "language": "javascript",
       "description": "context-aware retrieval"
     },
@@ -542,6 +558,30 @@
       "code": "// Generate multiple query variations for better retrieval\nasync function multiQueryRetrieval(userQuery) {\n  // Generate query variations\n  const variations = await llm.chat([\n    {\n      role: \"system\",\n      content: \"Generate 3 different phrasings of this question for search. Return as JSON array.\"\n    },\n    { role: \"user\", content: userQuery }\n  ])\n\n  const queries = [userQuery, ...JSON.parse(variations)]\n\n  // Retrieve for each query\n  const allResults = []\n  for (const query of queries) {\n    const results = await retrieveContext(query, { limit: 3 })\n    allResults.push(...results)\n  }\n\n  // Deduplicate and re-rank by score\n  const seen = new Set()\n  return allResults\n    .filter(r => {\n      const key = r.content.substring(0, 100)\n      if (seen.has(key)) return false\n      seen.add(key)\n      return true\n    })\n    .sort((a, b) => b.score - a.score)\n    .slice(0, 5)\n}",
       "language": "javascript",
       "description": "Multi-Query Retrieval (Better Recall) example for RAG Retrieval Pattern"
+    },
+    {
+      "ruleId": "query-same-embedding-model",
+      "ruleTitle": "Use Same Embedding Model for Data and Query",
+      "type": "bad",
+      "code": "// WRONG: Query embedding uses document semantics\nconst queryEmbedding = await voyageClient.embed({\n  input: [\"laptop for programming\"],\n  model: \"voyage-4\",\n  input_type: \"document\"  // WRONG for query-time embedding\n})\n\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: queryEmbedding.data[0].embedding,\n      numCandidates: 200,\n      limit: 10\n    }\n  }\n])\n// Result: Ranking quality can degrade because query semantics are incorrect",
+      "language": "javascript",
+      "description": "wrong voyage input_type for query"
+    },
+    {
+      "ruleId": "query-same-embedding-model",
+      "ruleTitle": "Use Same Embedding Model for Data and Query",
+      "type": "good",
+      "code": "// CORRECT: Asymmetric retrieval with provider-compatible Voyage 4 family\n// Ingestion uses higher-quality model\nconst docEmbedding = await voyageClient.embed({\n  input: [document.content],\n  model: \"voyage-4-large\",\n  input_type: \"document\"\n})\n\n// Query uses lower-cost model in same compatible family\nconst queryEmbedding = await voyageClient.embed({\n  input: [\"laptop for programming\"],\n  model: \"voyage-4-lite\",\n  input_type: \"query\"\n})\n\n// Dimensions must still match index configuration\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: queryEmbedding.data[0].embedding,\n      numCandidates: 200,\n      limit: 10\n    }\n  }\n])",
+      "language": "javascript",
+      "description": "asymmetric voyage retrieval with correct input_type"
+    },
+    {
+      "ruleId": "perf-numcandidates-tradeoff",
+      "ruleTitle": "numCandidates Trade-offs",
+      "type": "good",
+      "code": "// CORRECT: Benchmark model and numCandidates together (quality + latency + cost)\nasync function benchmarkRetrievalConfigs(queries, configs, candidateGrid = [200, 500, 1000]) {\n  for (const cfg of configs) {\n    for (const numCandidates of candidateGrid) {\n      const latencies = []\n      let recallSum = 0\n      let embedCost = 0\n\n      for (const q of queries) {\n        const queryEmbedding = await cfg.embed(q.text)\n        embedCost += cfg.estimateCost(q.text)\n\n        const start = Date.now()\n        const ann = await db.products.aggregate([\n          {\n            $vectorSearch: {\n              index: cfg.indexName,\n              path: \"embedding\",\n              queryVector: queryEmbedding,\n              numCandidates,\n              limit: 10\n            }\n          },\n          { $project: { _id: 1 } }\n        ]).toArray()\n        latencies.push(Date.now() - start)\n\n        const enn = await db.products.aggregate([\n          {\n            $vectorSearch: {\n              index: cfg.indexName,\n              path: \"embedding\",\n              queryVector: queryEmbedding,\n              exact: true,\n              limit: 10\n            }\n          },\n          { $project: { _id: 1 } }\n        ]).toArray()\n\n        const annIds = new Set(ann.map(d => d._id.toString()))\n        const matches = enn.filter(d => annIds.has(d._id.toString())).length\n        recallSum += matches / Math.max(enn.length, 1)\n      }\n\n      latencies.sort((a, b) => a - b)\n      const p95 = latencies[Math.floor(latencies.length * 0.95)] || 0\n      print(`model=${cfg.model} numCandidates=${numCandidates} recall=${(recallSum / queries.length).toFixed(3)} p95=${p95}ms cost=${embedCost.toFixed(4)}`)\n    }\n  }\n}",
+      "language": "javascript",
+      "description": "model numCandidates benchmark workflow"
     }
   ]
 }

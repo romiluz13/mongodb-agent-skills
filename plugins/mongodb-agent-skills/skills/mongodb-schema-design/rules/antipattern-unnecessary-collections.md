@@ -1,13 +1,13 @@
 ---
 title: Reduce Unnecessary Collections
 impact: CRITICAL
-impactDescription: "5-10× faster reads by eliminating joins, single query returns complete data"
+impactDescription: "Reduces avoidable joins when related data is repeatedly queried together"
 tags: schema, collections, anti-pattern, embedding, normalization, atlas-suggestion
 ---
 
 ## Reduce Unnecessary Collections
 
-**Too many collections is the most common mistake when migrating from SQL.** Each additional collection requires a separate query or $lookup, adding network round-trips and query planning overhead. MongoDB's document model lets you embed related data and return complete objects in a single read—use it.
+**Collection count alone is not the anti-pattern.** The anti-pattern is splitting data across many collections when the same operation repeatedly re-joins it. MongoDB supports both embedding and references; choose based on access patterns, update patterns, and growth.
 
 **Incorrect (SQL-style normalization):**
 
@@ -28,8 +28,7 @@ db.orders.aggregate([
   { $lookup: { from: "customers", localField: "customerId", foreignField: "_id", as: "customer" } },
   { $lookup: { from: "addresses", localField: "customerId", foreignField: "customerId", as: "address" } }
 ])
-// 5 collection scans, O(n×m×p×q×r) complexity
-// Response time: 50-500ms depending on data size
+// Multiple joins increase query complexity and runtime variance
 ```
 
 **Correct (embedded document model):**
@@ -77,7 +76,6 @@ db.orders.aggregate([
 
 // One query returns complete order - no joins needed
 db.orders.findOne({ _id: "order123" })
-// Response time: <5ms
 ```
 
 This isn't denormalization—it's proper document modeling. Orders are self-contained entities; the embedded data is a snapshot that shouldn't change.
@@ -132,14 +130,14 @@ db.adminCommand({ listDatabases: 1 }).databases
     const colls = db.getSiblingDB(d.name).getCollectionNames().length
     print(`${d.name}: ${colls} collections`)
   })
-// Red flag: 20+ collections for a simple application
+// Count alone is not sufficient: combine with access and index/storage evidence
 
 // Find $lookup-heavy aggregations
 db.setProfilingLevel(1, { slowms: 20 })
 db.system.profile.find({
   "command.pipeline.0.$lookup": { $exists: true }
 }).count()
-// High count = over-normalized schema
+// Frequent repeated lookups on the same paths can indicate over-normalized hot paths
 
 // Check if collections are always accessed together
 // If orders always needs customer, items, addresses

@@ -9,6 +9,8 @@ tags: similarity, cosine, euclidean, dotProduct, vector-index
 
 The similarity function determines how vector distances are calculated. Choosing wrong produces incorrect result rankings.
 
+If your embedding provider doesn't give explicit guidance, MongoDB docs recommend starting with `dotProduct` and unit-normalized vectors.
+
 **Incorrect (mismatched similarity function):**
 
 ```javascript
@@ -23,14 +25,14 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
   }]
 })
 
-// WRONG: Using euclidean for text embeddings
-// Most text embedding models are designed for cosine similarity
+// WRONG: Picking a similarity function by guesswork
+// Similarity should follow model guidance and vector normalization behavior
 db.products.createSearchIndex("vector_index", "vectorSearch", {
   fields: [{
     type: "vector",
     path: "embedding",
     numDimensions: 1536,
-    similarity: "euclidean"  // Works but suboptimal for text
+    similarity: "euclidean"  // Might be incorrect for your model
   }]
 })
 ```
@@ -38,19 +40,29 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
 **Correct (matching similarity to use case):**
 
 ```javascript
-// CORRECT: cosine for text embeddings (most common)
-// Works with OpenAI, Cohere, Voyage AI, etc.
+// CORRECT: dotProduct with unit-normalized vectors
+// Good default when model docs don't prescribe a specific metric
 db.products.createSearchIndex("vector_index", "vectorSearch", {
   fields: [{
     type: "vector",
     path: "embedding",
     numDimensions: 1536,
-    similarity: "cosine"  // Normalizes automatically
+    similarity: "dotProduct"
   }]
 })
 
-// CORRECT: euclidean for image/spatial embeddings
-// When absolute distance matters
+// CORRECT: cosine when your model guidance explicitly expects cosine behavior
+// Note: cosine can't be used with zero-magnitude vectors
+db.products.createSearchIndex("vector_index_cosine", "vectorSearch", {
+  fields: [{
+    type: "vector",
+    path: "embedding",
+    numDimensions: 1536,
+    similarity: "cosine"
+  }]
+})
+
+// CORRECT: euclidean for distance-based use cases
 db.images.createSearchIndex("image_vector_index", "vectorSearch", {
   fields: [{
     type: "vector",
@@ -59,26 +71,15 @@ db.images.createSearchIndex("image_vector_index", "vectorSearch", {
     similarity: "euclidean"
   }]
 })
-
-// CORRECT: dotProduct when vectors are pre-normalized
-// AND you want maximum performance
-db.products.createSearchIndex("vector_index", "vectorSearch", {
-  fields: [{
-    type: "vector",
-    path: "normalized_embedding",  // Must be normalized!
-    numDimensions: 1536,
-    similarity: "dotProduct"
-  }]
-})
 ```
 
 **Similarity Function Guide:**
 
 | Function | Best For | Pre-normalized? | Notes |
 |----------|----------|-----------------|-------|
-| `cosine` | Text embeddings | No (auto-normalizes) | Most common choice |
-| `euclidean` | Image/spatial data | No | Distance-based |
-| `dotProduct` | Performance-critical | Yes (required!) | Fastest computation |
+| `dotProduct` | Default when model guidance is unclear | Yes (required) | Efficient and docs-recommended starting point |
+| `cosine` | Models explicitly tuned for cosine similarity | Not required, but vectors must be non-zero | Docs recommend normalizing + `dotProduct` for cosine-like behavior |
+| `euclidean` | Distance-oriented embeddings/use cases | No | Use when model guidance indicates distance metric |
 
 **How to Check Your Embedding Model:**
 

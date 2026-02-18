@@ -1,13 +1,13 @@
 ---
 title: Consider Index Size and Memory Impact
 impact: HIGH
-impactDescription: "Indexes must fit in RAM for optimal performance—10 indexes × 100MB each = 1GB of working set"
+impactDescription: "Large index footprints can increase cache pressure and degrade query latency"
 tags: index, memory, size, RAM, working-set, performance, capacity
 ---
 
 ## Consider Index Size and Memory Impact
 
-**Indexes must fit in RAM for optimal performance—when indexes don't fit, queries hit disk and become orders of magnitude slower.** Each index on a 10M document collection might be 100-500MB. Create 10 indexes and you need 1-5GB just for indexes. Monitor index sizes, remove unused indexes, and use partial indexes to keep your working set in memory.
+**Index size directly affects cache pressure.** When frequently used index/data pages do not fit well in memory, disk reads and evictions increase. Monitor index sizes, remove unused indexes, and use targeted/partial indexes to keep the hot working set manageable.
 
 **Incorrect (creating indexes without considering memory impact):**
 
@@ -50,7 +50,8 @@ db.orders.createIndex(
 const cache = db.serverStatus().wiredTiger.cache["maximum bytes configured"]
 const indexSize = db.orders.stats().totalIndexSize
 print(`Index/cache ratio: ${(indexSize/cache*100).toFixed(1)}%`)
-// Target: < 50%
+// Interpret this ratio with workload metrics (evictions, latency, read I/O);
+// there is no universal threshold that fits every deployment.
 ```
 
 **Check index sizes:**
@@ -163,9 +164,10 @@ db.serverStatus().wiredTiger.cache
 // If pages evicted is high relative to pages read:
 // Working set doesn't fit in cache → performance degradation
 
-// Rule of thumb:
-// - Total index size should be < 50% of WiredTiger cache
-// - Leave room for data and query buffers
+// Track this with workload metrics:
+// - cache eviction behavior
+// - read I/O pressure
+// - query latency under representative load
 ```
 
 **Strategies to reduce index size:**
@@ -190,13 +192,12 @@ db.orders.aggregate([
   { $match: { "accesses.ops": 0, name: { $ne: "_id_" } } }
 ])
 
-// 4. Use shorter field names in indexed fields
-// { "customerIdentifier": 1 } vs { "cid": 1 }
-// Saves ~15 bytes per entry on string difference
+// 4. Use compact key/value representations where appropriate
+// (balanced against readability and compatibility constraints)
 
-// 5. Use integer IDs instead of strings where possible
+// 5. Use stable, efficient identifier types where possible
 // ObjectId: 12 bytes, UUID string: 36 bytes
-// 3× difference at scale
+// Size differences can matter at scale
 
 // 6. Compound indexes replace multiple single-field indexes
 // One { a: 1, b: 1, c: 1 } instead of three separate indexes

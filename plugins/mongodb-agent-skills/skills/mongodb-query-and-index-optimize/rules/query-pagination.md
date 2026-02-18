@@ -1,13 +1,13 @@
 ---
 title: Use Range-Based Pagination Instead of skip()
 impact: HIGH
-impactDescription: "Page 10,000: skip() takes 20 seconds, range-based takes 5ms—O(n) vs O(1)"
+impactDescription: "skip() cost grows with offset; keyset pagination typically scales better for deep pagination"
 tags: query, pagination, skip, cursor, performance, keyset, offset
 ---
 
 ## Use Range-Based Pagination Instead of skip()
 
-**skip() scans and discards documents—it gets slower the deeper you paginate.** Page 1 examines 20 docs; page 10,000 examines 200,000 docs just to discard 199,980. Range-based (keyset) pagination uses indexed field comparisons for O(1) performance on any page. This is why infinite scroll apps stay fast.
+**`skip()` scans and discards documents, so deeper offsets typically get slower.** Range-based (keyset) pagination uses indexed cursor predicates and usually scales better as offset grows.
 
 **Incorrect (skip degrades linearly with page depth):**
 
@@ -60,8 +60,8 @@ const page2 = await db.posts
 
 // Page N: Always the same performance
 // Index seeks directly to cursor position
-// Examines exactly 20 docs every time
-// Time: 5ms regardless of page number
+// Typically examines a bounded window near the cursor position
+// and scales better than deep skip/offset pagination
 ```
 
 **Handle non-unique sort fields (critical for correctness):**

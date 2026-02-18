@@ -36,7 +36,7 @@ db.products.aggregate([
     }
   }
 ])
-// Error: Path 'category' needs to be indexed as token
+// Error: Path 'category' must be indexed as type "filter"
 ```
 
 **Correct (filter fields indexed):**
@@ -97,6 +97,7 @@ db.products.aggregate([
 | `objectId` | `{ userId: ObjectId("...") }` |
 | `string` | `{ category: "tech" }` |
 | `UUID` | `{ sessionId: UUID("...") }` |
+| Arrays of supported scalar types | `{ genres: "Action" }` |
 
 **Supported Filter Operators:**
 
@@ -113,9 +114,24 @@ db.products.aggregate([
 { tags: { $in: ["sale", "new"] } }
 { tags: { $nin: ["discontinued"] } }
 
+// Existence
+{ discount: { $exists: true } }
+
 // Logical
 { $and: [{ status: "active" }, { price: { $lt: 100 } }] }
 { $or: [{ category: "A" }, { category: "B" }] }
+{ status: { $not: { $eq: "archived" } } }
+{ $nor: [{ category: "A" }, { category: "B" }] }
+```
+
+**Array Equality vs `$in`:**
+
+```javascript
+// Direct equality on array fields is supported (containment-style match)
+{ genres: "Action" }
+
+// Use $in when matching any of multiple values
+{ genres: { $in: ["Action", "Comedy"] } }
 ```
 
 **How to Verify:**
@@ -129,8 +145,8 @@ db.products.getSearchIndexes().forEach(idx => {
 
 **When NOT to use this pattern:**
 
-- Filtering on array elements (use $in instead of direct matching)
-- Filtering on nested objects (flatten to top-level fields)
+- Need analyzed-text prefilters like fuzzy, phrase, wildcard, or geo operators (use `$search.vectorSearch`)
+- Filtering on nested object values that are not indexed as `type: "filter"`
 - Text search filtering (use $search in hybrid search instead)
 
 ## Verify with

@@ -36,6 +36,11 @@ db.users.find({ userId: 123456 })
 - **Range queries or sorting**: Hashed indexes do not preserve order.
 - **Prefix searches**: Hashed values break prefix scans.
 
+**Important caveats:**
+
+- Avoid floating-point shard/index keys with hashed indexes. MongoDB hashes the truncated 64-bit integer form.
+- Hashed indexes cannot be multikey (array values are not valid hashed-index keys).
+
 ## Verify with
 
 ```javascript

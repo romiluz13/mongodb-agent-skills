@@ -1,7 +1,7 @@
 ---
 title: Model One-to-Many Relationships with References
 impact: HIGH
-impactDescription: "Handles unbounded growth, prevents 16MB crashes, enables independent queries"
+impactDescription: "Handles unbounded growth, avoids 16MB document-limit write failures, and enables independent queries"
 tags: schema, relationships, one-to-many, referencing, scalability
 ---
 
@@ -12,7 +12,7 @@ tags: schema, relationships, one-to-many, referencing, scalability
 **Incorrect (embedding unbounded arrays):**
 
 ```javascript
-// Publisher with ALL books embedded - will crash at scale
+// Publisher with ALL books embedded - risky at scale
 {
   _id: "oreilly",
   name: "O'Reilly Media",
@@ -24,7 +24,7 @@ tags: schema, relationships, one-to-many, referencing, scalability
   ]
 }
 // Adding one book rewrites entire 10MB document
-// Eventually exceeds 16MB limit → APPLICATION CRASH
+// Eventually exceeds 16MB limit -> writes fail for oversized documents
 ```
 
 **Correct (reference in child documents):**

@@ -83,6 +83,8 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
 
 **Common Embedding Model Dimensions:**
 
+Voyage models can support multiple output dimensions. If you configure a non-default output dimension at embedding time, your `numDimensions` must match that configured output exactly.
+
 | Model | Dimensions |
 |-------|------------|
 | OpenAI text-embedding-3-small | 1536 |
@@ -90,8 +92,9 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
 | OpenAI text-embedding-ada-002 | 1536 |
 | Cohere embed-english-v3.0 | 1024 |
 | Cohere embed-multilingual-v3.0 | 1024 |
-| Voyage voyage-3-large | 1024 |
-| Voyage voyage-3.5 | 1024 |
+| Voyage voyage-4 / voyage-4-lite / voyage-4-large | 1024 default (also 256, 512, 2048) |
+| Voyage voyage-code-3 | 1024 default (also 256, 512, 2048) |
+| Voyage voyage-3-large / voyage-3.5 (older) | 1024 default (also 256, 512, 2048) |
 | Google text-embedding-004 | 768 |
 | HuggingFace all-MiniLM-L6-v2 | 384 |
 | HuggingFace all-mpnet-base-v2 | 768 |
@@ -143,4 +146,6 @@ db.products.getSearchIndexes()
 2. Validate expected behavior and performance using explain and Atlas metrics.
 3. Confirm version-gated behavior on your target MongoDB release before production rollout.
 
-Reference: [MongoDB Vector Index Definition](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/#std-label-avs-types-vector-numDimensions)
+Reference:
+- [MongoDB Vector Index Definition](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/#std-label-avs-types-vector-numDimensions)
+- [Voyage Text Embeddings Models](https://www.mongodb.com/docs/voyageai/models/text-embeddings/)

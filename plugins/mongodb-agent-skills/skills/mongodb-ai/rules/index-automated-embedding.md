@@ -10,14 +10,14 @@ tags: automated-embedding, autoEmbed, vectorSearch, voyage, preview, self-manage
 MongoDB automated embedding now has deployment-specific behavior. Use the syntax that matches your deployment:
 
 - **Self-managed MongoDB Community Edition 8.2+ with Search/Vector Search (`mongot`)**: Preview feature that uses `autoEmbed`.
-- **Atlas**: separate Private Preview track with different setup and syntax expectations.
+- **Atlas clusters**: separate Atlas-only preview track exists with different syntax and enrollment requirements.
 
 Using the wrong syntax for the wrong deployment type causes failures or incorrect assumptions.
 
-**Incorrect (using older/private-preview syntax for Community 8.2+):**
+**Incorrect (using wrong field type for Community 8.2+ automated embedding):**
 
 ```javascript
-// WRONG for self-managed Community 8.2+ auto-embedding path
+// WRONG for self-managed Community 8.2+ automated-embedding path
 db.listingsAndReviews.createSearchIndex("vector_index", "vectorSearch", {
   fields: [{
     type: "text",
@@ -63,6 +63,18 @@ db.listingsAndReviews.aggregate([
 ])
 ```
 
+**Atlas Private Preview Syntax (enrollment-required, different from `autoEmbed`):**
+
+```javascript
+db.movies.createSearchIndex("auto_embed_index", "vectorSearch", {
+  fields: [{
+    type: "text",
+    path: "fullplot",
+    model: "voyage-3.5"
+  }]
+})
+```
+
 **Community 8.2+ Supported Models (`autoEmbed`):**
 
 | Model | Dimensions | Best For |
@@ -78,10 +90,11 @@ db.listingsAndReviews.aggregate([
   - Self-managed MongoDB Community Edition 8.2+ with Search/Vector Search (`mongot`)
   - Voyage API key(s) configured for indexing/query
   - Preview feature: validate behavior per release before production use
-- **Atlas private preview path**:
-  - M10+ cluster
-  - private-preview enrollment and constraints apply
-  - inference service currently runs on GCP even if your cluster is on another provider
+- **Atlas preview path**:
+  - Atlas M10+ cluster
+  - Private-preview enrollment and constraints apply
+  - Atlas preview docs use a different index syntax (`type: "text"` with `model`) than Community `autoEmbed`
+  - If you are not enrolled, use manual embedding pipelines
 
 **When Automated Embedding is Triggered:**
 
@@ -104,7 +117,7 @@ await db.products.insertMany(documents)
 **Deployment-Specific Notes:**
 
 1. Community 8.2+ preview guidance uses `autoEmbed` (with `modality` + model) in index definitions.
-2. Atlas private preview guidance has separate docs and can differ in exact syntax and supported model list.
+2. Atlas preview guidance uses a separate `text` + `model` syntax and rollout path.
 3. Keep deployment assumptions explicit in playbooks; do not mix syntax from one track into the other.
 
 **Combining Automated Embedding with Pre-Filtering:**
@@ -155,7 +168,7 @@ db.listingsAndReviews.aggregate([
 - You need full control over embedding provider/model lifecycle
 - You must reuse raw embedding vectors outside MongoDB workflows
 - Your compliance or platform constraints don't match preview/deployment requirements
-- You are on Atlas without private-preview enrollment for automated embedding features
+- You are on Atlas without automated-embedding preview access
 
 ## Verify with
 

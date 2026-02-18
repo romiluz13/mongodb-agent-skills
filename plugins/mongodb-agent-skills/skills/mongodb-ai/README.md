@@ -11,6 +11,7 @@ AI assistants (Claude, GPT, etc.) have knowledge cutoffs and lack accurate infor
 - **numCandidates** tuning (the 20x rule)
 - **Vector Quantization** (scalar/binary)
 - **Hybrid Search** with $rankFusion
+- **Hybrid strategy selection** ($rankFusion vs $scoreFusion vs retrieval+rerank)
 - **RAG implementation** patterns
 - **AI Agent memory** storage
 
@@ -53,6 +54,8 @@ Add the skill to project knowledge or paste `SKILL.md` contents into the convers
 - ANN vs ENN search selection
 - Pre-filtering vs post-filtering
 - Score retrieval with $meta
+- Voyage-compatible asymmetric retrieval + `input_type` guardrails
+- Benchmark workflow for model/recall/latency/cost decisions
 - RAG ingestion, retrieval, and context management
 - Hybrid search with $rankFusion
 - AI agent memory schemas
@@ -64,7 +67,9 @@ When you're working on MongoDB AI features, the skill triggers automatically on 
 - "$vectorSearch", "embedding"
 - "semantic search", "RAG"
 - "numCandidates", "similarity"
-- "hybrid search", "$rankFusion"
+- "hybrid search", "$rankFusion", "$scoreFusion"
+- "rerank", "two-stage retrieval"
+- "Voyage AI", "input_type", "asymmetric retrieval"
 - "AI agent", "LLM memory"
 
 ## MCP Integration

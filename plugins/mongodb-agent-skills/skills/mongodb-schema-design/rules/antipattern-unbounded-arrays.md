@@ -1,20 +1,20 @@
 ---
 title: Avoid Unbounded Arrays
 impact: CRITICAL
-impactDescription: "Prevents 16MB document crashes and 10-100× write performance degradation"
+impactDescription: "Prevents unbounded growth that risks the 16MB limit and degrades update/index behavior"
 tags: schema, arrays, anti-pattern, document-size, atlas-suggestion, 16mb-limit
 ---
 
 ## Avoid Unbounded Arrays
 
-**Unbounded arrays are the #1 cause of MongoDB production outages.** When arrays grow indefinitely, documents approach the 16MB BSON limit and eventually crash your application. Even before hitting the limit, large arrays cause 10-100× slower updates because MongoDB must rewrite the entire document and potentially relocate it on disk.
+**Unbounded arrays are a common schema anti-pattern.** When arrays grow indefinitely, documents can approach the 16MB BSON size limit. Before that point, growing arrays can strain memory and index performance and make updates more expensive.
 
 **Incorrect (array grows forever):**
 
 ```javascript
 // User document with unbounded activity log
 // Problem: After 1 year, this array has 100,000+ entries
-// Impact: Document size ~15MB, updates take 500ms+, approaching crash
+// Impact: Document grows toward BSON size limit and becomes expensive to maintain
 {
   _id: "user123",
   name: "Alice",
@@ -27,7 +27,7 @@ tags: schema, arrays, anti-pattern, document-size, atlas-suggestion, 16mb-limit
 }
 ```
 
-Every update to this document rewrites the entire 15MB, causing 500ms+ latency and potential timeouts. When it hits 16MB, all writes fail permanently.
+As this document grows, updates and indexes can become increasingly expensive. When an update would push the document past 16MB, that write is rejected until the data model is corrected.
 
 **Correct (separate collection with reference):**
 
@@ -36,7 +36,7 @@ Every update to this document rewrites the entire 15MB, causing 500ms+ latency a
 { _id: "user123", name: "Alice", lastActivity: ISODate("2024-01-02") }
 
 // Activity in separate collection (one document per event)
-// Each document ~150 bytes, independent writes, no size limits
+// Each document is written independently, keeping the parent document bounded
 { userId: "user123", action: "login", ts: ISODate("2024-01-01") }
 { userId: "user123", action: "purchase", ts: ISODate("2024-01-02") }
 
@@ -44,7 +44,7 @@ Every update to this document rewrites the entire 15MB, causing 500ms+ latency a
 db.activities.find({ userId: "user123" }).sort({ ts: -1 }).limit(10)
 ```
 
-Each activity is an independent document. Writes are O(1), queries use indexes, no size limits.
+Each activity is an independent document. This keeps parent documents small and avoids unbounded growth on a single record.
 
 **Alternative (bucket pattern for time-series):**
 
@@ -68,7 +68,7 @@ db.activityBuckets.findOne({
 })
 ```
 
-Bucket pattern reduces document count 10-100× while keeping arrays bounded by time window.
+Bucketing can reduce document count while keeping arrays bounded by a time window.
 
 **When NOT to use this pattern:**
 
@@ -88,14 +88,14 @@ db.users.aggregate([
   { $sort: { size: -1 } },
   { $limit: 10 }
 ])
-// Red flags: size > 1MB or arrayLength > 1000
+// Example alert thresholds (tune per workload): size > 1MB or arrayLength > 1000
 
 // Check for arrays that could grow unbounded
 db.users.aggregate([
-  { $match: { "activityLog.999": { $exists: true } } },
+  { $match: { "activityLog.999": { $exists: true } } }, // Example cardinality checkpoint
   { $count: "documentsWithLargeArrays" }
 ])
-// Any result > 0 indicates unbounded growth
+// Investigate documents where cardinality continues to increase over time
 ```
 
 Atlas Schema Suggestions flags: "Array field 'activityLog' may grow without bound"

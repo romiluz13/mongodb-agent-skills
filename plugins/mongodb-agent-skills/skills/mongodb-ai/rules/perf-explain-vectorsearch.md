@@ -175,7 +175,7 @@ async function analyzeVectorSearchPerformance(query) {
 
 | Symptom | Likely Cause | Fix |
 |---------|--------------|-----|
-| High vectorSearchTime | Low numCandidates or no index | Increase numCandidates, verify index |
+| High vectorSearchTime | High numCandidates, broad candidate set, or memory pressure | Tune numCandidates/filtering, verify memory sizing and index readiness |
 | High memUsedBytes | Large result set | Add pre-filtering |
 | Missing documents | HNSW probabilistic nature | Increase numCandidates or use ENN |
 
@@ -183,7 +183,6 @@ async function analyzeVectorSearchPerformance(query) {
 
 - Production queries (explain adds overhead)
 - Simple queries with known performance
-- When using ENN (exact search behavior is deterministic)
 
 ## Verify with
 

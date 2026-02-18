@@ -215,15 +215,15 @@ db.runCommand({
       },
       oneOf: [
         {
-          properties: { type: { const: "book" } },
+          properties: { type: { enum: ["book"] } },
           required: ["author", "isbn"]
         },
         {
-          properties: { type: { const: "electronics" } },
+          properties: { type: { enum: ["electronics"] } },
           required: ["brand"]
         },
         {
-          properties: { type: { const: "clothing" } },
+          properties: { type: { enum: ["clothing"] } },
           required: ["size", "color"]
         }
       ]

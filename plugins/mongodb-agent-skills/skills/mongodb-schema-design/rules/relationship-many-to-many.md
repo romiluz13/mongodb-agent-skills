@@ -1,7 +1,7 @@
 ---
 title: Model Many-to-Many Relationships
 impact: HIGH
-impactDescription: "Choose embedding or referencing based on query direction—10× query speed difference"
+impactDescription: "Choose embedding or referencing based on query direction and growth patterns"
 tags: schema, relationships, many-to-many, referencing, embedding
 ---
 
@@ -123,7 +123,7 @@ db.products.aggregate([
 | Students → Classes | Few classes per student | Embed in student |
 | Classes → Students | Many students per class | Reference only in class |
 | Both directions common | Moderate both sides | Bidirectional embed |
-| High cardinality both | 1000+ both sides | Reference-only, use $lookup |
+| High cardinality both | Large and growing on both sides | Reference-only, use $lookup |
 
 **Maintaining bidirectional data:**
 
@@ -151,7 +151,7 @@ session.withTransaction(async () => {
 
 **When NOT to use this pattern:**
 
-- **Extremely high cardinality**: 10,000+ connections per entity—use graph database or reference-only with pagination.
+- **Extremely high cardinality**: If connections per entity grow without clear bounds, use reference-only with pagination (or evaluate graph-style approaches).
 - **Frequently changing relationships**: If students change classes hourly, overhead of updating both sides is high.
 - **No primary query direction**: If truly 50/50 query split, consider hybrid approach.
 
@@ -167,7 +167,7 @@ db.students.aggregate([
     max: { $max: "$classCount" }
   }}
 ])
-// If max > 100, consider reference-only pattern
+// If cardinality is high and growing toward unbounded arrays, consider reference-only pattern
 
 // Verify bidirectional consistency
 db.students.aggregate([

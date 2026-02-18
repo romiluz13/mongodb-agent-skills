@@ -1,13 +1,13 @@
 ---
 title: Model One-to-Few Relationships with Embedded Arrays
 impact: HIGH
-impactDescription: "Single query for bounded arrays, no $lookup overhead"
+impactDescription: "Single-query access for bounded child arrays that are typically read with the parent"
 tags: schema, relationships, one-to-few, embedding, arrays
 ---
 
 ## Model One-to-Few Relationships with Embedded Arrays
 
-**Embed bounded, small arrays directly in the parent document.** When a parent entity has a small, predictable number of children that are always accessed together, embed them as an array. This eliminates $lookup operations and keeps related data atomic.
+**Embed bounded, small arrays directly in the parent document.** When a parent entity has a limited number of children that are usually accessed together, embedding keeps related data in one read path and supports atomic parent+child updates.
 
 **Incorrect (separate collection for few items):**
 
@@ -119,16 +119,16 @@ db.users.updateOne(
 
 - **Unbounded growth**: Comments, orders, events—use separate collection.
 - **Independent access**: If addresses are queried without user context.
-- **Large child documents**: If each address is >1KB with history, reference instead.
-- **More than ~50 items**: Array operations become slow, use bucket or separate collection.
+- **Large child documents**: If child documents are large relative to the parent, references are often easier to scale.
+- **Growing arrays**: If array size grows steadily toward unbounded behavior, move children to a separate collection.
 
 **One-to-Few vs One-to-Many decision:**
 
 | Factor | One-to-Few (Embed) | One-to-Many (Reference) |
 |--------|-------------------|------------------------|
-| Typical count | <50 | >100 |
-| Max possible | <100, enforced | Unbounded |
-| Child size | Small (<500 bytes) | Any size |
+| Typical count | Small and bounded | Large or growing |
+| Max possible | Explicitly bounded by product rules | Unbounded or unclear upper bound |
+| Child size | Small relative to parent | Large or highly variable |
 | Access pattern | Always with parent | Sometimes independent |
 | Update frequency | Rare | Frequent |
 
@@ -146,12 +146,12 @@ db.users.aggregate([
     max: { $max: "$addressCount" }
   }}
 ])
-// avg < 10, max < 50 = good for embedding
-// max > 100 = consider separate collection
+// If avg/max remain low and stable over time, embedding is usually a good fit.
+// If max keeps growing release-over-release, consider a separate child collection.
 
 // Find outliers with large arrays
 db.users.find({
-  $expr: { $gt: [{ $size: { $ifNull: ["$addresses", []] } }, 20] }
+  $expr: { $gt: [{ $size: { $ifNull: ["$addresses", []] } }, 50] } // example threshold; tune per workload
 })
 ```
 

@@ -1,7 +1,7 @@
 ---
 title: Use Query Settings to Override Query Plans
 impact: MEDIUM
-impactDescription: "Persistently force index usage without application code changes"
+impactDescription: "Persistently guide planner behavior for a query shape without application code changes"
 tags: querySettings, hint, plan, index, MongoDB-8.0, optimization
 ---
 
@@ -38,15 +38,19 @@ db.adminCommand({
       ns: { db: "mydb", coll: "orders" },
       allowedIndexes: [{ status: 1, region: 1, createdAt: -1 }]
     },
-    comment: "force compound index for regional order-status query shape"
+    comment: "constrain index candidates for regional order-status query shape"
   }
 })
 
-// Now ANY query matching this shape uses the specified index
-db.orders.find({ status: "pending", region: "us-east" })  // Uses hint
-db.orders.find({ status: "shipped", region: "eu-west" })   // Uses hint
+// Matching query shapes apply these query settings cluster-wide
+db.orders.find({ status: "pending", region: "us-east" })
+db.orders.find({ status: "shipped", region: "eu-west" })
 // No application code changes needed
 ```
+
+**Important caveat (`allowedIndexes` vs `hint()`):**
+
+`indexHints.allowedIndexes` constrains which indexes the planner can evaluate for a shape; it does not behave like a hard per-query `hint()`. For some shapes, the planner may still choose `COLLSCAN`.
 
 **Version note for `settings.comment`:**
 
@@ -109,7 +113,7 @@ db.adminCommand({
 db.users.find({ status: "active", age: { $gte: 18 } })
 db.users.find({ status: "inactive", age: { $gte: 65 } })
 db.users.find({ status: "pending", age: { $gte: 0 } })
-// All will use the configured index
+// All match the same query shape and receive the same query-settings policy
 ```
 
 **View current query settings:**

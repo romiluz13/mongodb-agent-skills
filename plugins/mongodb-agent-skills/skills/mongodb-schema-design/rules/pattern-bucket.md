@@ -1,13 +1,13 @@
 ---
 title: Use Bucket Pattern for Time-Series Data
 impact: MEDIUM
-impactDescription: "100-3600× fewer documents, 10-50× smaller indexes, 5-20× faster range queries"
+impactDescription: "Can reduce document/index volume and improve time-range query efficiency for suitable workloads"
 tags: schema, patterns, bucket, time-series, iot, metrics, aggregation
 ---
 
 ## Use Bucket Pattern for Time-Series Data
 
-**Group time-series data into buckets instead of one document per event.** A sensor generating 1 reading/second creates 86,400 documents/day with naive schema—bucketing by hour reduces this to 24 documents with 3,600× less index overhead.
+**Group time-series data into buckets instead of one document per event.** For high-frequency measurements, bucketing can drastically reduce document and index volume while keeping time-range queries efficient.
 
 **Incorrect (one document per event):**
 
@@ -132,7 +132,7 @@ db.sensor_data.insertOne({
 **When NOT to use this pattern:**
 
 - **Random access patterns**: If you frequently query individual events by ID, not time ranges.
-- **Low volume**: <1000 events/day per entity doesn't justify bucketing complexity.
+- **Low volume**: If event volume is low, bucketing complexity may outweigh benefits.
 - **Varied event sizes**: Bucketing works best when events are uniform size.
 
 ## Verify with
@@ -147,7 +147,7 @@ db.sensor_data.aggregate([
   { $project: { size: { $bsonSize: "$$ROOT" } } },
   { $group: { _id: null, avgSize: { $avg: "$size" } } }
 ])
-// Bucketed: 10-100KB; Unbucketed: 100-500 bytes
+// Compare average document size with query latency and index growth trends
 ```
 
 Reference: [Building with Patterns - Bucket Pattern](https://mongodb.com/blog/post/building-with-patterns-the-bucket-pattern)

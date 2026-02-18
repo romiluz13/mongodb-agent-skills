@@ -9,18 +9,21 @@ tags: restrictions, operations, DDL, transaction
 
 Not all commands and operations are valid inside transactions. Attempting unsupported operations causes runtime errors and aborts.
 
-**Incorrect (running unsupported admin-style operation in transaction):**
+**Incorrect (running unsupported aggregation stage in transaction):**
 
 ```javascript
 await session.withTransaction(async () => {
   await db.collection("orders").updateOne({ _id: 1 }, { $set: { status: "paid" } }, { session })
 
-  // Unsupported/restricted in transaction scope
-  await db.command({ createIndexes: "orders", indexes: [{ key: { status: 1 }, name: "status_1" }] })
+  // Unsupported in transactions: $out
+  await db.collection("orders").aggregate([
+    { $match: { status: "paid" } },
+    { $out: "orders_archive" }
+  ], { session }).toArray()
 })
 ```
 
-Mixing operational DDL-style work into a transaction is unsafe.
+Unsupported stages/commands inside the transaction callback cause runtime failure and abort.
 
 **Correct (separate transactional DML from operational commands):**
 
@@ -30,11 +33,22 @@ await session.withTransaction(async () => {
   await db.collection("ledger").insertOne({ orderId: 1, event: "paid" }, { session })
 })
 
-// Execute index/admin operations outside transaction windows
-await db.command({ createIndexes: "orders", indexes: [{ key: { status: 1 }, name: "status_1" }] })
+// Execute restricted aggregation/admin operations outside transaction windows
+await db.collection("orders").aggregate([
+  { $match: { status: "paid" } },
+  { $out: "orders_archive" }
+]).toArray()
 ```
 
 Keep transaction scope focused on supported document writes/reads.
+
+**Conditional DDL caveat (`create` / `createIndexes`):**
+
+`create` and `createIndexes` are not blanket-forbidden, but only allowed in specific transaction scenarios:
+
+- Transaction is **not** a cross-shard write transaction
+- Explicit create/index transaction uses `readConcern: "local"`
+- Index target is a non-existing collection or a new empty collection created earlier in the same transaction
 
 **When NOT to use this pattern:**
 

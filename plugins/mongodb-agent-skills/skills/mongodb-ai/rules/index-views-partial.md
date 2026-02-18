@@ -9,6 +9,11 @@ tags: views, partial-index, filter, subset
 
 Create vector indexes on Views to index only a subset of documents. Reduces index size and improves performance.
 
+**Version-gated workflow:**
+
+- **MongoDB 8.0+**: Create/manage view indexes with Atlas UI/Admin API, then run vector queries against the **source collection** while referencing the view-backed index.
+- **MongoDB 8.1+**: You can also manage view indexes from mongosh/drivers and run `$vectorSearch` directly against the **view**.
+
 **Incorrect (indexing all documents):**
 
 ```javascript
@@ -25,7 +30,7 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
 // Result: Index includes null embeddings, wastes resources
 ```
 
-**Correct (partial indexing via Views):**
+**Correct (MongoDB 8.0 flow: Atlas UI/Admin API + source collection query):**
 
 ```javascript
 // Step 1: Create View filtering to documents with embeddings
@@ -42,7 +47,41 @@ db.createView(
   ]
 )
 
-// Step 2: Create vector index on the View
+// Step 2: Create vector index "vector_index" on the View
+// using Atlas UI or Atlas Admin API (MongoDB 8.0+ path).
+
+// Step 3: Query SOURCE collection while referencing the view-backed index
+db.products.aggregate([
+  {
+    $vectorSearch: {
+      index: "vector_index",
+      path: "embedding",
+      queryVector: queryEmbedding,
+      numCandidates: 200,
+      limit: 10
+    }
+  }
+])
+```
+
+**Correct (MongoDB 8.1+ flow: mongosh/driver index management + direct view query):**
+
+```javascript
+// Step 1: Create View filtering to documents with embeddings
+db.createView(
+  "products_with_embeddings",
+  "products",
+  [
+    {
+      $match: {
+        embedding: { $exists: true, $type: "array" },
+        status: "active"
+      }
+    }
+  ]
+)
+
+// Step 2: Create vector index on the View from mongosh/driver (8.1+)
 db.products_with_embeddings.createSearchIndex(
   "vector_index",
   "vectorSearch",
@@ -56,7 +95,7 @@ db.products_with_embeddings.createSearchIndex(
   }
 )
 
-// Step 3: Query the View
+// Step 3: Query the View directly (8.1+)
 db.products_with_embeddings.aggregate([
   {
     $vectorSearch: {
@@ -171,11 +210,11 @@ Source Collection (products)
 
 **Important Notes:**
 
-1. Index uses View name, not source collection name
-2. Views must be on same database as source collection
-3. On MongoDB 8.0, run `$vectorSearch` against the source collection using the View-backed index
-4. On MongoDB 8.1+, you can run `$vectorSearch` directly against the View
-5. View definition cannot include `$vectorSearch` stage itself
+1. Index names must be unique across a source collection and its Views
+2. Views must be on the same database as their source collection
+3. On MongoDB 8.0, query the source collection with the View-backed index
+4. On MongoDB 8.1+, you can query the View directly
+5. View definition cannot include the `$vectorSearch` stage itself
 6. MongoDB 8.1+ adds `createSearchIndex()` / `updateSearchIndex()` / `dropSearchIndex()` / `$listSearchIndexes` support on Views in mongosh and drivers
 
 **When NOT to use this pattern:**

@@ -25,7 +25,7 @@ Without tuning and observability, contention can cause unpredictable abort storm
 **Correct (explicit timeout policy with monitored retry behavior):**
 
 ```javascript
-// Administrative tuning (set at server/runtime scope as appropriate)
+// Self-managed deployments: tune at server/runtime scope as appropriate
 // db.adminCommand({ setParameter: 1, maxTransactionLockRequestTimeoutMillis: 20 })
 
 await session.withTransaction(async () => {
@@ -37,6 +37,11 @@ await session.withTransaction(async () => {
 ```
 
 Tune lock timeout together with retry strategy and SLA.
+
+**Atlas caveat:**
+
+- Atlas clusters restrict direct use of `setParameter`.
+- For Atlas clusters, use Atlas-supported parameter management paths (or Atlas Support) instead of relying on `db.adminCommand({ setParameter: ... })` from app code.
 
 **When NOT to use this pattern:**
 

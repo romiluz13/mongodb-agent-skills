@@ -31,12 +31,20 @@ for (const region of regions) {
     await invoices.updateMany({ region }, { $set: { archived: true } }, { session })
   }, {
     readPreference: "primary",
-    writeConcern: { w: "majority" }
+    readConcern: { level: "snapshot" },
+    writeConcern: { w: "majority" },
+    maxCommitTimeMS: 10000
   })
 }
 ```
 
 Constrain each transaction to narrower shard-key scope where possible.
+
+**Critical multi-shard caveats:**
+
+- If a transaction spans multiple shards and any involved shard has an arbiter, the transaction aborts.
+- For consistent cross-shard snapshots, use `readConcern: "snapshot"` (not just `local`/`majority`).
+- In sharded clusters, set a commit time budget with `commitTransaction` `maxTimeMS` (or `maxCommitTimeMS` via callback APIs), bounded by `transactionLifetimeLimitSeconds`.
 
 **When NOT to use this pattern:**
 
@@ -49,4 +57,4 @@ Constrain each transaction to narrower shard-key scope where possible.
 2. Confirm shard key filters are as selective as possible.
 3. Measure abort rates and lock wait under peak distributed load.
 
-Reference: [Transactions Production Considerations](https://www.mongodb.com/docs/manual/core/transactions-production-consideration/)
+Reference: [Transactions in Sharded Clusters](https://www.mongodb.com/docs/manual/core/transactions-sharded-clusters/)

@@ -32,7 +32,7 @@ Reference these guidelines when:
 | 1 | Schema Anti-Patterns | CRITICAL | `antipattern-` | 6 |
 | 2 | Schema Fundamentals | HIGH | `fundamental-` | 5 |
 | 3 | Relationship Patterns | HIGH | `relationship-` | 6 |
-| 4 | Design Patterns | MEDIUM | `pattern-` | 9 |
+| 4 | Design Patterns | MEDIUM | `pattern-` | 10 |
 | 5 | Schema Validation | MEDIUM | `validation-` | 3 |
 
 ## Quick Reference

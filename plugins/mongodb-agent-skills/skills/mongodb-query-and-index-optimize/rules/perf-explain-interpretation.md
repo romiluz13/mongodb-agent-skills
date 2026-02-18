@@ -7,7 +7,7 @@ tags: performance, explain, query-plan, diagnostics, optimization, COLLSCAN, IXS
 
 ## Interpret explain() Output for Query Optimization
 
-**explain() is your single most important tool for understanding query performance—it shows exactly how MongoDB executes your query.** The difference between COLLSCAN (scanning every document) and IXSCAN (using an index) can be 10,000× performance. Learn to read explain output fluently: check the stage, examine keys vs documents examined, and understand index bounds.
+**`explain()` is a primary tool for understanding query performance and planner behavior.** COLLSCAN vs IXSCAN differences can be substantial on large datasets. Read explain output by checking stages, scan counts, and index bounds.
 
 **Basic explain() usage:**
 

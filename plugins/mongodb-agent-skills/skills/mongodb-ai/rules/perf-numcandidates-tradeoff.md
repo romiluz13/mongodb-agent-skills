@@ -24,7 +24,7 @@ db.products.aggregate([
     }
   }
 ])
-// Result: ~60% recall, fast but missing relevant results
+// Result: Fast but recall can be poor for many workloads
 
 // WRONG: Too high - unnecessary latency
 db.products.aggregate([
@@ -38,7 +38,7 @@ db.products.aggregate([
     }
   }
 ])
-// Result: ~99.9% recall, but 5x slower than needed
+// Result: Higher recall potential, but often unnecessary latency overhead
 ```
 
 **Correct (tuned for use case):**
@@ -51,12 +51,12 @@ db.products.aggregate([
       index: "vector_index",
       path: "embedding",
       queryVector: [...],
-      numCandidates: 100,  // 10x limit - fast, acceptable recall
+      numCandidates: 200,  // 20x limit - docs-first starting point
       limit: 10
     }
   }
 ])
-// Result: ~85% recall, < 20ms latency
+// Result: Lower latency profile for interactive workloads
 
 // Quality-focused search: Optimize for recall
 db.products.aggregate([
@@ -70,7 +70,7 @@ db.products.aggregate([
     }
   }
 ])
-// Result: ~97% recall, < 50ms latency
+// Result: Higher recall profile with moderate latency cost
 
 // Critical search: Maximum recall
 db.legalDocs.aggregate([
@@ -84,7 +84,7 @@ db.legalDocs.aggregate([
     }
   }
 ])
-// Result: ~99% recall, < 100ms latency
+// Result: Near-exact behavior for critical workloads, with higher latency
 ```
 
 **Benchmark Your Specific Dataset:**
@@ -131,33 +131,95 @@ async function benchmarkNumCandidates(queryVector, testCandidates = [50, 100, 20
 }
 ```
 
-**Typical Results Pattern:**
+**Benchmark workflow for model + `numCandidates` decisions:**
+
+```javascript
+// Compare embedding model + retrieval settings together
+async function benchmarkRetrievalConfigs(queries, modelConfigs, candidateGrid = [200, 500, 1000]) {
+  for (const cfg of modelConfigs) {
+    print(`\nModel: ${cfg.model} | dims: ${cfg.dimensions}`)
+
+    for (const numCandidates of candidateGrid) {
+      const latencies = []
+      let totalRecall = 0
+      let totalEmbeddingCost = 0
+
+      for (const q of queries) {
+        const queryEmbedding = await cfg.embed(q.text) // provider call
+        totalEmbeddingCost += cfg.estimateCost(q.text)
+
+        const start = Date.now()
+        const ann = await db.products.aggregate([
+          {
+            $vectorSearch: {
+              index: cfg.indexName,
+              path: "embedding",
+              queryVector: queryEmbedding,
+              numCandidates: numCandidates,
+              limit: 10
+            }
+          },
+          { $project: { _id: 1 } }
+        ]).toArray()
+        latencies.push(Date.now() - start)
+
+        const enn = await db.products.aggregate([
+          {
+            $vectorSearch: {
+              index: cfg.indexName,
+              path: "embedding",
+              queryVector: queryEmbedding,
+              exact: true,
+              limit: 10
+            }
+          },
+          { $project: { _id: 1 } }
+        ]).toArray()
+
+        const annIds = new Set(ann.map(d => d._id.toString()))
+        const matches = enn.filter(d => annIds.has(d._id.toString())).length
+        totalRecall += matches / Math.max(enn.length, 1)
+      }
+
+      latencies.sort((a, b) => a - b)
+      const p95 = latencies[Math.floor(latencies.length * 0.95)] || 0
+      const avgRecall = totalRecall / queries.length
+
+      print(
+        `numCandidates=${numCandidates} avgRecall=${avgRecall.toFixed(3)} ` +
+        `p95=${p95}ms embedCost≈${totalEmbeddingCost.toFixed(4)}`
+      )
+    }
+  }
+}
+```
+
+Select the configuration that meets your SLA and quality target, not the one with the highest recall in isolation.
+
+**Typical Results Pattern (dataset-dependent):**
 
 ```
-numCandidates | Recall | Latency | Notes
-      50      |  ~75%  |   10ms  | Too low
-     100      |  ~85%  |   15ms  | Minimum viable
-     200      |  ~92%  |   25ms  | Good default
-     500      |  ~97%  |   45ms  | High quality
-    1000      |  ~99%  |   80ms  | Near-perfect
-    2000      | ~99.5% |  150ms  | Diminishing returns
+numCandidates | Recall Trend | Latency Trend | Notes
+ lower        | lower        | lower         | Risk of missing relevant results
+ medium       | better       | medium        | Often a practical balance
+ higher       | highest      | highest       | Diminishing returns likely
 ```
 
 **Use Case Guidelines:**
 
 | Use Case | Recommended | Rationale |
 |----------|-------------|-----------|
-| Autocomplete | 50-100 | Speed > precision |
-| Product search | 200-500 | Balance |
-| RAG context | 100-200 | Good enough for context |
-| Legal discovery | 1000-2000 | Can't miss relevant docs |
-| Duplicate detection | 500-1000 | High precision needed |
+| Autocomplete | Lower range | Speed > precision |
+| Product search | Mid range | Balance |
+| RAG context | Mid range | Context relevance with latency control |
+| Legal discovery | Higher range | Prioritize recall |
+| Duplicate detection | Higher range | Higher precision/recall goals |
 
 **When NOT to use this pattern:**
 
 - Using ENN (exact: true) - numCandidates not applicable
 - Very small datasets (< 1000 vectors) - minimal impact
-- When latency doesn't matter - just use high value
+- Blindly using the maximum without recall-vs-latency benchmarking
 
 ## Verify with
 

@@ -9,7 +9,7 @@ tags: schema, patterns, time-series, collections, bucketing, ttl, granularity, c
 
 **Time series collections are purpose-built for append-only measurements.** MongoDB automatically buckets, compresses, and indexes time series data so you get high ingest rates with far less storage and index overhead than a standard collection. Use them for IoT sensor data, application metrics, financial data, and event logs.
 
-**MongoDB 8.0 Performance:** Block processing introduced in MongoDB 8.0 delivers **200%+ throughput improvement** for time series queries by processing data in compressed blocks rather than document-by-document. This is automatic - no configuration needed.
+**MongoDB 8.0 Performance:** Block processing introduced in MongoDB 8.0 can significantly improve eligible analytical pipelines (for example, `$match` + `$sort` on the time field + `$group`). In some cases, throughput improves by more than 200%. This is automatic for eligible queries.
 
 **Incorrect (regular collection for measurements):**
 
@@ -56,7 +56,7 @@ db.sensor_data.insertOne({
 // Benefits:
 // - Automatic bucketing (many measurements per internal doc)
 // - Column compression (40-60% disk reduction)
-// - Auto-created compound index on metaField + timeField
+// - MongoDB 6.3+: auto-created compound index on metaField + timeField for new collections
 // - Optimized for time-range queries
 ```
 
@@ -193,7 +193,7 @@ db.sensor_data.insertMany(batch, { ordered: false })
 **Secondary indexes on time series:**
 
 ```javascript
-// Time series auto-creates index on { metaField, timeField }
+// MongoDB 6.3+: time series auto-creates index on { metaField, timeField } for new collections
 // Add secondary indexes for other query patterns
 
 // Index on measurement values for threshold queries
@@ -234,7 +234,7 @@ sh.shardCollection("mydb.sensor_data", { "metadata.region": 1 })
 - **Not time-based data**: Primary access isn't time range queries.
 - **Frequent updates/deletes**: Time series optimized for append-only; updates to old data are slow.
 - **Very low volume**: A few hundred events don't benefit from bucketing.
-- **Need transactions**: Time series collections don't support multi-document transactions.
+- **Need transactional writes**: Time series collections don't support writes in transactions (reads are supported).
 - **Complex queries on measurements**: If you mostly query by non-time fields, regular collections may be better.
 
 ## Verify with

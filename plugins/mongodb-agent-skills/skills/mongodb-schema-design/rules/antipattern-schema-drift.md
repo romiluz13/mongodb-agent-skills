@@ -1,13 +1,13 @@
 ---
 title: Prevent Schema Drift
 impact: CRITICAL
-impactDescription: "Prevents application crashes, data corruption, and query failures from inconsistent schemas"
+impactDescription: "Prevents application errors and query failures from inconsistent schemas"
 tags: schema, anti-pattern, validation, consistency, data-quality, atlas-suggestion
 ---
 
 ## Prevent Schema Drift
 
-**Schema drift—when documents in the same collection have inconsistent structures—causes application crashes and silent data corruption.** MongoDB's flexibility is a feature, but undisciplined field additions lead to code that must handle every possible shape. Use schema validation to prevent drift before it happens.
+**Schema drift—when documents in the same collection have inconsistent structures—causes application errors and query inconsistencies.** MongoDB's flexibility is a feature, but undisciplined field additions lead to code that must handle many shapes. Use schema validation to prevent drift before it happens.
 
 **Incorrect (uncontrolled schema drift):**
 
@@ -175,22 +175,18 @@ db.users.find({
 
 ```javascript
 // Check if validation exists
-db.getCollectionInfos({ name: "users" })[0].options.validator
-// Empty = no validation, drift likely
+const collInfo = db.getCollectionInfos({ name: "users" })[0]
+const validator = collInfo?.options?.validator
+// Missing validator means schema drift risk is higher
 
-// Sample documents to detect drift
-db.users.aggregate([
-  { $sample: { size: 100 } },
-  { $project: { fieldTypes: {
-    $map: {
-      input: { $objectToArray: "$$ROOT" },
-      as: "f",
-      in: { k: "$$f.k", t: { $type: "$$f.v" } }
-    }
-  }}}
-])
+// Primary check: find documents that do NOT match current validator
+if (validator) {
+  db.users.find({ $nor: [validator] }).limit(20)
+  db.users.countDocuments({ $nor: [validator] })
+}
 
-// Count documents failing validation (if validation exists)
+// Optional heavy check for maintenance windows:
+// validate can be slow and can take an exclusive lock on the collection.
 db.runCommand({
   validate: "users",
   full: true

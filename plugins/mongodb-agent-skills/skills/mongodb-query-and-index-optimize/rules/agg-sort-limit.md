@@ -1,13 +1,13 @@
 ---
 title: Combine $sort with $limit for Top-N Queries
 impact: HIGH
-impactDescription: "Top 10 from 1M docs: separated stages use 100MB+; coalesced uses 10KB—10,000× less memory"
+impactDescription: "$sort + $limit coalescence can significantly reduce memory for top-N queries"
 tags: aggregation, sort, limit, top-n, memory, optimization, coalescence
 ---
 
 ## Combine $sort with $limit for Top-N Queries
 
-**$sort followed immediately by $limit triggers MongoDB's top-N optimization—it tracks only N documents instead of sorting everything.** Getting the top 10 scores from 1 million documents: without coalescence, MongoDB sorts all 1M docs in memory (100MB+, spills to disk). With coalescence, it maintains a 10-element heap (10KB), completing 1000× faster.
+**$sort followed by $limit can trigger top-N optimization, so MongoDB tracks only N documents instead of fully materializing the sort set.** This reduces memory pressure and often improves latency for leaderboard/ranking queries.
 
 **Incorrect ($sort without $limit or with stages between):**
 
@@ -21,25 +21,23 @@ db.scores.aggregate([
   // Time: 30+ seconds
 ])
 
-// Pattern 2: Stages between $sort and $limit (breaks optimization)
+// Pattern 2: Intervening stage changes document count (breaks optimization)
 db.scores.aggregate([
   { $match: { gameId: "game123" } },
   { $sort: { score: -1 } },
-  // Full sort happens here (1M docs)
 
-  { $addFields: { rank: { $literal: "calculating..." } } },
-  // This stage BREAKS coalescence!
-  // MongoDB doesn't know $limit is coming
+  { $unwind: "$events" },
+  // $unwind changes document count, so coalescence can't apply
 
   { $limit: 10 }
-  // Too late - full sort already done
 ])
 
-// Pattern 3: $project between (also breaks optimization)
+// Pattern 3: $group between $sort and $limit (also breaks optimization)
 db.scores.aggregate([
   { $match: { gameId: "game123" } },
   { $sort: { score: -1 } },
-  { $project: { score: 1, player: 1 } },  // Breaks coalescence
+  { $group: { _id: "$player", topScore: { $max: "$score" } } },
+  // $group changes document count and shape
   { $limit: 10 }
 ])
 ```
@@ -53,8 +51,7 @@ db.scores.aggregate([
   { $sort: { score: -1 } },
   { $limit: 10 }
   // COALESCED: MongoDB maintains 10-element heap
-  // Memory: ~10KB (not 100MB)
-  // Time: <100ms (not 30s)
+  // Memory footprint is bounded by limit value
 ])
 
 // explain() shows:
@@ -197,8 +194,8 @@ function checkSortLimitCoalescence(collection, pipeline) {
 
   if (!coalesced && sortStageIndex !== -1 && limitStageIndex !== -1) {
     if (limitStageIndex - sortStageIndex > 1) {
-      print("\n⚠️  TIP: Move $limit immediately after $sort")
-      print("   Current stages between $sort and $limit block coalescence")
+      print("\n⚠️  TIP: Keep only non-cardinality-changing stages between $sort and $limit")
+      print("   Stages like $unwind/$group between them block coalescence")
     }
   }
 

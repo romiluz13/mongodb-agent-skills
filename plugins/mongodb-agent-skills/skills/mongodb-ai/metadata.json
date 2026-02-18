@@ -2,7 +2,7 @@
   "version": "1.4.0",
   "organization": "MongoDB",
   "date": "February 2026",
-  "abstract": "MongoDB Atlas Vector Search and AI integration patterns for AI agents and developers. Contains 33 rules across 6 categories: Vector Index Creation (CRITICAL - vector field definition, similarity functions, filter fields, quantization, dimension matching, multi-tenant architecture, Views for partial indexing, HNSW options, automated embedding), $vectorSearch Queries (CRITICAL - first-stage requirement, numCandidates tuning, ANN vs ENN search, pre-filtering with $exists/$ne/$not, lexical prefilters via $search.vectorSearch for fuzzy/phrase/geo, score retrieval, embedding model consistency), Performance Tuning (HIGH - quantization at scale, index memory requirements, numCandidates trade-offs, pre-filter optimization, explain for vector search, dedicated Search Nodes), RAG Patterns (HIGH - ingestion patterns, retrieval patterns, context window management, metadata filtering), Hybrid Search (MEDIUM - $rankFusion usage, $scoreFusion for score-based combination, weight tuning, sub-pipeline limitations), AI Agent Integration (MEDIUM - memory schema design, semantic memory retrieval, session context storage). Each rule includes incorrect/correct code examples with quantified impact metrics, 'When NOT to use' exceptions, and verification commands. This skill bridges the critical knowledge gap where AI assistants have outdated information about MongoDB Vector Search features.",
+  "abstract": "MongoDB Atlas Vector Search and AI integration patterns for AI agents and developers. Contains 33 rules across 6 categories: Vector Index Creation (CRITICAL - vector field definition, similarity functions, filter fields, quantization, dimension matching, multi-tenant architecture, Views for partial indexing, HNSW options, automated embedding with Voyage AI models), $vectorSearch Queries (CRITICAL - first-stage requirement, numCandidates tuning, ANN vs ENN search, pre-filtering with $exists/$ne/$not, lexical prefilters via $search.vectorSearch for fuzzy/phrase/geo, score retrieval, embedding model consistency including provider-compatible families, asymmetric Voyage retrieval, and input_type guardrails), Performance Tuning (HIGH - quantization at scale, index memory requirements, numCandidates trade-offs, model/latency/cost benchmarking workflow, pre-filter optimization, explain for vector search, dedicated Search Nodes), RAG Patterns (HIGH - ingestion patterns, retrieval patterns, context window management, metadata filtering), Hybrid Search (MEDIUM - $rankFusion usage, $scoreFusion for score-based combination, weight tuning, decision matrix for fusion vs retrieval+rerank, sub-pipeline limitations), AI Agent Integration (MEDIUM - memory schema design, semantic memory retrieval, session context storage). Each rule includes incorrect/correct code examples with quantified impact metrics, 'When NOT to use' exceptions, and verification commands. This skill bridges the critical knowledge gap where AI assistants have outdated information about MongoDB Vector Search features.",
   "references": [
     "https://mongodb.com/docs/atlas/atlas-vector-search/",
     "https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/",
@@ -12,6 +12,10 @@
     "https://mongodb.com/docs/atlas/atlas-vector-search/rag/",
     "https://mongodb.com/docs/atlas/atlas-vector-search/ai-agents/",
     "https://mongodb.com/docs/atlas/atlas-vector-search/improve-accuracy/",
-    "https://mongodb.com/docs/atlas/atlas-vector-search/troubleshooting/"
+    "https://mongodb.com/docs/atlas/atlas-vector-search/troubleshooting/",
+    "https://mongodb.com/docs/atlas/atlas-vector-search/crud-embeddings/create-embeddings-automatic/",
+    "https://mongodb.com/docs/voyageai/models/text-embeddings/",
+    "https://mongodb.com/docs/voyageai/quickstart/",
+    "https://mongodb.com/docs/voyageai/models/rerankers/"
   ]
 }

@@ -7,7 +7,7 @@ tags: quantization, scale, RAM, performance, 100k
 
 ## Enable Quantization at Scale
 
-Enable quantization when your vector count exceeds 100K. Without quantization, large datasets require excessive RAM and slow performance.
+Enable quantization when your vector count grows large (typically 100K+ vectors). Use this as a starting guideline and benchmark on your own workload.
 
 **Incorrect (no quantization on large dataset):**
 
@@ -74,6 +74,8 @@ With binary quantization:
 ```
 
 **Decision Matrix:**
+
+Treat these ranges as starting heuristics, not hard limits.
 
 | Vector Count | Quantization | RAM (1536 dims) |
 |--------------|--------------|-----------------|

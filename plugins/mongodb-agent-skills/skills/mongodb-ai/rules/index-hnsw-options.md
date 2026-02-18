@@ -9,6 +9,8 @@ tags: HNSW, maxEdges, numEdgeCandidates, graph, tuning
 
 HNSW (Hierarchical Navigable Small World) graph parameters control index build quality and search accuracy. Tune for your workload only after baseline testing with defaults.
 
+`hnswOptions` is documented as a Preview capability. Treat non-default tuning as release-sensitive and re-validate on upgrades.
+
 **Incorrect (ignoring HNSW options):**
 
 ```javascript

@@ -1,13 +1,13 @@
 ---
 title: Model One-to-One Relationships with Embedding
 impact: HIGH
-impactDescription: "Single read operation vs 2 queries, atomic updates guaranteed"
+impactDescription: "Can reduce read round-trips and simplify atomic updates when data is consistently accessed together"
 tags: schema, relationships, one-to-one, embedding, fundamentals
 ---
 
 ## Model One-to-One Relationships with Embedding
 
-**Embed one-to-one related data directly in the parent document.** When two pieces of data always belong together and are always accessed together, they should live in the same document. Separating 1:1 data into two collections doubles your queries and breaks atomicity.
+**Embed one-to-one related data directly in the parent document when it is consistently co-accessed.** When two pieces of data always belong together and are typically read together, keeping them in one document can reduce read round-trips and simplify atomic updates.
 
 **Incorrect (separate collections for one-to-one data):**
 

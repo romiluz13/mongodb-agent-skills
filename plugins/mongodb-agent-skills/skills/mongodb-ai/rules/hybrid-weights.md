@@ -1,7 +1,7 @@
 ---
 title: Tuning Hybrid Search Weights
 impact: MEDIUM
-impactDescription: Per-query weight tuning improves relevance by 20-40%
+impactDescription: Per-query weight tuning can improve relevance for mixed semantic/lexical workloads
 tags: hybrid, weights, tuning, rankFusion, scoreFusion
 ---
 
@@ -9,7 +9,7 @@ tags: hybrid, weights, tuning, rankFusion, scoreFusion
 
 Weights control the contribution of each search method. Tune per-query based on query type.
 
-Current MongoDB 8.2 docs describe fusion stages as Preview features, so keep weights/behavior checks in release upgrade tests.
+Keep weights/behavior checks in release-upgrade tests because hybrid features evolve quickly across versions.
 
 **Incorrect (static weights for all queries):**
 
@@ -22,7 +22,9 @@ const hybridSearch = (query) => db.products.aggregate([
         pipelines: {
           vector: [{ $vectorSearch: { ... } }],
           text: [{ $search: { ... } }]
-        },
+        }
+      },
+      combination: {
         weights: {
           vector: 0.5,  // Always 50/50 - suboptimal
           text: 0.5
@@ -88,8 +90,7 @@ async function hybridSearch(query) {
                 text: { query: query, path: "description" }
               }
             }, { $limit: 20 }]
-          },
-          normalization: "none"
+          }
         },
         combination: {
           weights: weights

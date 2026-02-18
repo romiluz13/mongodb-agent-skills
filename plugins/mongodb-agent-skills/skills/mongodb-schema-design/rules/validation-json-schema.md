@@ -1,7 +1,7 @@
 ---
 title: Define Validation Rules with JSON Schema
 impact: MEDIUM
-impactDescription: "Human-readable validation, catches 90% of data quality issues at insert time"
+impactDescription: "Human-readable validation that prevents invalid writes at insert and update time"
 tags: schema, validation, json-schema, data-integrity, data-quality
 ---
 
@@ -174,7 +174,7 @@ db.createCollection("products", {
     oneOf: [
       {
         properties: {
-          type: { const: "physical" },
+          type: { enum: ["physical"] },
           weight: { bsonType: "double", minimum: 0 },
           dimensions: { bsonType: "object" }
         },
@@ -182,7 +182,7 @@ db.createCollection("products", {
       },
       {
         properties: {
-          type: { const: "digital" },
+          type: { enum: ["digital"] },
           downloadUrl: { bsonType: "string" },
           fileSize: { bsonType: "int" }
         },

@@ -89,7 +89,7 @@ db.products.getSearchIndexes()
 
 **When NOT to use this pattern:**
 
-- Using Automated Embedding feature (use `type: "text"` instead)
+- Defining an Automated Embedding field (use deployment-specific automated-embedding syntax: Community `autoEmbed` vs Atlas preview `text`+`model`)
 - Creating traditional search indexes (use Atlas Search)
 
 ## Verify with

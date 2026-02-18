@@ -9,7 +9,17 @@ tags: hybrid, rankFusion, scoreFusion, limitations, constraints
 
 `$rankFusion` and `$scoreFusion` have specific constraints. Understanding them prevents errors.
 
-Current MongoDB 8.2 docs describe fusion stages as Preview features. Keep rollout plans conservative and validate on your exact target release.
+Fusion-stage behavior has evolved quickly across 8.0-8.2+. Keep rollout plans conservative and validate on your exact target release.
+
+**Hybrid strategy decision matrix (docs-first):**
+
+| Goal | Primary Pattern | Minimum MongoDB Version | Why |
+|------|-----------------|-------------------------|-----|
+| Stable baseline hybrid retrieval | `$rankFusion` | 8.0+ (`$vectorSearch` in input: 8.1+) | Rank-based fusion, simple weighting, broadest compatibility |
+| Score-aware hybrid tuning | `$scoreFusion` | 8.2+ | Uses score magnitudes, normalization, custom expressions |
+| Highest top-k precision | Retrieval (`$vectorSearch` / fusion) + external reranker | Retrieval stage per selected pattern | Two-stage flow can improve final ordering after candidate retrieval |
+
+If you run retrieval + rerank, keep MongoDB guidance focused on candidate quality (`numCandidates`, filters, hybrid weights), then apply reranking in application/provider logic.
 
 **Incorrect (violating limitations):**
 
@@ -95,16 +105,14 @@ db.products.aggregate([
 | `$search` | Yes | Full-text search |
 | `$match` | Yes | Filter documents |
 | `$sort` | Yes | Re-order results |
-| `$sample` | Yes* | Random sampling in sub-pipelines |
-| `$skip` | Yes | Candidate paging inside sub-pipelines |
-| `$limit` | Yes | Limit candidate/results per sub-pipeline |
+| `$limit` | Yes | Recommended to cap candidate/results per sub-pipeline |
 | `$geoNear` | Yes | Geographic search |
 | `$project` | **No** | Use after $rankFusion |
 | `$group` | **No** | Not supported |
 | `$lookup` | **No** | Same collection only |
 | `$unwind` | **No** | Not supported |
 
-`*` `$sample` support is documented for `$rankFusion`; verify `$scoreFusion` support on your target MongoDB patch release before production rollout.
+For Atlas hybrid-search guidance, rely on the conservative stage set above. If you use additional stages from server-manual examples, validate behavior on your target patch release first.
 
 **Key Limitations:**
 
@@ -126,8 +134,7 @@ db.products.aggregate([
 }
 
 // 4. No stable global pagination across fused output
-// You can use $skip/$limit in each sub-pipeline to control candidates,
-// but end-to-end paging over fused/merged output is release-sensitive.
+// End-to-end paging over fused/merged output is release-sensitive.
 // Workaround: Request a larger window and paginate in application code.
 
 // 5. Same collection only

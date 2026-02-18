@@ -1,6 +1,6 @@
 ---
 name: mongodb-ai
-description: MongoDB Atlas Vector Search and AI integration. Use when creating vector indexes, writing $vectorSearch queries, building RAG applications, implementing hybrid search, or storing AI agent memory. Triggers on "vector search", "vector index", "$vectorSearch", "embedding", "semantic search", "RAG", "retrieval augmented generation", "numCandidates", "similarity search", "cosine similarity", "hybrid search", "$rankFusion", "$scoreFusion", "AI agent", "LLM memory", "quantization", "multi-tenant", "Search Nodes", "explain vectorsearch", "HNSW", "automated embedding", "lexical prefilter", "fuzzy search vector", "phrase filter".
+description: MongoDB Atlas Vector Search and AI integration. Use when creating vector indexes, writing $vectorSearch queries, building RAG applications, implementing hybrid search, or storing AI agent memory. Triggers on "vector search", "vector index", "$vectorSearch", "embedding", "semantic search", "RAG", "retrieval augmented generation", "numCandidates", "similarity search", "cosine similarity", "hybrid search", "$rankFusion", "$scoreFusion", "rerank", "two-stage retrieval", "AI agent", "LLM memory", "quantization", "multi-tenant", "Search Nodes", "explain vectorsearch", "HNSW", "automated embedding", "autoEmbed", "Voyage AI", "voyage-4", "voyage-4-large", "voyage-code-3", "input_type", "asymmetric retrieval", "lexical prefilter", "fuzzy search vector", "phrase filter".
 license: Apache-2.0
 metadata:
   author: mongodb
@@ -25,9 +25,11 @@ Reference these guidelines when:
 - Tuning numCandidates for recall vs. latency
 - Implementing RAG (Retrieval-Augmented Generation)
 - Building hybrid search with `$rankFusion` or `$scoreFusion`
+- Choosing between fusion-only retrieval and retrieval + rerank workflows
 - Storing AI agent memory (short-term and long-term)
 - Choosing similarity functions (cosine, euclidean, dotProduct)
 - Enabling vector quantization for large datasets
+- Integrating Voyage AI embedding models (for example `voyage-4` or `voyage-code-3`)
 - Pre-filtering vector search results
 - Debugging "no results" or slow vector queries
 
@@ -64,13 +66,13 @@ Reference these guidelines when:
 - `query-prefiltering` - Filter before vector comparison ($exists, $ne, $not)
 - `query-lexical-prefilter` - Advanced text filters (fuzzy, phrase, geo) via $search.vectorSearch
 - `query-get-scores` - Using $meta: "vectorSearchScore"
-- `query-same-embedding-model` - Data and query embeddings must match
+- `query-same-embedding-model` - Data/query embeddings must share space, dimensions, and correct `input_type`
 
 ### 3. Performance Tuning (HIGH) - 6 rules
 
 - `perf-quantization-scale` - Enable at 100K+ vectors
 - `perf-index-in-memory` - Vector indexes must fit in RAM
-- `perf-numcandidates-tradeoff` - Higher = better recall, slower queries
+- `perf-numcandidates-tradeoff` - Benchmark recall/latency/cost trade-offs by model and `numCandidates`
 - `perf-prefilter-narrow` - Reduce candidate set before vector comparison
 - `perf-explain-vectorsearch` - Debug with explain() for vector queries
 - `perf-search-nodes` - Dedicated Search Nodes for production
@@ -87,7 +89,7 @@ Reference these guidelines when:
 - `hybrid-rankfusion` - Combining vector + text search (MongoDB 8.0+)
 - `hybrid-scorefusion` - Score-based hybrid search (MongoDB 8.2+)
 - `hybrid-weights` - Per-query weight tuning
-- `hybrid-limitations` - Stage restrictions in sub-pipelines
+- `hybrid-limitations` - Stage restrictions plus decision matrix (`$rankFusion` vs `$scoreFusion` vs retrieval+rerank)
 
 ### 6. AI Agent Integration (MEDIUM) - 3 rules
 

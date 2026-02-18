@@ -1,13 +1,13 @@
 ---
 title: Respect the 16MB Document Limit
 impact: CRITICAL
-impactDescription: "Hard limit—exceeding crashes writes, corrupts data, requires emergency refactoring"
+impactDescription: "Hard BSON limit; oversized documents fail writes and force schema refactoring"
 tags: schema, fundamentals, document-size, 16mb, bson-limit, atlas-suggestion
 ---
 
 ## Respect the 16MB Document Limit
 
-**MongoDB documents cannot exceed 16 megabytes (16,777,216 bytes).** This is a hard BSON limit—not a guideline. When a document approaches this limit, writes fail, applications crash, and you're forced into emergency schema refactoring. Design to stay well under this limit from day one.
+**MongoDB documents cannot exceed 16 megabytes (16,777,216 bytes).** This is a hard BSON limit, not a guideline. When documents approach the limit, writes can fail and schema refactoring becomes urgent.
 
 **How documents hit 16MB:**
 
@@ -18,7 +18,7 @@ tags: schema, fundamentals, document-size, 16mb, bson-limit, atlas-suggestion
   activityLog: [
     // 100,000 events × 150 bytes = 15MB
     { action: "login", ts: ISODate("..."), ip: "..." },
-    // ... grows forever until crash
+    // ... grows forever until writes begin failing for oversized docs
   ]
 }
 
@@ -28,7 +28,7 @@ tags: schema, fundamentals, document-size, 16mb, bson-limit, atlas-suggestion
   content: "...",
   attachments: [
     { filename: "report.pdf", data: BinData(0, "...") }  // 10MB PDF
-    // One more attachment = crash
+    // Additional large attachments can push document size past the 16MB limit
   ]
 }
 
@@ -112,15 +112,13 @@ db.users.aggregate([
 ])
 ```
 
-**Safe size thresholds:**
+**Example monitoring thresholds (tune per workload):**
 
-| Document Size | Risk Level | Action |
-|---------------|------------|--------|
-| <100 KB | Safe | Normal operation |
-| 100 KB - 1 MB | Monitor | Watch for growth patterns |
-| 1 MB - 5 MB | Warning | Plan refactoring, add alerts |
-| 5 MB - 10 MB | Critical | Refactor immediately |
-| >10 MB | Emergency | Document at risk of failure |
+| Document Size | Suggested Action |
+|---------------|------------------|
+| Smaller documents | Track growth trend over time |
+| Mid-size documents | Add alerts and review growth patterns |
+| Large documents | Prioritize refactor plan before limit risk |
 
 **Prevention strategies:**
 
@@ -183,7 +181,7 @@ const downloadStream = bucket.openDownloadStream(videoId)
 **When NOT to worry about 16MB:**
 
 - **Small, fixed schemas**: User profiles, configs, small entities rarely hit limits.
-- **Bounded arrays with validation**: If you enforce `maxItems: 50`, you're safe.
+- **Bounded arrays with validation**: Explicit limits reduce growth risk.
 - **Read-heavy with controlled writes**: If writes are always small updates.
 
 ## Verify with
@@ -195,7 +193,7 @@ db.createCollection("documentSizeAlerts")
 // Periodic check (run via cron/scheduled job)
 db.users.aggregate([
   { $project: { size: { $bsonSize: "$$ROOT" } } },
-  { $match: { size: { $gt: 5000000 } } },  // >5MB
+  { $match: { size: { $gt: 5000000 } } },  // Example alert threshold; tune per workload
   { $merge: {
     into: "documentSizeAlerts",
     whenMatched: "replace"
@@ -203,7 +201,7 @@ db.users.aggregate([
 ])
 
 // Alert if any documents are approaching limit
-db.documentSizeAlerts.find({ size: { $gt: 10000000 } })
+db.documentSizeAlerts.find({ size: { $gt: 10000000 } }) // Example threshold; tune per workload
 ```
 
 Reference: [BSON Document Size Limit](https://mongodb.com/docs/manual/reference/limits/#std-label-limit-bson-document-size)

@@ -1,13 +1,15 @@
 ---
 title: Use Same Embedding Model for Data and Query
 impact: CRITICAL
-impactDescription: Different models = zero or garbage results
+impactDescription: Mismatched embedding spaces cause zero or low-quality results
 tags: embedding-model, consistency, ingestion, query
 ---
 
 ## Use Same Embedding Model for Data and Query
 
-The embedding model used for queries MUST be the same as the model used for document embeddings. Different models produce incompatible vector spaces.
+The query embedding model must use the same embedding space as the document embeddings. The safest default is using the exact same model for both indexing and querying.
+
+Do not assume cross-model compatibility unless the provider explicitly documents it. For example, Voyage documents compatibility across the Voyage 4 text-embedding series.
 
 **Incorrect (mismatched models):**
 
@@ -34,13 +36,13 @@ db.products.aggregate([
 ])
 // Result: Garbage results or no meaningful matches
 
-// WRONG: Using different model version
+// WRONG: Using a different model family without compatibility guarantees
 // Data embedded with text-embedding-ada-002
 const queryEmbedding = await openai.embeddings.create({
   input: "laptop for programming",
-  model: "text-embedding-3-small"  // Different version!
+  model: "voyage-4"  // Different family and embedding space
 })
-// Result: Suboptimal results due to different vector spaces
+// Result: Garbage results or no meaningful matches
 ```
 
 **Correct (consistent model usage):**
@@ -79,6 +81,95 @@ db.products.aggregate([
 ])
 // Result: Correct semantic matches
 ```
+
+**Asymmetric retrieval pattern (Voyage 4 compatible family):**
+
+```javascript
+// Ingestion: use higher-quality model for document embeddings
+const docEmbedding = await voyageClient.embed({
+  input: [document.content],
+  model: "voyage-4-large",
+  input_type: "document"
+})
+
+// Query: use lower-cost model in the same compatible family
+const queryEmbedding = await voyageClient.embed({
+  input: ["laptop for programming"],
+  model: "voyage-4-lite",
+  input_type: "query"
+})
+
+db.products.aggregate([
+  {
+    $vectorSearch: {
+      index: "vector_index",
+      path: "embedding",
+      queryVector: queryEmbedding.data[0].embedding,
+      numCandidates: 200,
+      limit: 10
+    }
+  }
+])
+```
+
+Use this asymmetric pattern only when provider docs explicitly confirm a shared embedding space.
+
+**Provider compatibility caveat (Voyage 4 family):**
+
+```javascript
+// Data embedded with voyage-4 at ingestion time
+const docEmbedding = await voyageClient.embed({
+  input: [document.content],
+  model: "voyage-4",
+  input_type: "document"
+})
+
+// Query can use another Voyage 4-series model if provider docs mark them compatible
+const queryEmbedding = await voyageClient.embed({
+  input: ["laptop for programming"],
+  model: "voyage-4-lite",   // Same compatible model family
+  input_type: "query"
+})
+
+db.products.aggregate([
+  {
+    $vectorSearch: {
+      index: "vector_index",
+      path: "embedding",
+      queryVector: queryEmbedding.data[0].embedding,
+      numCandidates: 200,
+      limit: 10
+    }
+  }
+])
+```
+
+Compatibility caveat still applies:
+- Keep dimensions aligned (for example, 1024 default for Voyage 4 series unless you intentionally use a different configured output dimension).
+- Keep `input_type` semantics correct (`document` for ingestion, `query` for query embeddings).
+
+**Critical `input_type` guardrail:**
+
+```javascript
+// WRONG: query-time embedding generated with document semantics
+const queryEmbedding = await voyageClient.embed({
+  input: ["laptop for programming"],
+  model: "voyage-4",
+  input_type: "document"  // WRONG FOR QUERY
+})
+
+// CORRECT: query-time embedding must use input_type: "query"
+const fixedQueryEmbedding = await voyageClient.embed({
+  input: ["laptop for programming"],
+  model: "voyage-4",
+  input_type: "query"
+})
+```
+
+Before rollout, validate three invariants together:
+1. Embedding family compatibility is documented by the provider.
+2. Ingestion and query dimensions match your index `numDimensions`.
+3. Ingestion/query `input_type` semantics are correct for every code path.
 
 **Best Practice: Track Embedding Model:**
 
@@ -159,6 +250,7 @@ db.products.findOne({}, { "metadata.embeddingModel": 1 })
 
 - Using MongoDB's Automated Embedding feature (model handled automatically)
 - Multi-model hybrid systems (requires separate indexes)
+- Provider-documented compatible model families that share embedding space (for example, Voyage 4 series), as long as dimensions and semantics remain aligned
 - Dimensionality reduction (requires careful handling)
 
 ## Verify with
@@ -167,4 +259,7 @@ db.products.findOne({}, { "metadata.embeddingModel": 1 })
 2. Validate expected behavior and performance using explain and Atlas metrics.
 3. Confirm version-gated behavior on your target MongoDB release before production rollout.
 
-Reference: [MongoDB Vector Search Troubleshooting](https://mongodb.com/docs/atlas/atlas-vector-search/troubleshooting/)
+Reference:
+- [MongoDB Vector Search Troubleshooting](https://mongodb.com/docs/atlas/atlas-vector-search/troubleshooting/)
+- [Voyage Text Embeddings](https://www.mongodb.com/docs/voyageai/models/text-embeddings/)
+- [Voyage API Quickstart](https://www.mongodb.com/docs/voyageai/quickstart/)

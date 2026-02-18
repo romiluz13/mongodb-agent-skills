@@ -1,13 +1,13 @@
 ---
 title: Use Projections to Limit Fields
 impact: HIGH
-impactDescription: "50MB→200KB data transfer, 60× less bandwidth—only fetch what you display"
+impactDescription: "Projection can reduce payload size and network/memory pressure by returning only needed fields"
 tags: query, projection, bandwidth, performance, working-set, network
 ---
 
 ## Use Projections to Limit Fields
 
-**Always specify only the fields you need—projections can reduce data transfer by 100× or more.** Without projections, MongoDB returns entire documents including fields you never use. We've seen API response times drop from 30 seconds to 0.5 seconds just by adding a projection that fetches 3 fields instead of 200.
+**Specify the fields you need when documents are wide or payload size matters.** Projections can reduce data transfer and memory pressure by avoiding large unused fields.
 
 **Incorrect (fetching entire documents—bandwidth killer):**
 

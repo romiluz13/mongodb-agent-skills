@@ -1,7 +1,7 @@
 ---
 title: Order Compound Index Fields Correctly (ESR Rule)
 impact: CRITICAL
-impactDescription: "10-100× query performance—wrong order forces full index scan + in-memory sort"
+impactDescription: "Wrong compound-index field order can force expensive scans and in-memory sorts"
 tags: index, compound-index, field-order, esr-rule, performance, query-optimization, atlas-suggestion
 ---
 
@@ -155,8 +155,8 @@ if (hasInMemorySort(stats)) {
 
 // Mistake 3: Forgetting sort direction matters
 // Query: .sort({ date: -1 })
-{ date: 1 }   // Works but scans backwards (less efficient)
-{ date: -1 }  // Optimal: natural index order matches query
+{ date: 1 }   // Works: MongoDB can traverse single-field indexes in reverse
+{ date: -1 }  // Also works; choose direction consistency for readability/pattern reuse
 ```
 
 

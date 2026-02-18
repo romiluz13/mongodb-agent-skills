@@ -1,13 +1,13 @@
 ---
 title: Batch Operations to Avoid N+1 Queries
 impact: HIGH
-impactDescription: "101 round trips → 2 round trips—50× faster by eliminating N+1 query pattern"
+impactDescription: "Batching often reduces round trips and improves latency by avoiding N+1 access patterns"
 tags: query, n-plus-one, batch, in-operator, lookup, performance, round-trips
 ---
 
 ## Batch Operations to Avoid N+1 Queries
 
-**Never query inside a loop—the N+1 pattern is the most common cause of slow APIs.** One query returns N items, then N follow-up queries fetch related data. With 100ms network latency, 100 items = 10+ seconds. Batch with `$in` or `$lookup` to reduce N+1 queries to 1-2 queries regardless of N.
+**Avoid unbounded query-in-loop patterns on hot paths.** N+1 access patterns increase round trips as result size grows. Batch with `$in`, `$lookup`, or bulk operations when N can grow.
 
 **Incorrect (N+1 queries—linear scaling horror):**
 

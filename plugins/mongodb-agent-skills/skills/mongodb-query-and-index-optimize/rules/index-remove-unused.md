@@ -1,13 +1,13 @@
 ---
 title: Remove Unused Indexes
 impact: HIGH
-impactDescription: "Each unused index adds 10-30% write latency and wastes RAM—5 unused indexes can double write times"
+impactDescription: "Unused indexes increase write, memory, and storage overhead without helping read performance"
 tags: index, unused-index, indexstats, maintenance, atlas-suggestion
 ---
 
 ## Remove Unused Indexes
 
-**Every index costs write performance and memory whether it's used or not.** Each insert and update must maintain all indexes on a collection. We've seen production systems with 15 indexes where 10 were never used—removing them cut write latency by 60%. Audit indexes regularly and remove any that aren't serving queries.
+**Every index costs write performance and memory whether it's used or not.** Each insert and update maintains index structures, so stale indexes add overhead. Audit indexes regularly and remove indexes that are truly unused and non-critical.
 
 **Incorrect (keeping all indexes "just in case"):**
 
@@ -31,9 +31,9 @@ db.products.getIndexes()
 ]
 
 // Cost of 12 indexes:
-// - Insert: Must write to 12 B-trees (6× slower than 2 indexes)
-// - Memory: ~500MB index data competing for 1GB WiredTiger cache
-// - Storage: 2GB index files vs 800MB needed
+// - Higher write overhead (more index maintenance per write)
+// - More memory pressure from additional index pages
+// - Extra disk/storage footprint
 ```
 
 **Correct (audit and remove unused):**
@@ -59,8 +59,8 @@ db.products.aggregate([{ $indexStats: {} }])
 ]
 
 // Step 2: Identify candidates for removal
-// Rule: ops = 0 over 30+ days → drop
-// Rule: ops < 100 and low cardinality → probably not helping
+// Heuristic: ops = 0 over a meaningful observation window => candidate
+// Low-usage indexes require business-context review before dropping
 
 // Step 3: Remove unused indexes (one at a time, monitor)
 db.products.dropIndex("name_text")        // Dead feature
@@ -76,8 +76,7 @@ db.products.dropIndex("category_1")       // Redundant with compound
 // status_1 (89 ops) - low cardinality, check if actually helping
 
 // Result: 12 indexes → 6 indexes
-// Write latency: -45%
-// Memory freed: ~300MB for cache
+// Expect lower write/memory/storage overhead; quantify in your environment.
 ```
 
 **Index redundancy rules:**
@@ -104,13 +103,12 @@ db.products.dropIndex("category_1")       // Redundant with compound
 
 **Index cost breakdown:**
 
-| Resource | Impact per Index | 10 Unused Indexes |
-|----------|-----------------|-------------------|
-| Insert latency | +5-15% | +50-150% slower |
-| Update latency | +5-15% | +50-150% slower |
-| Storage | 10-30% of data size | 100-300% overhead |
-| RAM (WiredTiger cache) | Competes for cache | Less data cached |
-| Replication lag | More oplog entries | Secondaries fall behind |
+| Resource | Typical Effect |
+|----------|----------------|
+| Insert/update latency | Additional index maintenance work |
+| Storage | Larger on-disk index footprint |
+| RAM (WiredTiger cache) | More index pages competing with data pages |
+| Replication | More index-update work on secondaries |
 
 **When NOT to drop an index:**
 

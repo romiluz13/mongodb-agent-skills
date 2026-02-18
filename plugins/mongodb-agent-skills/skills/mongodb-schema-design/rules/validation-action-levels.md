@@ -208,13 +208,13 @@ db.createCollection("users", {
       oneOf: [
         // Version 1 schema
         {
-          properties: { schemaVersion: { const: 1 }, name: { bsonType: "string" } },
+          properties: { schemaVersion: { enum: [1] }, name: { bsonType: "string" } },
           required: ["name"]
         },
         // Version 2 schema
         {
           properties: {
-            schemaVersion: { const: 2 },
+            schemaVersion: { enum: [2] },
             firstName: { bsonType: "string" },
             lastName: { bsonType: "string" }
           },

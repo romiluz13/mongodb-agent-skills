@@ -32,10 +32,12 @@ db.orders.find({ status: "pending" })
 // 3) If needed, clear only the affected query shape
 db.orders.getPlanCache().clearPlansByQuery(
   { status: "pending" },
-  { createdAt: -1 },
-  { _id: 1, status: 1, total: 1 }
+  { _id: 1, status: 1, total: 1 },
+  { createdAt: -1 }
 )
 ```
+
+`clearPlansByQuery()` uses the signature `(query, projection, sort)`. Projection is optional, but pass `{}` when you need to provide a sort shape.
 
 **How the plan cache works:**
 
@@ -114,8 +116,8 @@ db.orders.getPlanCache().clear()
 // Clear cache for specific query shape
 db.orders.getPlanCache().clearPlansByQuery(
   { status: "pending" },           // query
-  { createdAt: -1 },               // sort
-  { _id: 1, status: 1, total: 1 }  // projection
+  { _id: 1, status: 1, total: 1 }, // projection
+  { createdAt: -1 }                // sort
 )
 
 // When to manually clear:
@@ -176,11 +178,11 @@ db.orders.aggregate([
 // - Using parameterized queries (same shape, different values)
 ```
 
-**Index filters (force specific indexes):**
+**Legacy index filters (deprecated in MongoDB 8.0+):**
 
 ```javascript
-// Index filters override plan cache for specific query shapes
-// Use sparingly - they bypass the optimizer
+// Starting in MongoDB 8.0, use query settings instead of index filters.
+// Keep these commands for legacy troubleshooting only.
 
 // Set an index filter
 db.runCommand({
@@ -196,8 +198,26 @@ db.runCommand({ planCacheListFilters: "orders" })
 // Clear filters
 db.runCommand({ planCacheClearFilters: "orders" })
 
-// WARNING: Index filters persist until cleared or server restart
-// They can hide problems - use hint() for one-off queries instead
+// Index filters are process-local (not persistent) and deprecated in 8.0+
+// Prefer query settings for persistent, cluster-scoped policy
+```
+
+```javascript
+// Query-settings-first replacement (MongoDB 8.0+)
+db.adminCommand({
+  setQuerySettings: {
+    find: "orders",
+    filter: { status: { $eq: {} } },
+    sort: { createdAt: -1 },
+    $db: "mydb"
+  },
+  settings: {
+    indexHints: {
+      ns: { db: "mydb", coll: "orders" },
+      allowedIndexes: ["status_1_createdAt_1"]
+    }
+  }
+})
 ```
 
 **Best practices:**

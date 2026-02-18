@@ -39,7 +39,7 @@ async function getAllReports(managerId) {
 
 ```javascript
 // Index the field used for matching
-db.employees.createIndex({ name: 1 })
+db.employees.createIndex({ reportsTo: 1 })
 
 // Single query traverses entire hierarchy
 db.employees.aggregate([

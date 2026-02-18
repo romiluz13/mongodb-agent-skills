@@ -1,24 +1,24 @@
 ---
 title: Embed vs Reference Decision Framework
 impact: HIGH
-impactDescription: "Determines query patterns for lifetime of application—wrong choice costs 2-10× performance"
+impactDescription: "Determines long-term query and update paths in your application data model"
 tags: schema, embedding, referencing, relationships, fundamentals
 ---
 
 ## Embed vs Reference Decision Framework
 
-**This is the most important schema decision you'll make.** Choose embedding or referencing based on access patterns, not entity relationships. Getting this wrong means living with 2-10× slower queries or painful migrations later.
+**This is one of the most important schema decisions you'll make.** Choose embedding or referencing based on access patterns, not just entity relationships.
 
 **Embed when:**
 - Data is always accessed together (1:1 or 1:few relationships)
 - Child data doesn't make sense without parent
 - Updates to both happen atomically
-- Child array is bounded (typically <100 elements)
+- Child array is clearly bounded by product constraints
 
 **Reference when:**
 - Data is accessed independently
 - Many-to-many relationships exist
-- Child data is large (>16KB each) or array is unbounded
+- Child data is large relative to the parent or array growth is unbounded
 - Different update frequencies
 
 **Incorrect (reference when should embed):**
@@ -31,7 +31,7 @@ tags: schema, embedding, referencing, relationships, fundamentals
 // Every user fetch requires two queries
 const user = await db.users.findOne({ _id: userId })      // Query 1
 const profile = await db.profiles.findOne({ userId })    // Query 2
-// 2× latency, 2× index lookups
+// Extra round-trips and index lookups on the read path
 // No atomicity - what if profile insert fails after user insert?
 // Orphaned profiles when user deleted - referential integrity issues
 ```
@@ -70,7 +70,7 @@ db.users.updateOne(
   title: "Popular Post",
   comments: [
     // 50,000 comments × 500 bytes = 25MB document
-    // Exceeds 16MB BSON limit - APPLICATION CRASH
+    // Exceeds 16MB BSON limit -> writes fail for oversized documents
     { author: "user1", text: "...", ts: ISODate("...") },
     // ... grows forever
   ]
@@ -103,16 +103,16 @@ db.users.updateOne(
 
 | Relationship | Read Pattern | Write Pattern | Bounded? | Decision |
 |--------------|--------------|---------------|----------|----------|
-| User → Profile | Always together | Together | Yes (1) | **Embed** |
-| Order → Items | Always together | Together | Yes (<50) | **Embed** |
+| User → Profile | Always together | Together | Yes | **Embed** |
+| Order → Items | Usually together | Together | Yes (bounded) | **Embed** |
 | Post → Comments | Together on load | Separate adds | No (unbounded) | **Reference** |
-| Author → Books | Separately | Separate | No (could be 100+) | **Reference** |
+| Author → Books | Separately | Separate | Can grow large | **Reference** |
 | Product ↔ Category | Either way | Either | N/A (many-to-many) | **Reference both ways** |
 
 **When NOT to use embedding:**
 
 - **Data grows unbounded**: Comments, logs, events—separate collection.
-- **Large child documents**: If each child is >16KB, embedding few hits 16MB limit.
+- **Large child documents**: If each child is large relative to the parent, references are usually safer.
 - **Independent access**: If you ever query child without parent, reference.
 - **Different lifecycles**: If child data is archived/deleted separately.
 
@@ -125,9 +125,9 @@ db.posts.aggregate([
     size: { $bsonSize: "$$ROOT" },
     commentCount: { $size: { $ifNull: ["$comments", []] } }
   }},
-  { $match: { size: { $gt: 1000000 } } }  // >1MB
+  { $match: { size: { $gt: 1000000 } } }  // example threshold, tune per workload
 ])
-// Any results = refactor to reference
+// Investigate large documents and growth trend before deciding to refactor
 
 // Check for orphaned references
 db.profiles.aggregate([

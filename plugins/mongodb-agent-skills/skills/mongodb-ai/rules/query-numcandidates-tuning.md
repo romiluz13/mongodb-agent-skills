@@ -70,14 +70,14 @@ db.products.aggregate([
 ])
 ```
 
-**The 20x Rule:**
+**The 20x Rule (starting point):**
 
 ```
-numCandidates = 20 × limit (minimum recommended)
+numCandidates = 20 × limit
 ```
 
-| limit | numCandidates (20x) | Better Recall (50x) | Max Allowed |
-|-------|---------------------|---------------------|-------------|
+| limit | numCandidates (20x start) | Higher Recall Trial (50x) | Max Allowed |
+|-------|----------------------------|---------------------------|-------------|
 | 5 | 100 | 250 | 10,000 |
 | 10 | 200 | 500 | 10,000 |
 | 25 | 500 | 1,250 | 10,000 |
@@ -87,11 +87,11 @@ numCandidates = 20 × limit (minimum recommended)
 **Trade-off Visualization:**
 
 ```
-numCandidates   Recall    Latency
-     20x        ~90%       Low
-     50x        ~95%       Medium
-    100x        ~98%       Higher
-    200x        ~99%       High
+numCandidates   Recall Trend   Latency Trend
+     20x        Baseline       Lower
+     50x        Higher         Medium
+    100x        Higher         Higher
+    200x        Highest        Highest
 ```
 
 **How to Measure Recall:**
@@ -134,7 +134,7 @@ const recall = matches / ennResults.length  // Should be > 0.9
 
 **When to Increase numCandidates:**
 
-- Low recall in testing (< 90%)
+- Recall in testing is below your quality target
 - High-stakes searches where missing results is costly
 - Low-dimensional vectors (< 256 dims)
 - After enabling quantization

@@ -1,13 +1,13 @@
 ---
 title: Pre-filter to Narrow Candidate Set
 impact: HIGH
-impactDescription: Reduces vector comparisons by 10-1000x
+impactDescription: Reducing the candidate set before vector comparison can materially improve latency and relevance
 tags: pre-filter, filter, performance, candidates
 ---
 
 ## Pre-filter to Narrow Candidate Set
 
-Pre-filtering narrows the candidate set before vector comparison. Filtering 1M to 10K candidates = 100x fewer vector operations.
+Pre-filtering narrows the candidate set before vector comparison. The more selective the filter, the less work vector search must do.
 
 **Incorrect (no filtering on large dataset):**
 
@@ -40,7 +40,7 @@ db.products.aggregate([
       queryVector: [...],
       numCandidates: 200,
       limit: 10,
-      filter: { category: "electronics" }  // 1M → 100K candidates
+      filter: { category: "electronics" }  // Example: broad set reduced to a narrower subset
     }
   }
 ])
@@ -64,7 +64,7 @@ db.products.aggregate([
     }
   }
 ])
-// 1M → 5K candidates = 200x fewer comparisons
+// Example: highly selective filter can cut candidate volume dramatically
 ```
 
 **Filter Strategy by Use Case:**
@@ -108,22 +108,18 @@ db.products.aggregate([
 }
 ```
 
-**Performance Impact Example:**
+**Performance Impact Pattern (illustrative):**
 
 ```
-Without filter (1M docs):
-  - Vector comparisons: 1,000,000
-  - Latency: ~150ms
+Without filter:
+  - Higher candidate volume
+  - Higher latency and lower precision under mixed data
 
-With category filter (100K docs in category):
-  - Vector comparisons: 100,000
-  - Latency: ~40ms
-  - Improvement: 3.75x faster
+With selective filter:
+  - Lower candidate volume
+  - Lower latency and better relevance stability
 
-With multi-filter (10K docs matching all):
-  - Vector comparisons: 10,000
-  - Latency: ~15ms
-  - Improvement: 10x faster
+Exact gains vary by dataset size, filter selectivity, index shape, and query mix.
 ```
 
 **Index Definition for Filters:**
@@ -173,7 +169,7 @@ console.log(`Filter selectivity: ${((total - filtered) / total * 100).toFixed(1)
 
 **When NOT to use this pattern:**
 
-- Filter removes too many candidates (< 100 remaining)
+- Filter is so restrictive that it removes most relevant candidates
 - Filter field not indexed (will error or post-filter)
 - Need results across all categories
 

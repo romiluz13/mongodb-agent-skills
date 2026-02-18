@@ -1,13 +1,13 @@
 ---
 title: Model Tree and Hierarchical Data
 impact: HIGH
-impactDescription: "Choose pattern based on query type—10-100× performance difference for tree operations"
+impactDescription: "Choose a tree pattern that matches query shape and update behavior"
 tags: schema, relationships, tree, hierarchy, parent-child, categories
 ---
 
 ## Model Tree and Hierarchical Data
 
-**Hierarchical data requires choosing a tree pattern based on your primary operations.** MongoDB offers five patterns for trees—each optimizes different queries. Pick wrong and your category lookups become O(n) instead of O(1).
+**Hierarchical data requires choosing a tree pattern based on your primary operations.** MongoDB offers multiple tree patterns, each with different tradeoffs for parent/child lookup, subtree traversal, and update cost.
 
 **Incorrect (recursive queries for breadcrumbs):**
 
@@ -33,14 +33,14 @@ async function getBreadcrumb(categoryId) {
 **Correct (materialized path for breadcrumbs):**
 
 ```javascript
-// Store full path for O(1) ancestor queries
+// Store full path for efficient ancestor/subtree traversal
 { _id: "MongoDB", path: ",Programming,Databases,MongoDB,", depth: 3 }
 
 // Single query returns all ancestors
 const category = db.categories.findOne({ _id: "MongoDB" })
 const ancestors = category.path.split(",").filter(Boolean)
 db.categories.find({ _id: { $in: ancestors } }).sort({ depth: 1 })
-// 1 query regardless of depth!
+// Avoids iterative parent lookups across multiple round-trips
 ```
 
 **Common hierarchical data:**
@@ -155,13 +155,13 @@ db.categories.find({
 
 ### Pattern Comparison
 
-| Pattern | Find Parent | Find Children | Find All Descendants | Find All Ancestors | Insert |
-|---------|-------------|---------------|---------------------|-------------------|--------|
-| Parent References | O(1) | O(1) | O(depth) recursive | O(depth) recursive | O(1) |
-| Child References | O(n) | O(1) | O(depth) recursive | O(depth) recursive | O(1) |
-| Array of Ancestors | O(1) | O(1) | O(1) indexed | O(1) | O(depth) |
-| Materialized Paths | O(1) | O(1) regex | O(1) regex | O(1) | O(depth) |
-| Nested Sets | O(1) | O(1) | O(1) range | O(1) range | O(n) |
+| Pattern | Parent Lookup | Child Lookup | Descendant Queries | Ancestor Queries | Update Cost |
+|---------|---------------|--------------|--------------------|------------------|-------------|
+| Parent References | Direct | Indexed by `parent` | Recursive / `$graphLookup` | Recursive | Low |
+| Child References | Via `children` membership query | Direct from `children` array | Recursive / `$graphLookup` | Recursive | Low to moderate (array maintenance) |
+| Array of Ancestors | Optional via `parent` | Via `parent` or reverse query | Fast with `ancestors` index | Direct from stored array | Moderate (update ancestor arrays) |
+| Materialized Paths | Via path parsing or `parent` field | Prefix path query | Flexible regex/prefix path queries (shape-dependent index efficiency) | From stored path | Moderate (path rewrites on moves) |
+| Nested Sets | Via `parent` | Range boundaries | Fast range scans for subtrees | Range/predicate based | High for frequent tree mutations |
 
 **Recommended patterns by use case:**
 

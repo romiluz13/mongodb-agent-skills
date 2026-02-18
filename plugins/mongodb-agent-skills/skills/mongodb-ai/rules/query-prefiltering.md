@@ -1,7 +1,7 @@
 ---
 title: Pre-Filtering Vector Search
 impact: CRITICAL
-impactDescription: 10-100x more efficient than post-filtering, better result quality
+impactDescription: Pre-filtering often reduces compute and improves retrieval quality versus post-filtering
 tags: filter, pre-filter, post-filter, performance
 ---
 
@@ -237,7 +237,7 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
 
 - Filter field not indexed (use post-filter or update index)
 - Complex computed filters (use post-filter with larger limit)
-- Filtering on nested arrays (not supported in pre-filter)
+- Filters that require unsupported operators or computed expressions
 
 ## Verify with
 

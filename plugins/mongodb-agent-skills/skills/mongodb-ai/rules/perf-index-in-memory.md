@@ -1,7 +1,7 @@
 ---
 title: Vector Index Must Fit in RAM
 impact: HIGH
-impactDescription: Disk spillover causes 10-100x performance degradation
+impactDescription: Disk spillover can cause severe latency and throughput degradation
 tags: RAM, memory, index-size, performance, mongot
 ---
 
@@ -25,7 +25,7 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
     // No quantization on 2M vectors = 12GB needed
   }]
 })
-// Result: Query latency goes from 50ms to 5000ms
+// Result: Query latency becomes unstable and can degrade significantly
 ```
 
 **Correct (size index to fit RAM):**
@@ -64,17 +64,9 @@ db.products.createSearchIndex("active_vector_index", "vectorSearch", {
 // Then always filter: filter: { status: "active" }
 ```
 
-**RAM Requirements by Cluster Tier:**
+**Sizing Guidance:**
 
-| Tier | RAM | Max Vectors (no quant) | Max Vectors (binary) |
-|------|-----|------------------------|----------------------|
-| M10 | 2 GB | ~300K | ~7M |
-| M20 | 4 GB | ~600K | ~14M |
-| M30 | 8 GB | ~1.2M | ~28M |
-| M40 | 16 GB | ~2.4M | ~56M |
-| M50 | 32 GB | ~5M | ~112M |
-
-*Based on 1536-dimensional vectors*
+Use this estimate only as a starting point, then validate against Atlas "Required Memory" and runtime metrics.
 
 **Calculate Your Index Size:**
 
@@ -88,7 +80,7 @@ function estimateVectorIndexRAM(vectorCount, dimensions, quantization = "none") 
   }
 
   const vectorBytes = vectorCount * bytesPerVector[quantization]
-  const hnswOverhead = 1.3  // Graph overhead ~30%
+  const hnswOverhead = 1.3  // Coarse estimate; validate with measured metrics
 
   return (vectorBytes * hnswOverhead) / (1024 * 1024 * 1024)  // GB
 }
@@ -124,8 +116,6 @@ GET /api/atlas/v1.0/groups/{groupId}/processes/{processId}/measurements
 
 **When NOT to use this pattern:**
 
-- Using dedicated Search Nodes (separate memory pool)
-- Serverless instances (auto-scaling)
 - Development/testing with small datasets
 
 ## Verify with

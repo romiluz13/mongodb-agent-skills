@@ -1,13 +1,13 @@
 ---
 title: Avoid Bloated Documents
 impact: CRITICAL
-impactDescription: "10-100× memory efficiency, 50-500ms faster queries"
+impactDescription: "Improves working-set efficiency by separating hot and cold fields"
 tags: schema, document-size, anti-pattern, working-set, memory, atlas-suggestion
 ---
 
 ## Avoid Bloated Documents
 
-**Large documents destroy working set efficiency.** MongoDB loads entire documents into RAM, even when queries only need a few fields. A 500KB product document that could be 500 bytes means you fit 1,000× fewer documents in memory—turning cached reads into disk reads and 5ms queries into 500ms nightmares.
+**Large documents can hurt working set efficiency.** MongoDB reads full documents, even when queries only need a few fields. When frequently queried documents carry large cold fields, cache pressure increases and hot-path queries may become slower and more disk-bound.
 
 **Incorrect (everything in one document):**
 
@@ -25,16 +25,16 @@ tags: schema, document-size, anti-pattern, working-set, memory, atlas-suggestion
   priceHistory: [...]       // 50KB - analytics only
 }
 // Total: ~665KB per product
-// 1GB RAM = 1,500 products cached (should be 150,000)
+// Large cold fields reduce how many hot-path documents fit in cache
 ```
 
-Every query that touches this collection loads 665KB documents, even `db.products.find({}, {name: 1, price: 1})`.
+Queries that touch this collection still read large documents, even when projecting a small field set such as `db.products.find({}, {name: 1, price: 1})`.
 
 **Correct (hot data only in main document):**
 
 ```javascript
 // Product - hot data only (~500 bytes)
-// This is what 95% of queries actually need
+// This is what most product-list queries actually need
 {
   _id: "prod123",
   name: "Laptop",
@@ -44,19 +44,19 @@ Every query that touches this collection loads 665KB documents, even `db.product
   reviewCount: 127,
   inStock: true
 }
-// 1GB RAM = 2,000,000 products cached
+// Keeping only hot fields in the main document improves cache density
 
 // Cold data in separate collections - loaded only when needed
 // products_details: { productId, description, fullSpecs }
 // products_images: { productId, images: [...] }
 // products_reviews: { productId, reviews: [...] }  // paginated
 
-// Product detail page: 2 queries instead of 1, but 100× faster
+// Product detail page: 2 targeted queries instead of 1 large-document query
 const product = await db.products.findOne({ _id })           // 0.5KB from cache
 const details = await db.products_details.findOne({ productId })  // 15KB
 ```
 
-Two small queries are faster than one huge query when working set exceeds RAM.
+Two targeted queries can outperform one oversized-document query when hot-path reads are cache constrained.
 
 **Alternative (projection when you can't refactor):**
 
@@ -89,12 +89,12 @@ db.products.aggregate([
   { $sort: { size: -1 } },
   { $limit: 10 }
 ])
-// Red flags: documents > 16KB for frequently-queried collections
+// Investigate large documents in hot-path collections as split candidates
 
 // Check working set vs RAM
 db.serverStatus().wiredTiger.cache
 // "bytes currently in the cache" vs "maximum bytes configured"
-// If current > 80% of max, you have working set pressure
+// Example alert threshold: sustained cache usage > 80% of max (tune per workload)
 
 // Analyze field sizes
 db.products.aggregate([

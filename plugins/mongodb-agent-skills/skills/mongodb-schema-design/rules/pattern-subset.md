@@ -1,13 +1,13 @@
 ---
 title: Use Subset Pattern for Hot/Cold Data
 impact: MEDIUM
-impactDescription: "10-100× better working set efficiency, fits 100× more documents in RAM"
+impactDescription: "Improves working-set efficiency by separating frequently-read hot data from rarely-read cold data"
 tags: schema, patterns, subset, hot-data, cold-data, working-set, memory
 ---
 
 ## Use Subset Pattern for Hot/Cold Data
 
-**Keep frequently-accessed (hot) data in the main document, store rarely-accessed (cold) data in a separate collection.** MongoDB loads entire documents into RAM—a 100KB document with 1KB of hot data wastes 99% of your cache. Separating hot/cold data means 100× more useful documents fit in memory.
+**Keep frequently-accessed (hot) data in the main document, store rarely-accessed (cold) data in a separate collection.** MongoDB reads full documents, so large cold sections can reduce cache efficiency for hot-path queries.
 
 **Incorrect (all data in one document):**
 
@@ -56,7 +56,7 @@ tags: schema, patterns, subset, hot-data, cold-data, working-set, memory
     { user: "critic2", rating: 5, text: "Revolutionary", featured: true }
   ]
 }
-// 1GB RAM = 500,000 movies cached (500× more)
+// Depending on size reduction, significantly more hot-path documents may fit in cache
 
 // Cold data: Full reviews in separate collection
 {
@@ -76,7 +76,7 @@ tags: schema, patterns, subset, hot-data, cold-data, working-set, memory
 ```javascript
 // Movie page load: single query, small document, likely cached
 const movie = db.movies.findOne({ _id: "movie123" })
-// Response time: 1-5ms (from RAM)
+// Hot-path query is typically faster and more cache-friendly
 
 // User clicks "Show all reviews": separate query, paginated
 const reviews = db.reviews
@@ -84,7 +84,7 @@ const reviews = db.reviews
   .sort({ helpful: -1 })
   .skip(0)
   .limit(20)
-// Response time: 10-50ms (acceptable for user action)
+// Cold-path query is loaded separately and can be paginated
 ```
 
 **Maintaining the subset:**
@@ -130,8 +130,8 @@ db.movies.updateOne(
 |------------------|----------------------|
 | Displayed on every page load | Only on user action (click, scroll) |
 | Used for filtering/sorting | Historical/archival |
-| Small size (<1KB per field) | Large size (>10KB) |
-| Few items (<10) | Many items (>100) |
+| Small relative size | Large relative size |
+| Bounded small subsets | Large or unbounded sets |
 | Changes rarely | Changes frequently |
 
 **When NOT to use this pattern:**
@@ -155,14 +155,14 @@ db.movies.aggregate([
   }},
   { $match: {
     $expr: { $gt: ["$reviewsSize", { $multiply: ["$hotSize", 10] }] }
-  }},  // Cold data > 10× hot data
+  }},  // Example ratio threshold; tune per workload
   { $limit: 10 }
 ])
 
 // Check working set efficiency
 db.serverStatus().wiredTiger.cache
 // "bytes currently in the cache" vs "maximum bytes configured"
-// If near max, subset pattern will help significantly
+// If cache pressure is high, evaluate subset split candidates
 ```
 
 Reference: [Building with Patterns - Subset Pattern](https://mongodb.com/blog/post/building-with-patterns-the-subset-pattern)

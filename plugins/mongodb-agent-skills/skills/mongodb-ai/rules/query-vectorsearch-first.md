@@ -77,6 +77,12 @@ db.products.aggregate([
 ])
 ```
 
+**View support nuance (8.0 vs 8.1+):**
+
+- `$vectorSearch` cannot be used in a **view definition** on any MongoDB version.
+- On MongoDB **8.0**, create/manage view indexes via Atlas UI/Admin API and query the **source collection** with the view-backed index.
+- On MongoDB **8.1+**, you can additionally query the **view directly** with `$vectorSearch`.
+
 **Correct ($vectorSearch first, then other stages):**
 
 ```javascript
@@ -180,7 +186,7 @@ db.products.aggregate([
 
 - Using $search for text search (different stage, different rules)
 - Hybrid search with $rankFusion (uses sub-pipelines)
-- Views on MongoDB < 8.0 (not supported)
+- Direct `$vectorSearch` query against a standard View on MongoDB 8.0 (use source-collection query + view-backed index)
 
 ## Verify with
 

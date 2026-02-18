@@ -1,13 +1,13 @@
 ---
 title: Embrace the Document Model
 impact: HIGH
-impactDescription: "4× fewer queries, single atomic operation vs multi-table transaction"
+impactDescription: "Aligns schema to aggregate access patterns and minimizes avoidable cross-collection joins"
 tags: schema, document-model, fundamentals, sql-migration
 ---
 
 ## Embrace the Document Model
 
-**Don't recreate SQL tables in MongoDB.** The document model exists to eliminate joins, not to store flat rows with foreign keys scattered across collections. Teams migrating from SQL who replicate their table structure see 4× more queries and lose MongoDB's single-document atomicity.
+**Don't recreate SQL tables one-to-one in MongoDB.** The document model is designed to store related data together when it is read and updated together. Naively copying relational boundaries often increases application-side joins and coordination logic.
 
 **Incorrect (SQL patterns in MongoDB):**
 
@@ -24,7 +24,7 @@ const addresses = db.addresses.find({ customerId: "cust123" })  // Query 2
 const phones = db.phones.find({ customerId: "cust123" })  // Query 3
 const prefs = db.preferences.find({ customerId: "cust123" })  // Query 4
 // Total: 4 round-trips, 4 index lookups, application-side joining
-// Update requires transaction or risks inconsistency
+// Update may require transaction/coordination across collections
 ```
 
 **Correct (rich document model):**
@@ -62,14 +62,14 @@ db.customers.updateOne(
 )
 ```
 
-**Benefits of document model:**
+**Common tradeoffs:**
 
-| Aspect | SQL Approach | Document Approach |
-|--------|-------------|-------------------|
-| Queries per entity | 4+ | 1 |
-| Atomicity | Requires transaction | Built-in |
-| Schema changes | ALTER TABLE + migration | Just write new fields |
-| Network round-trips | N per entity | 1 per entity |
+| Aspect | SQL-style mapping in MongoDB | Document-first mapping |
+|--------|----------------------------|------------------------|
+| Queries per aggregate view | Often multiple collection reads or `$lookup` | Often one collection read for hot paths |
+| Atomicity for related fields | May require multi-document transaction | Single-document writes are atomic |
+| Schema evolution | More migration/coordination between collections | Often localized changes per document shape |
+| Application logic | More join/merge logic in app | Simpler read model for common operations |
 
 **When migrating from SQL:**
 
@@ -92,7 +92,7 @@ db.adminCommand({ listDatabases: 1 }).databases.forEach(d => {
   const colls = db.getSiblingDB(d.name).getCollectionNames().length
   print(`${d.name}: ${colls} collections`)
 })
-// Red flag: Collection count >> entity count (SQL thinking)
+// Collection count alone is not enough evidence; inspect query/access patterns too
 
 // Check for SQL-style foreign key patterns
 db.addresses.aggregate([

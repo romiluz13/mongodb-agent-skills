@@ -1,7 +1,7 @@
 ---
 title: Use Computed Pattern for Expensive Calculations
 impact: MEDIUM
-impactDescription: "100-1000× faster reads by pre-computing aggregations"
+impactDescription: "Improves read latency by pre-computing frequently-requested aggregations"
 tags: schema, patterns, computed, aggregation, performance, denormalization
 ---
 
@@ -30,7 +30,7 @@ db.screenings.aggregate([
     screeningCount: { $sum: 1 }
   }}
 ])
-// 50-500ms per page load, scanning 10,000 documents
+// Repeated scans can add substantial read latency and CPU overhead
 // 1M page views/day = 1M expensive aggregations
 ```
 
@@ -52,7 +52,7 @@ db.screenings.aggregate([
 
 // Movie page: instant read, no aggregation
 db.movies.findOne({ _id: "movie1" })
-// <5ms, single document read
+// Single-document read on the hot path
 ```
 
 **Update strategies:**

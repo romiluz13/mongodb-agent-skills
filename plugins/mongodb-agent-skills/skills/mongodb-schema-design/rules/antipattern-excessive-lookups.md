@@ -1,18 +1,18 @@
 ---
 title: Reduce Excessive $lookup Usage
 impact: CRITICAL
-impactDescription: "5-50× faster queries by eliminating joins, O(n×m) → O(n)"
+impactDescription: "Can reduce query cost on hot paths by avoiding repeated cross-collection joins"
 tags: schema, lookup, anti-pattern, joins, denormalization, atlas-suggestion
 ---
 
 ## Reduce Excessive $lookup Usage
 
-**Frequent $lookup operations mean your schema is over-normalized.** Each $lookup executes a separate query against another collection—without an index on the foreign field, it's a nested collection scan with O(n×m) complexity. If you're always joining the same data, the answer is denormalization, not more indexes.
+**Frequent $lookup operations on hot paths can indicate over-normalization.** `$lookup` is useful, but repeated joins can be slower and more resource-intensive than querying a single collection, especially when supporting indexes or match selectivity are weak. If the same related fields are read together often, consider embedding or extended references.
 
 **Incorrect (constant $lookup for common operations):**
 
 ```javascript
-// Every product page requires 3 collection scans
+// Every product page requires repeated joins across collections
 db.products.aggregate([
   { $match: { _id: productId } },
   { $lookup: {
@@ -30,11 +30,10 @@ db.products.aggregate([
   { $unwind: "$category" },
   { $unwind: "$brand" }
 ])
-// 3 queries, 3× network round-trips, 3× query planning overhead
-// With 100K products: 100K × 3 = 300K operations for listing page
+// Multiple join stages add planning/execution overhead on hot paths
 ```
 
-Even with indexes, $lookup adds 2-10ms per join. On a listing page with 50 products, that's 100-500ms just for joins.
+Join cost depends on cardinality, stage order, index support, and result size. Measure before deciding to embed.
 
 **Correct (denormalize frequently-joined data):**
 
@@ -60,7 +59,7 @@ Even with indexes, $lookup adds 2-10ms per join. On a listing page with 50 produ
 
 // Single indexed query, no $lookup needed
 db.products.findOne({ _id: "prod123" })
-// Or listing: 50 products in single query, <5ms total
+// Or listing: one query against a single collection
 db.products.find({ "category._id": "cat-electronics" }).limit(50)
 ```
 
@@ -117,8 +116,8 @@ db.products.aggregate([
 **When NOT to use this pattern:**
 
 - **Data changes frequently and independently**: If brand logos change daily, denormalization creates update overhead.
-- **Rarely-accessed data**: Don't embed review details if only 5% of product views load reviews.
-- **Many-to-many with high cardinality**: Products with 1000+ categories shouldn't embed all category data.
+- **Rarely-accessed data**: Don't embed review details if only a small fraction of product views load reviews.
+- **Many-to-many with high cardinality**: Avoid embedding large or fast-growing relationship sets.
 - **Analytics queries**: Batch jobs can afford $lookup latency; real-time queries cannot.
 
 ## Verify with

@@ -25,7 +25,7 @@ Production Architecture:
 ┌─────────────────┐     ┌─────────────────┐
 │  Database Node  │     │   Search Node   │
 │     (mongod)    │────▶│    (mongot)     │
-│    M40 tier     │     │    S30 tier     │
+│    M10+ tier    │     │ sized per usage │
 └─────────────────┘     └─────────────────┘
         │                       │
    Database ops           Vector Search
@@ -34,32 +34,9 @@ Production Architecture:
 
 **Deployment Recommendations:**
 
-| Environment | Configuration |
-|-------------|---------------|
-| Development | M10/M20 (shared) |
-| Staging | M30 with Search Nodes |
-| Production | M40+ with dedicated Search Nodes (S30+) |
-
-**Search Node Tiers:**
-
-| Tier | RAM | CPUs | Best For |
-|------|-----|------|----------|
-| S20 (High-CPU) | 4 GB | 4 | Low latency, smaller indexes |
-| S30 (Low-CPU) | 8 GB | 2 | Larger indexes, moderate queries |
-| S40 | 16 GB | 4 | Large production workloads |
-| S50 | 32 GB | 8 | Very large indexes |
-| S80 | 64 GB | 16 | Enterprise scale |
-
-**RAM Allocation on Search Nodes:**
-
-```
-Search Nodes: ~90% RAM for vector index + JVM
-Database Nodes: ~50% for MongoDB, ~50% for search (shared)
-
-Example:
-- S30 (8 GB): ~7.2 GB available for vector index
-- M40 shared: ~4 GB available for vector index
-```
+- Use a dedicated cluster (`M10+`) and dedicated Search Nodes for production workloads.
+- Size Search Nodes from measured required memory + query throughput, not fixed tier pairings.
+- Start from observed metrics and scale Search Nodes vertically or horizontally as load grows.
 
 **Sizing Your Search Nodes:**
 
@@ -85,7 +62,7 @@ function calculateSearchNodeSize(vectorCount, dimensions, quantization = "none")
 
 // Example: 1M vectors, 1536 dims, no quantization
 const requiredGB = calculateSearchNodeSize(1000000, 1536, "none")
-console.log(`Required: ${requiredGB.toFixed(2)} GB`)  // ~8.8 GB → S40 tier
+console.log(`Required: ${requiredGB.toFixed(2)} GB`)  // choose nearest tier with headroom
 ```
 
 **Migration to Search Nodes:**
@@ -113,7 +90,9 @@ Step 5: Monitor metrics during migration
 ```
 AWS:     Available in select regions
 Azure:   Available in select regions
-GCP:     Available in ALL regions
+GCP:     Broadly available
+
+Always verify current regional availability in Atlas before rollout.
 ```
 
 **Monitoring Search Nodes:**

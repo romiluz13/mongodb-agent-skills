@@ -1,13 +1,13 @@
 ---
 title: Avoid $unwind on Large Arrays
 impact: HIGH
-impactDescription: "100 posts × 10K comments each = 1M docs in memory; array operators keep it at 100 docs"
+impactDescription: "Large-array $unwind can multiply pipeline volume dramatically and increase downstream memory/CPU costs"
 tags: aggregation, unwind, arrays, memory, anti-pattern, document-explosion
 ---
 
 ## Avoid $unwind on Large Arrays
 
-**$unwind creates one document per array element—10,000-element arrays become 10,000 documents.** If you have 100 posts with 10,000 comments each and $unwind the comments, you've just created 1 million documents in your pipeline from 100 inputs. This explodes memory usage, exceeds the 100MB stage limit, and forces disk spills. Use array operators ($size, $filter, $slice, $reduce) to process arrays without unwinding.
+**$unwind creates one document per array element—10,000-element arrays become 10,000 documents.** If you have 100 posts with 10,000 comments each and unwind comments, you create about 1 million pipeline documents from 100 inputs. This can greatly increase CPU and memory pressure in downstream stages like `$sort`/`$group`. Use array operators (`$size`, `$filter`, `$slice`, `$reduce`) when full unwind is unnecessary.
 
 **Incorrect ($unwind on large arrays—document explosion):**
 

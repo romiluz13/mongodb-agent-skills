@@ -1,13 +1,13 @@
 ---
 title: Avoid $ne and $nin Operators
 impact: HIGH
-impactDescription: "Negation scans 90%+ of index—$in with positive values is 10-100× faster"
+impactDescription: "Negation operators are often low-selectivity; prefer positive predicates when practical"
 tags: query, operators, ne, nin, anti-pattern, index-usage, negation
 ---
 
 ## Avoid $ne and $nin Operators
 
-**Negation operators ($ne, $nin, $not) cannot efficiently use indexes—they scan everything except the excluded values.** If your collection has 1 million documents and you query `{ status: { $ne: "deleted" } }`, MongoDB scans 950,000 index entries to exclude 50,000. Use positive matching with $in instead, or restructure your schema to avoid negation patterns.
+**Negation operators ($ne, $nin, $not) are often low-selectivity and may perform no better than broad scans.** If your collection has 1 million documents and you query `{ status: { $ne: "deleted" } }`, MongoDB may still examine most of the index/documents. Prefer positive matching with `$in` when practical, or model explicit "active" predicates.
 
 **Incorrect (negation—scans almost entire index):**
 

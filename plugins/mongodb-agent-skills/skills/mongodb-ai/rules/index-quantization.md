@@ -7,7 +7,7 @@ tags: quantization, scalar, binary, int8, int1, RAM, performance
 
 ## Vector Quantization for Scale
 
-Quantization compresses vectors to reduce RAM usage. Essential for datasets over 100K vectors. Scalar reduces RAM by 3.75x, binary by 24x.
+Quantization compresses vectors to reduce RAM usage. It's typically recommended for larger datasets (around 100K+ vectors), then tuned by benchmark results. Scalar reduces RAM by about 3.75x and binary by about 24x.
 
 **Incorrect (no quantization on large dataset):**
 
@@ -82,7 +82,7 @@ With binary quantization:
 // Check your vector count
 db.products.countDocuments({ embedding: { $exists: true } })
 
-// Rule of thumb:
+// Rule-of-thumb starting points (benchmark before locking in):
 // < 100K vectors: quantization optional
 // 100K - 1M vectors: use scalar
 // > 1M vectors: use binary

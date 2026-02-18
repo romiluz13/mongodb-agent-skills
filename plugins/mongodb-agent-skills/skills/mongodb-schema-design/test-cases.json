@@ -1,9 +1,9 @@
 {
   "skill": "mongodb-schema-design",
   "generatedAt": "2026-02-11T10:50:26.763Z",
-  "totalTestCases": 60,
+  "totalTestCases": 62,
   "summary": {
-    "badExamples": 29,
+    "badExamples": 31,
     "goodExamples": 31
   },
   "testCases": [
@@ -19,7 +19,7 @@
       "ruleId": "antipattern-bloated-documents",
       "ruleTitle": "Avoid Bloated Documents",
       "type": "good",
-      "code": "// Product - hot data only (~500 bytes)\n// This is what 95% of queries actually need\n{\n  _id: \"prod123\",\n  name: \"Laptop\",\n  price: 999,\n  thumbnail: \"https://cdn.example.com/prod123-thumb.jpg\",\n  avgRating: 4.5,\n  reviewCount: 127,\n  inStock: true\n}\n// 1GB RAM = 2,000,000 products cached\n\n// Cold data in separate collections - loaded only when needed\n// products_details: { productId, description, fullSpecs }\n// products_images: { productId, images: [...] }\n// products_reviews: { productId, reviews: [...] }  // paginated\n\n// Product detail page: 2 queries instead of 1, but 100× faster\nconst product = await db.products.findOne({ _id })           // 0.5KB from cache\nconst details = await db.products_details.findOne({ productId })  // 15KB",
+      "code": "// Product - hot data only (~500 bytes)\n// This is what 95% of queries actually need\n{\n  _id: \"prod123\",\n  name: \"Laptop\",\n  price: 999,\n  thumbnail: \"https://cdn.example.com/prod123-thumb.jpg\",\n  avgRating: 4.5,\n  reviewCount: 127,\n  inStock: true\n}\n// 1GB RAM = 2,000,000 products cached\n\n// Cold data in separate collections - loaded only when needed\n// products_details: { productId, description, fullSpecs }\n// products_images: { productId, images: [...] }\n// products_reviews: { productId, reviews: [...] }  // paginated\n\n// Product detail page: 2 queries instead of 1, but 100\u00d7 faster\nconst product = await db.products.findOne({ _id })           // 0.5KB from cache\nconst details = await db.products_details.findOne({ productId })  // 15KB",
       "language": "javascript",
       "description": "hot data only in main document"
     },
@@ -27,7 +27,7 @@
       "ruleId": "antipattern-excessive-lookups",
       "ruleTitle": "Reduce Excessive $lookup Usage",
       "type": "bad",
-      "code": "// Every product page requires 3 collection scans\ndb.products.aggregate([\n  { $match: { _id: productId } },\n  { $lookup: {\n      from: \"categories\",          // Collection scan #2\n      localField: \"categoryId\",\n      foreignField: \"_id\",\n      as: \"category\"\n  }},\n  { $lookup: {\n      from: \"brands\",              // Collection scan #3\n      localField: \"brandId\",\n      foreignField: \"_id\",\n      as: \"brand\"\n  }},\n  { $unwind: \"$category\" },\n  { $unwind: \"$brand\" }\n])\n// 3 queries, 3× network round-trips, 3× query planning overhead\n// With 100K products: 100K × 3 = 300K operations for listing page",
+      "code": "// Every product page requires 3 collection scans\ndb.products.aggregate([\n  { $match: { _id: productId } },\n  { $lookup: {\n      from: \"categories\",          // Collection scan #2\n      localField: \"categoryId\",\n      foreignField: \"_id\",\n      as: \"category\"\n  }},\n  { $lookup: {\n      from: \"brands\",              // Collection scan #3\n      localField: \"brandId\",\n      foreignField: \"_id\",\n      as: \"brand\"\n  }},\n  { $unwind: \"$category\" },\n  { $unwind: \"$brand\" }\n])\n// 3 queries, 3\u00d7 network round-trips, 3\u00d7 query planning overhead\n// With 100K products: 100K \u00d7 3 = 300K operations for listing page",
       "language": "javascript",
       "description": "constant $lookup for common operations"
     },
@@ -75,7 +75,7 @@
       "ruleId": "antipattern-unbounded-arrays",
       "ruleTitle": "Avoid Unbounded Arrays",
       "type": "bad",
-      "code": "// User document with unbounded activity log\n// Problem: After 1 year, this array has 100,000+ entries\n// Impact: Document size ~15MB, updates take 500ms+, approaching crash\n{\n  _id: \"user123\",\n  name: \"Alice\",\n  activityLog: [\n    { action: \"login\", ts: ISODate(\"2024-01-01\") },\n    { action: \"purchase\", ts: ISODate(\"2024-01-02\") },\n    // ... grows to 100,000+ entries over time\n    // Each entry ~150 bytes × 100,000 = 15MB\n  ]\n}",
+      "code": "// User document with unbounded activity log\n// Problem: After 1 year, this array has 100,000+ entries\n// Impact: Document size ~15MB, updates take 500ms+, approaching crash\n{\n  _id: \"user123\",\n  name: \"Alice\",\n  activityLog: [\n    { action: \"login\", ts: ISODate(\"2024-01-01\") },\n    { action: \"purchase\", ts: ISODate(\"2024-01-02\") },\n    // ... grows to 100,000+ entries over time\n    // Each entry ~150 bytes \u00d7 100,000 = 15MB\n  ]\n}",
       "language": "javascript",
       "description": "array grows forever"
     },
@@ -91,7 +91,7 @@
       "ruleId": "antipattern-unnecessary-collections",
       "ruleTitle": "Reduce Unnecessary Collections",
       "type": "bad",
-      "code": "// 5 collections for one order - relational thinking in MongoDB\n// orders: { _id, customerId, date, status }\n// order_items: { orderId, productId, quantity, price }\n// products: { _id, name, sku }\n// customers: { _id, name, email }\n// addresses: { customerId, street, city }\n\n// Displaying one order requires 5 queries or complex $lookup chain\ndb.orders.aggregate([\n  { $match: { _id: orderId } },\n  { $lookup: { from: \"order_items\", localField: \"_id\", foreignField: \"orderId\", as: \"items\" } },\n  { $unwind: \"$items\" },\n  { $lookup: { from: \"products\", localField: \"items.productId\", foreignField: \"_id\", as: \"items.product\" } },\n  { $lookup: { from: \"customers\", localField: \"customerId\", foreignField: \"_id\", as: \"customer\" } },\n  { $lookup: { from: \"addresses\", localField: \"customerId\", foreignField: \"customerId\", as: \"address\" } }\n])\n// 5 collection scans, O(n×m×p×q×r) complexity\n// Response time: 50-500ms depending on data size",
+      "code": "// 5 collections for one order - relational thinking in MongoDB\n// orders: { _id, customerId, date, status }\n// order_items: { orderId, productId, quantity, price }\n// products: { _id, name, sku }\n// customers: { _id, name, email }\n// addresses: { customerId, street, city }\n\n// Displaying one order requires 5 queries or complex $lookup chain\ndb.orders.aggregate([\n  { $match: { _id: orderId } },\n  { $lookup: { from: \"order_items\", localField: \"_id\", foreignField: \"orderId\", as: \"items\" } },\n  { $unwind: \"$items\" },\n  { $lookup: { from: \"products\", localField: \"items.productId\", foreignField: \"_id\", as: \"items.product\" } },\n  { $lookup: { from: \"customers\", localField: \"customerId\", foreignField: \"_id\", as: \"customer\" } },\n  { $lookup: { from: \"addresses\", localField: \"customerId\", foreignField: \"customerId\", as: \"address\" } }\n])\n// 5 collection scans, O(n\u00d7m\u00d7p\u00d7q\u00d7r) complexity\n// Response time: 50-500ms depending on data size",
       "language": "javascript",
       "description": "SQL-style normalization"
     },
@@ -155,7 +155,7 @@
       "ruleId": "fundamental-embed-vs-reference",
       "ruleTitle": "Embed vs Reference Decision Framework",
       "type": "bad",
-      "code": "// Blog post with ALL comments embedded - unbounded!\n{\n  _id: \"post123\",\n  title: \"Popular Post\",\n  comments: [\n    // 50,000 comments × 500 bytes = 25MB document\n    // Exceeds 16MB BSON limit - APPLICATION CRASH\n    { author: \"user1\", text: \"...\", ts: ISODate(\"...\") },\n    // ... grows forever\n  ]\n}",
+      "code": "// Blog post with ALL comments embedded - unbounded!\n{\n  _id: \"post123\",\n  title: \"Popular Post\",\n  comments: [\n    // 50,000 comments \u00d7 500 bytes = 25MB document\n    // Exceeds 16MB BSON limit - APPLICATION CRASH\n    { author: \"user1\", text: \"...\", ts: ISODate(\"...\") },\n    // ... grows forever\n  ]\n}",
       "language": "javascript",
       "description": "embed when should reference"
     },
@@ -219,7 +219,7 @@
       "ruleId": "pattern-bucket",
       "ruleTitle": "Use Bucket Pattern for Time-Series Data",
       "type": "bad",
-      "code": "// Sensor readings: 1 document per reading\n// Each document ~100 bytes + index entries\n{ sensorId: \"temp-01\", ts: ISODate(\"2024-01-15T10:00:00Z\"), value: 22.5 }\n{ sensorId: \"temp-01\", ts: ISODate(\"2024-01-15T10:00:01Z\"), value: 22.6 }\n{ sensorId: \"temp-01\", ts: ISODate(\"2024-01-15T10:00:02Z\"), value: 22.5 }\n// ...\n\n// Per sensor per year:\n// 86,400 docs/day × 365 days = 31,536,000 documents\n// 31M index entries for {sensorId, ts} compound index\n// Query for 1 day: scan 86,400 index entries",
+      "code": "// Sensor readings: 1 document per reading\n// Each document ~100 bytes + index entries\n{ sensorId: \"temp-01\", ts: ISODate(\"2024-01-15T10:00:00Z\"), value: 22.5 }\n{ sensorId: \"temp-01\", ts: ISODate(\"2024-01-15T10:00:01Z\"), value: 22.6 }\n{ sensorId: \"temp-01\", ts: ISODate(\"2024-01-15T10:00:02Z\"), value: 22.5 }\n// ...\n\n// Per sensor per year:\n// 86,400 docs/day \u00d7 365 days = 31,536,000 documents\n// 31M index entries for {sensorId, ts} compound index\n// Query for 1 day: scan 86,400 index entries",
       "language": "javascript",
       "description": "one document per event"
     },
@@ -227,7 +227,7 @@
       "ruleId": "pattern-bucket",
       "ruleTitle": "Use Bucket Pattern for Time-Series Data",
       "type": "good",
-      "code": "// One document per sensor per hour\n// Readings array bounded to ~3,600 elements\n{\n  sensorId: \"temp-01\",\n  bucket: ISODate(\"2024-01-15T10:00:00Z\"),  // Hour start\n  readings: [\n    { m: 0, s: 0, value: 22.5 },   // Minute 0, second 0\n    { m: 0, s: 1, value: 22.6 },   // Minute 0, second 1\n    { m: 0, s: 2, value: 22.5 },\n    // ... up to 3,600 readings\n  ],\n  count: 3600,\n  // Pre-computed aggregates - no need to scan array\n  sum: 81234.5,\n  min: 21.2,\n  max: 24.8,\n  avg: 22.56\n}\n\n// Per sensor per year:\n// 24 docs/day × 365 days = 8,760 documents (3,600× fewer)\n// 8,760 index entries (3,600× smaller index)\n// Query for 1 day: scan 24 index entries",
+      "code": "// One document per sensor per hour\n// Readings array bounded to ~3,600 elements\n{\n  sensorId: \"temp-01\",\n  bucket: ISODate(\"2024-01-15T10:00:00Z\"),  // Hour start\n  readings: [\n    { m: 0, s: 0, value: 22.5 },   // Minute 0, second 0\n    { m: 0, s: 1, value: 22.6 },   // Minute 0, second 1\n    { m: 0, s: 2, value: 22.5 },\n    // ... up to 3,600 readings\n  ],\n  count: 3600,\n  // Pre-computed aggregates - no need to scan array\n  sum: 81234.5,\n  min: 21.2,\n  max: 24.8,\n  avg: 22.56\n}\n\n// Per sensor per year:\n// 24 docs/day \u00d7 365 days = 8,760 documents (3,600\u00d7 fewer)\n// 8,760 index entries (3,600\u00d7 smaller index)\n// Query for 1 day: scan 24 index entries",
       "language": "javascript",
       "description": "bucket pattern - group by time window"
     },
@@ -251,7 +251,7 @@
       "ruleId": "pattern-extended-reference",
       "ruleTitle": "Use Extended Reference Pattern",
       "type": "bad",
-      "code": "// Order references customer by ID only\n{\n  _id: \"order123\",\n  customerId: \"cust456\",  // Just an ObjectId\n  items: [...],\n  total: 299.99\n}\n\n// Every order list/display requires $lookup\ndb.orders.aggregate([\n  { $match: { status: \"pending\" } },\n  { $lookup: {\n    from: \"customers\",\n    localField: \"customerId\",\n    foreignField: \"_id\",\n    as: \"customer\"\n  }},\n  { $unwind: \"$customer\" }\n])\n// 50 orders × $lookup = 50 extra index lookups\n// List view: 50-200ms instead of 5-20ms",
+      "code": "// Order references customer by ID only\n{\n  _id: \"order123\",\n  customerId: \"cust456\",  // Just an ObjectId\n  items: [...],\n  total: 299.99\n}\n\n// Every order list/display requires $lookup\ndb.orders.aggregate([\n  { $match: { status: \"pending\" } },\n  { $lookup: {\n    from: \"customers\",\n    localField: \"customerId\",\n    foreignField: \"_id\",\n    as: \"customer\"\n  }},\n  { $unwind: \"$customer\" }\n])\n// 50 orders \u00d7 $lookup = 50 extra index lookups\n// List view: 50-200ms instead of 5-20ms",
       "language": "javascript",
       "description": "always $lookup for display data"
     },
@@ -307,7 +307,7 @@
       "ruleId": "pattern-subset",
       "ruleTitle": "Use Subset Pattern for Hot/Cold Data",
       "type": "bad",
-      "code": "// Movie with ALL reviews embedded\n// Hot data: title, rating, plot (~1KB)\n// Cold data: 10,000 reviews (~1MB)\n{\n  _id: \"movie123\",\n  title: \"The Matrix\",\n  year: 1999,\n  rating: 8.7,\n  plot: \"A computer hacker learns about the true nature...\",\n  reviews: [\n    // 10,000 reviews × 100 bytes each = 1MB cold data\n    { user: \"critic1\", rating: 5, text: \"Masterpiece...\", date: \"...\" },\n    { user: \"user42\", rating: 4, text: \"Great effects...\", date: \"...\" },\n    // ... 9,998 more reviews, 95% never read\n  ]\n}\n\n// Every movie page load pulls 1MB into RAM\n// 1GB RAM = 1,000 movies cached\n// Most page views only need title + rating + plot",
+      "code": "// Movie with ALL reviews embedded\n// Hot data: title, rating, plot (~1KB)\n// Cold data: 10,000 reviews (~1MB)\n{\n  _id: \"movie123\",\n  title: \"The Matrix\",\n  year: 1999,\n  rating: 8.7,\n  plot: \"A computer hacker learns about the true nature...\",\n  reviews: [\n    // 10,000 reviews \u00d7 100 bytes each = 1MB cold data\n    { user: \"critic1\", rating: 5, text: \"Masterpiece...\", date: \"...\" },\n    { user: \"user42\", rating: 4, text: \"Great effects...\", date: \"...\" },\n    // ... 9,998 more reviews, 95% never read\n  ]\n}\n\n// Every movie page load pulls 1MB into RAM\n// 1GB RAM = 1,000 movies cached\n// Most page views only need title + rating + plot",
       "language": "javascript",
       "description": "all data in one document"
     },
@@ -315,7 +315,7 @@
       "ruleId": "pattern-subset",
       "ruleTitle": "Use Subset Pattern for Hot/Cold Data",
       "type": "good",
-      "code": "// Movie with only hot data (~2KB)\n{\n  _id: \"movie123\",\n  title: \"The Matrix\",\n  year: 1999,\n  rating: 8.7,\n  plot: \"A computer hacker learns about the true nature...\",\n  // Summary stats - no full reviews\n  reviewStats: {\n    count: 10000,\n    avgRating: 4.2,\n    distribution: { 5: 4000, 4: 3000, 3: 2000, 2: 700, 1: 300 }\n  },\n  // Only top 5 featured reviews (~500 bytes)\n  featuredReviews: [\n    { user: \"critic1\", rating: 5, text: \"Masterpiece\", featured: true },\n    { user: \"critic2\", rating: 5, text: \"Revolutionary\", featured: true }\n  ]\n}\n// 1GB RAM = 500,000 movies cached (500× more)\n\n// Cold data: Full reviews in separate collection\n{\n  _id: ObjectId(\"...\"),\n  movieId: \"movie123\",\n  user: \"user456\",\n  rating: 4,\n  text: \"Great visual effects and deep storyline...\",\n  date: ISODate(\"2024-01-15\"),\n  helpful: 42\n}\n// Only loaded when user clicks \"Show all reviews\"",
+      "code": "// Movie with only hot data (~2KB)\n{\n  _id: \"movie123\",\n  title: \"The Matrix\",\n  year: 1999,\n  rating: 8.7,\n  plot: \"A computer hacker learns about the true nature...\",\n  // Summary stats - no full reviews\n  reviewStats: {\n    count: 10000,\n    avgRating: 4.2,\n    distribution: { 5: 4000, 4: 3000, 3: 2000, 2: 700, 1: 300 }\n  },\n  // Only top 5 featured reviews (~500 bytes)\n  featuredReviews: [\n    { user: \"critic1\", rating: 5, text: \"Masterpiece\", featured: true },\n    { user: \"critic2\", rating: 5, text: \"Revolutionary\", featured: true }\n  ]\n}\n// 1GB RAM = 500,000 movies cached (500\u00d7 more)\n\n// Cold data: Full reviews in separate collection\n{\n  _id: ObjectId(\"...\"),\n  movieId: \"movie123\",\n  user: \"user456\",\n  rating: 4,\n  text: \"Great visual effects and deep storyline...\",\n  date: ISODate(\"2024-01-15\"),\n  helpful: 42\n}\n// Only loaded when user clicks \"Show all reviews\"",
       "language": "javascript",
       "description": "subset pattern"
     },
@@ -371,7 +371,7 @@
       "ruleId": "relationship-one-to-many",
       "ruleTitle": "Model One-to-Many Relationships with References",
       "type": "bad",
-      "code": "// Publisher with ALL books embedded - will crash at scale\n{\n  _id: \"oreilly\",\n  name: \"O'Reilly Media\",\n  books: [\n    // 10,000+ books × 1KB each = 10MB+ document\n    { title: \"MongoDB: The Definitive Guide\", isbn: \"123\", pages: 400 },\n    { title: \"Learning Python\", isbn: \"456\", pages: 600 },\n    // ... grows forever\n  ]\n}\n// Adding one book rewrites entire 10MB document\n// Eventually exceeds 16MB limit → APPLICATION CRASH",
+      "code": "// Publisher with ALL books embedded - will crash at scale\n{\n  _id: \"oreilly\",\n  name: \"O'Reilly Media\",\n  books: [\n    // 10,000+ books \u00d7 1KB each = 10MB+ document\n    { title: \"MongoDB: The Definitive Guide\", isbn: \"123\", pages: 400 },\n    { title: \"Learning Python\", isbn: \"456\", pages: 600 },\n    // ... grows forever\n  ]\n}\n// Adding one book rewrites entire 10MB document\n// Eventually exceeds 16MB limit \u2192 APPLICATION CRASH",
       "language": "javascript",
       "description": "embedding unbounded arrays"
     },
@@ -486,6 +486,22 @@
       "code": "// Phase 1: warn-only while you audit and fix data\n\ndb.runCommand({\n  collMod: \"users\",\n  validator: { $jsonSchema: { bsonType: \"object\", required: [\"email\"] } },\n  validationAction: \"warn\",\n  validationLevel: \"moderate\"\n})\n\n// Phase 2: after backfill, enforce strictly\n\ndb.runCommand({\n  collMod: \"users\",\n  validationAction: \"error\",\n  validationLevel: \"strict\"\n})",
       "language": "javascript",
       "description": "staged rollout"
+    },
+    {
+      "ruleId": "fundamental-16mb-awareness",
+      "ruleTitle": "Respect the 16MB Document Limit",
+      "type": "bad",
+      "code": "// Incorrect assumption: document can keep growing and MongoDB will handle it\ndb.users.updateOne(\n  { _id: 'user1' },\n  { $push: { activityLog: { $each: largeEventsArray } } }\n)\n\n// Risk: once document exceeds 16MB, the write fails\n// (it does not silently truncate or corrupt data)",
+      "language": "javascript",
+      "description": "treats 16MB document limit as soft and allows unbounded growth in one document"
+    },
+    {
+      "ruleId": "pattern-outlier",
+      "ruleTitle": "Use Outlier Pattern for Exceptional Documents",
+      "type": "bad",
+      "code": "// Rigid outlier split with hard-coded percentage\n// Assumes exactly top 5% are outliers for every collection\nif (customerCount > 1000) {\n  moveToOutlierCollection(doc)\n}\n\n// Problem: static threshold may misclassify data and add unnecessary complexity",
+      "language": "javascript",
+      "description": "uses fixed distribution thresholds for outlier pattern instead of workload-based cutoff"
     }
   ]
 }

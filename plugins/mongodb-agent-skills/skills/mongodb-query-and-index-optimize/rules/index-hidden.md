@@ -34,6 +34,12 @@ db.orders.unhideIndex("status_1_createdAt_-1")
 - **You need to reduce storage immediately**: Hidden indexes still consume disk.
 - **You are confident and have load-tested**: Dropping may be fine.
 
+**Important caveats:**
+
+- Hiding/unhiding resets that index's `$indexStats` counters.
+- You cannot `hint()` a hidden index.
+- Hidden indexes still enforce their behavior (for example `unique` and TTL effects continue).
+
 ## Verify with
 
 ```javascript

@@ -1,7 +1,7 @@
 ---
 title: Use Extended Reference Pattern
 impact: MEDIUM
-impactDescription: "Eliminates $lookup for 80% of queries, 5-10× faster list views"
+impactDescription: "Reduces repeated `$lookup` on hot paths by caching selected referenced fields"
 tags: schema, patterns, extended-reference, denormalization, caching
 ---
 
@@ -31,8 +31,7 @@ db.orders.aggregate([
   }},
   { $unwind: "$customer" }
 ])
-// 50 orders × $lookup = 50 extra index lookups
-// List view: 50-200ms instead of 5-20ms
+// Repeated joins add avoidable work for a common list view
 ```
 
 **Correct (extended reference):**
@@ -55,7 +54,6 @@ db.orders.aggregate([
 // Order list without $lookup - single query
 db.orders.find({ status: "pending" })
 // Returns customer.name directly - no join needed
-// 50 orders in 5ms instead of 50ms
 
 // Full customer data available when needed
 const fullCustomer = db.customers.findOne({ _id: order.customer._id })
@@ -129,7 +127,7 @@ if (!order.customerCache ||
 - **Frequently-changing data**: If customer name changes daily, update overhead exceeds $lookup cost.
 - **Large cached payloads**: Don't embed 50KB of author bio in every article.
 - **Sensitive data segregation**: Don't copy PII into collections with different access controls.
-- **Writes >> Reads**: If you write 100× more than read, caching adds overhead.
+- **Writes >> Reads**: If writes greatly outnumber reads, caching adds overhead.
 
 ## Verify with
 

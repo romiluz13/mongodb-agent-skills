@@ -1,15 +1,15 @@
 ---
 title: Use allowDiskUse for Large Aggregations
 impact: MEDIUM
-impactDescription: "Aggregations exceeding 100MB limit: allowDiskUse prevents failure but is 10-100× slower than in-memory"
+impactDescription: "allowDiskUse determines whether memory-heavy stages spill to disk or error when they exceed memory limits"
 tags: aggregation, memory, allowDiskUse, sort, group, large-data
 ---
 
 ## Use allowDiskUse for Large Aggregations
 
-**Aggregation pipeline stages have a 100MB memory limit per stage—allowDiskUse lets them spill to disk when exceeded.** Without it, large $sort, $group, or $bucket operations fail with "exceeded memory limit". Enable it for batch jobs and analytics, but understand it's 10-100× slower than in-memory. The real fix is optimizing your pipeline to fit in memory.
+**Aggregation pipeline stages have a 100MB per-stage memory threshold for in-memory work.** Starting in MongoDB 6.0, `allowDiskUseByDefault` (default `true`) controls whether stages that exceed this threshold spill to disk by default. Use per-query `allowDiskUse` to make behavior explicit across environments, and optimize pipelines to reduce memory pressure.
 
-**Incorrect (large aggregation fails without allowDiskUse):**
+**Incorrect (assuming defaults will always allow disk spill):**
 
 ```javascript
 // Sorting 1M large documents
@@ -18,20 +18,20 @@ db.orders.aggregate([
   { $sort: { totalAmount: -1 } }   // Sort ALL of them
 ])
 
-// ERROR: Sort exceeded memory limit of 104857600 bytes
+// Can error with "exceeded memory limit" when disk use is disabled
 
 // Why 100MB isn't enough:
 // 1M docs × ~200 bytes each = 200MB for sort buffer
 // Exceeds 100MB limit → operation fails
 
-// Same problem with $group on high-cardinality field:
+// Same risk with $group on high-cardinality field:
 db.events.aggregate([
   { $group: { _id: "$sessionId", count: { $sum: 1 } } }
 ])
 // 5M unique sessions = 5M group keys = exceeds memory
 ```
 
-**Correct (allowDiskUse for large operations):**
+**Correct (set allowDiskUse behavior explicitly for large operations):**
 
 ```javascript
 // Enable disk spilling for large aggregations
@@ -45,19 +45,18 @@ db.orders.aggregate(
 
 // Now works, but:
 // - Uses temporary files on disk
-// - 10-100× slower than in-memory
+// - Can be significantly slower than memory-resident execution
 // - Consumes disk I/O bandwidth
 // - Appropriate for batch jobs, not real-time queries
 ```
 
-**When allowDiskUse is triggered:**
+**Stages commonly affected by memory limits:**
 
 ```javascript
 // Stages that can exceed memory limit:
 // - $sort (sorting large result sets)
 // - $group (many unique groups)
 // - $bucket / $bucketAuto (histogram creation)
-// - $facet (each sub-pipeline has separate limit)
 // - $setWindowFields (window computations)
 
 // Example: $group with many unique keys
@@ -72,29 +71,11 @@ db.logs.aggregate([
 
 // High-cardinality grouping = many group keys = memory pressure
 
-// Example: $facet with multiple large sub-pipelines
-db.products.aggregate([
-  {
-    $facet: {
-      byCategory: [
-        { $group: { _id: "$category", count: { $sum: 1 } } }
-      ],
-      byPrice: [
-        { $bucket: {
-            groupBy: "$price",
-            boundaries: [0, 100, 500, 1000, Infinity]
-        }}
-      ],
-      topRated: [
-        { $sort: { rating: -1 } },  // Each facet has 100MB limit
-        { $limit: 100 }
-      ]
-    }
-  }
-], { allowDiskUse: true })
+// NOTE: $facet has a hard 100MB limit per stage and cannot spill to disk.
+// allowDiskUse does not relax $facet's per-stage 100MB limit.
 ```
 
-**Better approach: Optimize to avoid disk use:**
+**Better approach: optimize to reduce disk use:**
 
 ```javascript
 // STRATEGY 1: $project early to reduce document size
@@ -176,7 +157,7 @@ collection.aggregate(pipeline)
 db.collection.aggregate(pipeline, { allowDiskUse: true })
 ```
 
-**When NOT to use allowDiskUse:**
+**When NOT to rely on allowDiskUse as the primary fix:**
 
 - **Real-time queries**: Disk I/O adds latency. Optimize pipeline instead.
 - **High-concurrency scenarios**: Multiple disk spills compete for I/O.
@@ -195,6 +176,7 @@ db.collection.aggregate(pipeline, { allowDiskUse: true })
 ```javascript
 // Check if aggregation needs allowDiskUse
 function analyzeAggregationMemory(collection, pipeline) {
+  // Remember: server parameter allowDiskUseByDefault (MongoDB 6.0+) affects default behavior.
   // Try without allowDiskUse first
   try {
     const explain = db[collection].explain("executionStats").aggregate(pipeline)

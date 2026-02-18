@@ -102,8 +102,10 @@ db.runCommand({
   validationAction: "warn"       // Log violations, don't block
 })
 
-// Check logs for violations, fix existing data
-db.users.find({ $nor: [{ email: { $regex: /^[a-zA-Z0-9._%+-]+@/ } }] })
+// Check for violations using the actual validator shape
+const info = db.getCollectionInfos({ name: "users" })[0]
+const validator = info?.options?.validator
+db.users.find({ $nor: [validator] })
 
 // Then switch to strict + error
 db.runCommand({
@@ -122,23 +124,20 @@ db.runCommand({
 ## Verify with
 
 ```javascript
-// Check if validation exists on collection
-db.getCollectionInfos({ name: "users" })[0].options.validator
-// Empty = no validation (add it!)
-
-// Test your validation rules
-db.runCommand({
-  validate: "users",
-  full: true
+// Read current validator and validation settings
+const info = db.getCollectionInfos({ name: "users" })[0]
+printjson({
+  validationLevel: info?.options?.validationLevel,
+  validationAction: info?.options?.validationAction,
+  validator: info?.options?.validator
 })
 
-// Find documents that would fail current validation
-db.users.find({
-  $nor: [
-    { email: { $type: "string" } },
-    { name: { $type: "string" } }
-  ]
-})
+// Primary compliance check: find documents that do NOT match validator
+const validator = info?.options?.validator
+db.users.find({ $nor: [validator] })
+
+// Optional heavyweight check (slow, can block due collection lock):
+// db.runCommand({ validate: "users", full: true })
 ```
 
 Reference: [Schema Validation](https://mongodb.com/docs/manual/core/schema-validation/)

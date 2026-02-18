@@ -164,9 +164,12 @@ db.articles.createIndex({ content: "text" })  // ERROR: Already has text index
 // Combine all text fields in one index:
 db.articles.createIndex({ title: "text", content: "text", summary: "text" })
 
-// No compound with text as non-first field
-db.articles.createIndex({ title: "text", authorId: 1 })  // ✓ OK
-db.articles.createIndex({ authorId: 1, title: "text" })  // ✗ ERROR
+// Compound text index rules:
+// - Text keys can be combined with ascending/descending keys.
+// - If non-text keys PRECEDE the text key, $text queries must include
+//   equality matches on those preceding keys.
+db.articles.createIndex({ title: "text", authorId: 1 })  // ✓ Valid
+db.articles.createIndex({ authorId: 1, title: "text" })  // ✓ Valid (requires equality on authorId for $text use)
 
 // Combine text search with other filters:
 db.articles.find({

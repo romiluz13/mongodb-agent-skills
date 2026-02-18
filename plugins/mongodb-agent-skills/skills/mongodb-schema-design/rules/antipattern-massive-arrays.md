@@ -1,19 +1,19 @@
 ---
 title: Limit Array Size
 impact: CRITICAL
-impactDescription: "Prevents O(n) operations, 10-100× write improvement for large arrays"
+impactDescription: "Keeps high-cardinality arrays from degrading update and index performance"
 tags: schema, arrays, anti-pattern, performance, indexing, subset-pattern
 ---
 
 ## Limit Array Size
 
-**Arrays over 1,000 elements cause severe performance issues.** Every array modification requires rewriting the entire array—adding a comment to a 5,000-element array rewrites 2.5MB. Multikey indexes on large arrays consume 1000× more memory and slow every write. This is different from unbounded arrays: even bounded arrays can be too large.
+**Large arrays can become expensive even when bounded.** As arrays grow, document size, multikey index fan-out, and update costs can increase. This is different from unbounded arrays: a bounded array can still be too large for your workload.
 
 **Incorrect (large embedded arrays):**
 
 ```javascript
 // Blog post with all comments embedded
-// Problem: Each $push rewrites the entire 2.5MB array
+// Problem: frequent updates on a very large embedded array
 {
   _id: "post123",
   title: "Popular Post",
@@ -24,13 +24,12 @@ tags: schema, arrays, anti-pattern, performance, indexing, subset-pattern
   ]
 }
 
-// Adding one comment rewrites 2.5MB on disk
-// If you have an index on comments.author, that's 5,000 index entries
+// Adding one comment grows an already large document
+// If you index comments.author, index fan-out grows with array size
 db.posts.updateOne(
   { _id: "post123" },
   { $push: { comments: newComment } }
 )
-// Write time: 200-500ms, locks document during write
 ```
 
 **Correct (bounded array + overflow collection):**
@@ -70,7 +69,6 @@ db.posts.updateOne(
 )
 // Simultaneously insert into comments collection
 db.comments.insertOne({ postId: "post123", ...newComment })
-// Write time: <5ms
 ```
 
 **Alternative ($slice without separate collection):**
@@ -91,14 +89,14 @@ db.posts.updateOne(
 )
 ```
 
-**Thresholds:**
+**Workload signals:**
 
-| Array Size | Recommendation | Rationale |
-|------------|----------------|-----------|
-| <100 elements | Safe to embed | Negligible overhead |
-| 100-500 elements | Use $slice, monitor | May need refactoring |
-| 500-1000 elements | Plan migration | Performance degradation starts |
-| >1000 elements | Separate collection | Unacceptable write times |
+| Signal | Recommendation | Rationale |
+|--------|----------------|-----------|
+| Array cardinality keeps growing | Cap with `$slice` or split to separate collection | Keeps document growth bounded |
+| Array field is heavily indexed | Review multikey index fan-out and move cold history out | Reduces index/storage overhead |
+| Hot-path reads only need recent subset | Keep recent N embedded, archive full history elsewhere | Preserves locality for common queries |
+| Frequent updates become slower as array grows | Compare embedded vs referenced/write-path design | Avoids accumulating write amplification |
 
 **When NOT to use this pattern:**
 
@@ -115,15 +113,15 @@ db.posts.aggregate([
     title: 1,
     commentsCount: { $size: { $ifNull: ["$comments", []] } }
   }},
-  { $match: { commentsCount: { $gt: 100 } } },
+  { $match: { commentsCount: { $gt: 100 } } }, // Example threshold; tune per workload
   { $sort: { commentsCount: -1 } },
   { $limit: 10 }
 ])
-// Red flags: any document with >1000 array elements
+// Inspect high-cardinality arrays against your read/write patterns
 
 // Check multikey index size vs document count
 db.posts.stats().indexSizes
-// If "comments.author_1" is 100× larger than "_id", arrays are too big
+// Large array-index footprint can signal fan-out pressure
 
 // Profile write times for array updates
 db.setProfilingLevel(1, { slowms: 100 })

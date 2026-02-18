@@ -158,6 +158,8 @@ db.logs.aggregate([{ $group: ... }])            // Memory exhaustion, no $match
 - Writing $vectorSearch queries
 - Building RAG applications
 - Implementing hybrid search ($rankFusion)
+- Choosing hybrid strategy ($rankFusion vs $scoreFusion vs retrieval+rerank)
+- Applying Voyage-compatible asymmetric retrieval with correct `input_type`
 - Storing AI agent memory
 - Multi-tenant vector search
 

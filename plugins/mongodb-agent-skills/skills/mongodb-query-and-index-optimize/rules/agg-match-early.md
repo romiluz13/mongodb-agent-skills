@@ -1,13 +1,13 @@
 ---
 title: Place $match at Pipeline Start
 impact: HIGH
-impactDescription: "$match after $lookup: 10M lookups; $match before: 10K lookups—1000× less work"
+impactDescription: "Pushing source-collection filters early can drastically reduce downstream work"
 tags: aggregation, match, filter, optimization, index-usage, pipeline
 ---
 
 ## Place $match at Pipeline Start
 
-**$match at the pipeline start can use indexes; $match after $lookup cannot.** Every document that enters your pipeline flows through all subsequent stages. If you have 10 million orders but only 10,000 are "completed", putting `$match: { status: "completed" }` first means 10K documents flow through $lookup instead of 10M. That's the difference between 100ms and 10 minutes.
+**Push source-collection filters as early as possible.** Every document that enters the pipeline flows through later stages. Splitting `$match` into "source filters" and "post-join/computed filters" usually lowers lookup/group/unwind cost and can preserve index use for the source collection.
 
 **Incorrect ($match after expensive operations—processes everything):**
 
@@ -25,7 +25,6 @@ db.orders.aggregate([
   },
   // Cost: 10M index lookups on customers collection
   // Memory: 10M documents × (order + customer data)
-  // Time: ~45 seconds
 
   { $unwind: "$customer" },  // Still processing 10M docs
 
@@ -50,8 +49,6 @@ db.orders.aggregate([
   { $match: { status: "completed" } },
   // Uses index on { status: 1 }
   // 10M orders → 10K completed orders
-  // Cost: 1 index scan
-  // Time: 5ms
 
   // Step 2: $lookup only the filtered set
   {
@@ -63,7 +60,6 @@ db.orders.aggregate([
     }
   },
   // Cost: 10K index lookups (not 10M!)
-  // Time: ~100ms
 
   { $unwind: "$customer" },
 
@@ -72,14 +68,14 @@ db.orders.aggregate([
   // Returns: 500 documents
 ])
 
-// Result: 100ms instead of 45 seconds (450× faster)
+// Result: far less downstream work on large collections
 ```
 
 **Index requirement for $match optimization:**
 
 ```javascript
-// Only the FIRST $match stage can use indexes
-// Subsequent $match stages filter in memory
+// Match predicates that can be pushed to the source collection can use indexes.
+// Predicates on joined/computed fields run after those stages.
 
 // Ensure index exists for first $match
 db.orders.createIndex({ status: 1, createdAt: -1 })

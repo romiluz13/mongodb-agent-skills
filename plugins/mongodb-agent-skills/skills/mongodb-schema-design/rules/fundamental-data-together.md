@@ -1,13 +1,13 @@
 ---
 title: Store Data That's Accessed Together
 impact: HIGH
-impactDescription: "3× fewer queries, eliminates network round-trips, enables single-document atomicity"
+impactDescription: "Reduces application-side joins by aligning document shape to common access patterns"
 tags: schema, embedding, access-patterns, fundamentals, mongodb-philosophy
 ---
 
 ## Store Data That's Accessed Together
 
-**MongoDB's core principle: data that is accessed together should be stored together.** Design schemas around queries, not entities. This is the opposite of relational normalization—we optimize for read patterns, not data purity.
+**MongoDB's core principle: data that is accessed together should be stored together.** Design schemas around queries, not entities. In many workloads this reduces cross-collection joins and simplifies common reads.
 
 **Incorrect (entity-based design):**
 
@@ -44,7 +44,7 @@ const tags = await db.article_tags.find({ articleId }).toArray()  // Query 3
   readingTime: 8
 }
 
-// Single query returns complete article - 1ms response
+// Single query returns complete article view
 const article = await db.articles.findOne({ _id: articleId })
 // API response can return document directly - no transformation
 ```
