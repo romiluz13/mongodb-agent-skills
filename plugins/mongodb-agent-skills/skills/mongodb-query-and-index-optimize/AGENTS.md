@@ -9170,7 +9170,7 @@ Reference: [https://mongodb.com/docs/manual/tutorial/manage-the-database-profile
 7. [https://mongodb.com/docs/manual/tutorial/manage-the-database-profiler/](https://mongodb.com/docs/manual/tutorial/manage-the-database-profiler/)
 8. [https://mongodb.com/docs/manual/reference/operator/aggregation/indexStats/](https://mongodb.com/docs/manual/reference/operator/aggregation/indexStats/)
 9. [https://mongodb.com/docs/atlas/performance-advisor/](https://mongodb.com/docs/atlas/performance-advisor/)
-10. [https://mongodb.com/developer/products/mongodb/performance-best-practices-indexing/](https://mongodb.com/developer/products/mongodb/performance-best-practices-indexing/)
+10. [https://www.mongodb.com/company/blog/performance-best-practices-indexing](https://www.mongodb.com/company/blog/performance-best-practices-indexing)
 11. [https://mongodb.com/docs/manual/core/index-unique/](https://mongodb.com/docs/manual/core/index-unique/)
 12. [https://mongodb.com/docs/manual/core/indexes/index-types/index-hashed/](https://mongodb.com/docs/manual/core/indexes/index-types/index-hashed/)
 13. [https://mongodb.com/docs/manual/core/clustered-collections/](https://mongodb.com/docs/manual/core/clustered-collections/)
