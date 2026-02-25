@@ -4,7 +4,7 @@ description: MongoDB Atlas Vector Search and AI integration. Use when creating v
 license: Apache-2.0
 metadata:
   author: mongodb
-  version: "1.4.0"
+  version: "1.5.0"
 ---
 
 # MongoDB AI: Vector Search and AI Integration
@@ -32,6 +32,8 @@ Reference these guidelines when:
 - Integrating Voyage AI embedding models (for example `voyage-4` or `voyage-code-3`)
 - Pre-filtering vector search results
 - Debugging "no results" or slow vector queries
+
+Use `mongodb-search` instead when the request is primarily about lexical Search engine design (`$search`, analyzers, synonyms, facets, search alerts, or Community `mongot` operations) rather than model/provider semantics.
 
 ## Rule Categories by Priority
 
@@ -86,8 +88,8 @@ Reference these guidelines when:
 
 ### 5. Hybrid Search (MEDIUM) - 4 rules
 
-- `hybrid-rankfusion` - Combining vector + text search (MongoDB 8.0+)
-- `hybrid-scorefusion` - Score-based hybrid search (MongoDB 8.2+)
+- `hybrid-rankfusion` - Combining vector + text search (MongoDB 8.0+, Preview)
+- `hybrid-scorefusion` - Score-based hybrid search (MongoDB 8.2+, Preview)
 - `hybrid-weights` - Per-query weight tuning
 - `hybrid-limitations` - Stage restrictions plus decision matrix (`$rankFusion` vs `$scoreFusion` vs retrieval+rerank)
 
@@ -245,8 +247,8 @@ When connected, I can automatically:
 ## Common Errors
 
 ### "$vectorSearch is not allowed"
-**Cause**: MongoDB version < 7.0.2
-**Fix**: Upgrade cluster to MongoDB 7.0.2+
+**Cause**: MongoDB version does not support $vectorSearch
+**Fix**: Upgrade cluster to MongoDB v6.0.11 or v7.0.2+
 
 ### No results returned
 **Causes**:
