@@ -1,0 +1,395 @@
+{
+  "skill": "mongodb-search",
+  "generatedAt": "2026-02-18",
+  "summary": {
+    "badExamples": 24,
+    "goodExamples": 24
+  },
+  "totalTestCases": 48,
+  "testCases": [
+    {
+      "ruleId": "deploy-track-detection",
+      "ruleTitle": "Detect Deployment Track Before Recommending Syntax",
+      "type": "bad",
+      "code": "Assume Atlas-only syntax without asking deployment type or MongoDB version.",
+      "language": "text",
+      "description": "bad pattern for deploy-track-detection"
+    },
+    {
+      "ruleId": "deploy-track-detection",
+      "ruleTitle": "Detect Deployment Track Before Recommending Syntax",
+      "type": "good",
+      "code": "Collect track (atlas-cloud|community-manual|k8s-operator-self-managed) and version=8.2 before giving syntax and docs links.",
+      "language": "text",
+      "description": "good pattern for deploy-track-detection"
+    },
+    {
+      "ruleId": "release-status-gating",
+      "ruleTitle": "Gate Guidance by GA vs Preview Status",
+      "type": "bad",
+      "code": "Mark a feature production-ready without checking changelog or preview status.",
+      "language": "text",
+      "description": "bad pattern for release-status-gating"
+    },
+    {
+      "ruleId": "release-status-gating",
+      "ruleTitle": "Gate Guidance by GA vs Preview Status",
+      "type": "good",
+      "code": "Check changelog, capture date/status, and include GA/Preview label in guidance.",
+      "language": "text",
+      "description": "good pattern for release-status-gating"
+    },
+    {
+      "ruleId": "community-preview-safety",
+      "ruleTitle": "Apply Community Search Preview Safety Controls",
+      "type": "bad",
+      "code": "Recommend Community Search for strict SLA production without preview caveat.",
+      "language": "text",
+      "description": "bad pattern for community-preview-safety"
+    },
+    {
+      "ruleId": "community-preview-safety",
+      "ruleTitle": "Apply Community Search Preview Safety Controls",
+      "type": "good",
+      "code": "Label Community Search as Preview and require staging validation before production.",
+      "language": "text",
+      "description": "good pattern for community-preview-safety"
+    },
+    {
+      "ruleId": "community-prereqs-mongot-auth",
+      "ruleTitle": "Enforce Community Search Prerequisites and Authentication",
+      "type": "bad",
+      "code": "db.createUser({ user: 'appUser', pwd: 'x', roles: [{ role: 'readWrite', db: 'admin' }] })",
+      "language": "javascript",
+      "description": "bad pattern for community-prereqs-mongot-auth"
+    },
+    {
+      "ruleId": "community-prereqs-mongot-auth",
+      "ruleTitle": "Enforce Community Search Prerequisites and Authentication",
+      "type": "good",
+      "code": "db.createUser({ user: 'mongotUser', pwd: passwordPrompt(), roles: [{ role: 'searchCoordinator', db: 'admin' }] })",
+      "language": "javascript",
+      "description": "good pattern for community-prereqs-mongot-auth"
+    },
+    {
+      "ruleId": "community-mongot-health-check",
+      "ruleTitle": "Verify mongot Health Before Search Query Tuning",
+      "type": "bad",
+      "code": "db.movies.aggregate([{ $search: { text: { query: 'test', path: 'title' } } }]) // no health checks",
+      "language": "javascript",
+      "description": "bad pattern for community-mongot-health-check"
+    },
+    {
+      "ruleId": "community-mongot-health-check",
+      "ruleTitle": "Verify mongot Health Before Search Query Tuning",
+      "type": "good",
+      "code": "curl localhost:8080/health\nmongosh --eval 'db.runCommand({ listSearchIndexes: \"movies\" })'",
+      "language": "bash",
+      "description": "good pattern for community-mongot-health-check"
+    },
+    {
+      "ruleId": "index-static-vs-dynamic-mappings",
+      "ruleTitle": "Constrain Dynamic Mappings and Prefer Static Index Definitions",
+      "type": "bad",
+      "code": "db.items.createSearchIndex('default', { mappings: { dynamic: true } })",
+      "language": "javascript",
+      "description": "bad pattern for index-static-vs-dynamic-mappings"
+    },
+    {
+      "ruleId": "index-static-vs-dynamic-mappings",
+      "ruleTitle": "Constrain Dynamic Mappings and Prefer Static Index Definitions",
+      "type": "good",
+      "code": "db.items.createSearchIndex('default', { mappings: { dynamic: false, fields: { metadata: { type: 'document', dynamic: { typeSet: 'metadataTypes' } } } }, typeSets: [{ name: 'metadataTypes', types: [{ type: 'token' }] }] })",
+      "language": "javascript",
+      "description": "good pattern for index-static-vs-dynamic-mappings"
+    },
+    {
+      "ruleId": "index-fields-limit-guardrail",
+      "ruleTitle": "Respond to Search Max Fields Indexed Guardrail",
+      "type": "bad",
+      "code": "Increase alert threshold only; keep broad root dynamic mapping.",
+      "language": "text",
+      "description": "bad pattern for index-fields-limit-guardrail"
+    },
+    {
+      "ruleId": "index-fields-limit-guardrail",
+      "ruleTitle": "Respond to Search Max Fields Indexed Guardrail",
+      "type": "good",
+      "code": "Reduce indexed field surface via static mappings and split indexes, then re-check metric.",
+      "language": "text",
+      "description": "good pattern for index-fields-limit-guardrail"
+    },
+    {
+      "ruleId": "index-ngram-limit-guardrail",
+      "ruleTitle": "Control nGram and Autocomplete Field Growth",
+      "type": "bad",
+      "code": "db.docs.createSearchIndex('default', { mappings: { dynamic: true, fields: { title: { type: 'autocomplete', tokenization: 'nGram', minGrams: 2, maxGrams: 20 } } } })",
+      "language": "javascript",
+      "description": "bad pattern for index-ngram-limit-guardrail"
+    },
+    {
+      "ruleId": "index-ngram-limit-guardrail",
+      "ruleTitle": "Control nGram and Autocomplete Field Growth",
+      "type": "good",
+      "code": "db.docs.createSearchIndex('autocomplete_idx', { mappings: { dynamic: false, fields: { title: { type: 'autocomplete', tokenization: 'edgeGram', minGrams: 2, maxGrams: 15 } } } })",
+      "language": "javascript",
+      "description": "good pattern for index-ngram-limit-guardrail"
+    },
+    {
+      "ruleId": "index-analyzer-selection",
+      "ruleTitle": "Select Analyzers and Operators as a Matched Pair",
+      "type": "bad",
+      "code": "{ $search: { queryString: { defaultPath: 'title', query: 'sta' } } } // used for type-ahead",
+      "language": "javascript",
+      "description": "bad pattern for index-analyzer-selection"
+    },
+    {
+      "ruleId": "index-analyzer-selection",
+      "ruleTitle": "Select Analyzers and Operators as a Matched Pair",
+      "type": "good",
+      "code": "{ $search: { autocomplete: { query: 'sta', path: 'title' } } } // type-ahead intent",
+      "language": "javascript",
+      "description": "good pattern for index-analyzer-selection"
+    },
+    {
+      "ruleId": "index-synonyms-lifecycle",
+      "ruleTitle": "Manage Synonyms as a Controlled Data Source",
+      "type": "bad",
+      "code": "db.sample_synonyms.insertOne({ input: 'pc' }) // invalid schema",
+      "language": "javascript",
+      "description": "bad pattern for index-synonyms-lifecycle"
+    },
+    {
+      "ruleId": "index-synonyms-lifecycle",
+      "ruleTitle": "Manage Synonyms as a Controlled Data Source",
+      "type": "good",
+      "code": "db.sample_synonyms.insertOne({ mappingType: 'explicit', input: ['pc'], synonyms: ['computer', 'workstation'] })",
+      "language": "javascript",
+      "description": "good pattern for index-synonyms-lifecycle"
+    },
+    {
+      "ruleId": "index-facet-field-typing",
+      "ruleTitle": "Use Facet-Compatible Field Types",
+      "type": "bad",
+      "code": "db.products.aggregate([{ $searchMeta: { facet: { facets: { brands: { type: 'string', path: 'brand' } } } } }]) // brand not mapped as token",
+      "language": "javascript",
+      "description": "bad pattern for index-facet-field-typing"
+    },
+    {
+      "ruleId": "index-facet-field-typing",
+      "ruleTitle": "Use Facet-Compatible Field Types",
+      "type": "good",
+      "code": "db.products.aggregate([{ $searchMeta: { facet: { operator: { text: { query: 'laptop', path: 'description' } }, facets: { brands: { type: 'string', path: 'brand' } } } } }])",
+      "language": "javascript",
+      "description": "good pattern for index-facet-field-typing"
+    },
+    {
+      "ruleId": "query-compound-structure",
+      "ruleTitle": "Structure compound Clauses for Relevance and Filtering",
+      "type": "bad",
+      "code": "db.jobs.aggregate([{ $search: { text: { query: 'mongodb engineer', path: 'title' } } }, { $match: { location: 'remote' } }])",
+      "language": "javascript",
+      "description": "bad pattern for query-compound-structure"
+    },
+    {
+      "ruleId": "query-compound-structure",
+      "ruleTitle": "Structure compound Clauses for Relevance and Filtering",
+      "type": "good",
+      "code": "db.jobs.aggregate([{ $search: { compound: { must: [{ text: { query: 'mongodb engineer', path: 'title' } }], filter: [{ equals: { path: 'location', value: 'remote' } }] } } }])",
+      "language": "javascript",
+      "description": "good pattern for query-compound-structure"
+    },
+    {
+      "ruleId": "query-operator-selection",
+      "ruleTitle": "Choose Search Operator by Intent",
+      "type": "bad",
+      "code": "{ $search: { queryString: { defaultPath: 'title', query: 'star wars' } } } // phrase intent",
+      "language": "javascript",
+      "description": "bad pattern for query-operator-selection"
+    },
+    {
+      "ruleId": "query-operator-selection",
+      "ruleTitle": "Choose Search Operator by Intent",
+      "type": "good",
+      "code": "{ $search: { phrase: { query: 'star wars', path: 'title' } } } // phrase intent",
+      "language": "javascript",
+      "description": "good pattern for query-operator-selection"
+    },
+    {
+      "ruleId": "query-score-tuning",
+      "ruleTitle": "Tune Score Modifiers with Controlled Weights",
+      "type": "bad",
+      "code": "{ $search: { text: { query: 'database', path: 'title', score: { boost: { value: 1000 } } } } }",
+      "language": "javascript",
+      "description": "bad pattern for query-score-tuning"
+    },
+    {
+      "ruleId": "query-score-tuning",
+      "ruleTitle": "Tune Score Modifiers with Controlled Weights",
+      "type": "good",
+      "code": "{ $search: { text: { query: 'database', path: 'title', score: { boost: { value: 2 } } } } }",
+      "language": "javascript",
+      "description": "good pattern for query-score-tuning"
+    },
+    {
+      "ruleId": "query-return-shape",
+      "ruleTitle": "Control Search Result Shape with highlight and Stored Source",
+      "type": "bad",
+      "code": "db.docs.aggregate([{ $search: { text: { query: 'latency', path: 'body' } } }, { $sort: { updatedAt: -1 } }])",
+      "language": "javascript",
+      "description": "bad pattern for query-return-shape"
+    },
+    {
+      "ruleId": "query-return-shape",
+      "ruleTitle": "Control Search Result Shape with highlight and Stored Source",
+      "type": "good",
+      "code": "db.docs.aggregate([{ $search: { text: { query: 'latency', path: 'body' }, highlight: { path: 'body' }, returnStoredSource: true } }, { $project: { highlights: { $meta: 'searchHighlights' } } }])",
+      "language": "javascript",
+      "description": "good pattern for query-return-shape"
+    },
+    {
+      "ruleId": "query-facet-pipelines",
+      "ruleTitle": "Use $searchMeta for Facet-Only Metadata Workloads",
+      "type": "bad",
+      "code": "db.products.aggregate([{ $search: { facet: { facets: { brands: { type: 'string', path: 'brand' } } } } }])",
+      "language": "javascript",
+      "description": "bad pattern for query-facet-pipelines"
+    },
+    {
+      "ruleId": "query-facet-pipelines",
+      "ruleTitle": "Use $searchMeta for Facet-Only Metadata Workloads",
+      "type": "good",
+      "code": "db.products.aggregate([{ $searchMeta: { facet: { operator: { text: { query: 'laptop', path: 'description' } }, facets: { brands: { type: 'string', path: 'brand' } } } } }])",
+      "language": "javascript",
+      "description": "good pattern for query-facet-pipelines"
+    },
+    {
+      "ruleId": "hybrid-lexical-prefilter-routing",
+      "ruleTitle": "Route Prefilters Between $vectorSearch and $search.vectorSearch Correctly",
+      "type": "bad",
+      "code": "db.docs.aggregate([{ $vectorSearch: { index: 'v', path: 'embedding', queryVector: [0.1], numCandidates: 100, limit: 10, filter: { text: { query: 'phone', path: 'title' } } } }])",
+      "language": "javascript",
+      "description": "bad pattern for hybrid-lexical-prefilter-routing"
+    },
+    {
+      "ruleId": "hybrid-lexical-prefilter-routing",
+      "ruleTitle": "Route Prefilters Between $vectorSearch and $search.vectorSearch Correctly",
+      "type": "good",
+      "code": "db.docs.aggregate([{ $search: { index: 'hybrid', vectorSearch: { path: 'embedding', queryVector: [0.1], numCandidates: 100, limit: 10, filter: { text: { query: 'phone', path: 'title', fuzzy: { maxEdits: 1 } } } } } }])",
+      "language": "javascript",
+      "description": "good pattern for hybrid-lexical-prefilter-routing"
+    },
+    {
+      "ruleId": "hybrid-fusion-stage-gates",
+      "ruleTitle": "Enforce Version and Stage Gates for Fusion Pipelines",
+      "type": "bad",
+      "code": "{ $scoreFusion: { input: { pipelines: { p1: [{ $search: { text: { query: 'x', path: 'title' } } }, { $project: { title: 1 } }] } } } }",
+      "language": "javascript",
+      "description": "bad pattern for hybrid-fusion-stage-gates"
+    },
+    {
+      "ruleId": "hybrid-fusion-stage-gates",
+      "ruleTitle": "Enforce Version and Stage Gates for Fusion Pipelines",
+      "type": "good",
+      "code": "On MongoDB 8.2+, use $scoreFusion with same-collection $search/$vectorSearch pipelines and no document-modifying stages.",
+      "language": "text",
+      "description": "good pattern for hybrid-fusion-stage-gates"
+    },
+    {
+      "ruleId": "hybrid-strategy-selection",
+      "ruleTitle": "Choose Hybrid Strategy by Goal and Constraints",
+      "type": "bad",
+      "code": "Use fixed 50/50 lexical-vector weights for every query family.",
+      "language": "text",
+      "description": "bad pattern for hybrid-strategy-selection"
+    },
+    {
+      "ruleId": "hybrid-strategy-selection",
+      "ruleTitle": "Choose Hybrid Strategy by Goal and Constraints",
+      "type": "good",
+      "code": "Tune strategy and weights per intent class; add rerank for precision-critical flows.",
+      "language": "text",
+      "description": "good pattern for hybrid-strategy-selection"
+    },
+    {
+      "ruleId": "ops-alerts-and-metrics-runbook",
+      "ruleTitle": "Use Alert and Metrics Runbooks for Search Operations",
+      "type": "bad",
+      "code": "Ignore Search Max Fields Indexed alerts and continue indexing.",
+      "language": "text",
+      "description": "bad pattern for ops-alerts-and-metrics-runbook"
+    },
+    {
+      "ruleId": "ops-alerts-and-metrics-runbook",
+      "ruleTitle": "Use Alert and Metrics Runbooks for Search Operations",
+      "type": "good",
+      "code": "Map each alert to first action and monitor Search Max Fields / Search Max nGram metrics.",
+      "language": "text",
+      "description": "good pattern for ops-alerts-and-metrics-runbook"
+    },
+    {
+      "ruleId": "ops-index-build-failure-triage",
+      "ruleTitle": "Triage Index Status Before Rebuilding",
+      "type": "bad",
+      "code": "db.movies.dropSearchIndex('default') // no status triage",
+      "language": "javascript",
+      "description": "bad pattern for ops-index-build-failure-triage"
+    },
+    {
+      "ruleId": "ops-index-build-failure-triage",
+      "ruleTitle": "Triage Index Status Before Rebuilding",
+      "type": "good",
+      "code": "Inspect status (Pending/Building/Stale/Failed), capture node error, then apply targeted fix.",
+      "language": "text",
+      "description": "good pattern for ops-index-build-failure-triage"
+    },
+    {
+      "ruleId": "ops-log-driven-debugging",
+      "ruleTitle": "Debug with Explain, Metrics, and Process Health Signals",
+      "type": "bad",
+      "code": "Change analyzers and boosts repeatedly without explain or metrics.",
+      "language": "text",
+      "description": "bad pattern for ops-log-driven-debugging"
+    },
+    {
+      "ruleId": "ops-log-driven-debugging",
+      "ruleTitle": "Debug with Explain, Metrics, and Process Health Signals",
+      "type": "good",
+      "code": "db.movies.explain('executionStats').aggregate([{ $search: { text: { query: 'history', path: 'plot' } } }, { $limit: 10 }])",
+      "language": "javascript",
+      "description": "good pattern for ops-log-driven-debugging"
+    },
+    {
+      "ruleId": "ops-reindex-change-management",
+      "ruleTitle": "Roll Out Index Definition Changes with Reindex Safety",
+      "type": "bad",
+      "code": "Edit index at peak traffic without disk headroom or rollback path.",
+      "language": "text",
+      "description": "bad pattern for ops-reindex-change-management"
+    },
+    {
+      "ruleId": "ops-reindex-change-management",
+      "ruleTitle": "Roll Out Index Definition Changes with Reindex Safety",
+      "type": "good",
+      "code": "Schedule change window, verify free space for old+new indexes, and keep rollback definition.",
+      "language": "text",
+      "description": "good pattern for ops-reindex-change-management"
+    },
+    {
+      "ruleId": "boundary-handoff-to-mongodb-ai",
+      "ruleTitle": "Hand Off Provider and Embedding Semantics to mongodb-ai",
+      "type": "bad",
+      "code": "Keep Voyage model compatibility, input_type, and chunking policy in mongodb-search rules.",
+      "language": "text",
+      "description": "bad pattern for boundary-handoff-to-mongodb-ai"
+    },
+    {
+      "ruleId": "boundary-handoff-to-mongodb-ai",
+      "ruleTitle": "Hand Off Provider and Embedding Semantics to mongodb-ai",
+      "type": "good",
+      "code": "Keep search engine semantics here; hand provider/model and RAG semantics to mongodb-ai.",
+      "language": "text",
+      "description": "good pattern for boundary-handoff-to-mongodb-ai"
+    }
+  ]
+}

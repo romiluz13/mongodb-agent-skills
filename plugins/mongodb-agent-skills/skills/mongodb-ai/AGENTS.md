@@ -1,6 +1,6 @@
 # MongoDB AI & Vector Search Best Practices
 
-**Version 1.4.0**
+**Version 1.5.0**
 MongoDB
 February 2026
 

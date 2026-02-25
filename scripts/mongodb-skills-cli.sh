@@ -9,6 +9,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SKILLS_SRC_ROOT="$REPO_ROOT/plugins/mongodb-agent-skills/skills"
 
 ALL_SKILLS=(
+  "mongodb-search"
   "mongodb-ai"
   "mongodb-query-and-index-optimize"
   "mongodb-schema-design"
@@ -31,7 +32,7 @@ Agents:
   claude-code, codex, cursor
 
 Skills:
-  mongodb-ai, mongodb-query-and-index-optimize, mongodb-schema-design, mongodb-transactions-consistency
+  mongodb-search, mongodb-ai, mongodb-query-and-index-optimize, mongodb-schema-design, mongodb-transactions-consistency
 USAGE
 }
 

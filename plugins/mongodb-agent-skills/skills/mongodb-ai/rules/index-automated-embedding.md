@@ -14,6 +14,8 @@ MongoDB automated embedding now has deployment-specific behavior. Use the syntax
 
 Using the wrong syntax for the wrong deployment type causes failures or incorrect assumptions.
 
+For deployment-track detection and self-managed Search operational prerequisites, use `mongodb-search`.
+
 **Incorrect (using wrong field type for Community 8.2+ automated embedding):**
 
 ```javascript

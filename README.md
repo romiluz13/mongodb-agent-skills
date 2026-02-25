@@ -16,7 +16,7 @@
 
 **Stop writing slow MongoDB code. Build AI that works.**
 
-*129 rules. Battle-tested patterns.*
+*153 rules. Battle-tested patterns.*
 *The difference between 10 seconds and 10 milliseconds.*
 *The bridge between AI assistants and MongoDB's latest features.*
 
@@ -24,7 +24,7 @@
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-00ED64?style=for-the-badge)](https://claude.ai)
 [![License](https://img.shields.io/badge/License-Apache%202.0-001E2B?style=for-the-badge)](LICENSE)
 
-**Current release: `v1.1.0`**
+**Current release: `v1.2.0`**
 
 </div>
 
@@ -51,7 +51,7 @@ Works with **Claude Code, Codex, Cursor, and 35+ other agents**.
 npx skills add romiluz13/mongodb-agent-skills --skill '*' -a claude-code -a codex -a cursor
 
 # Install one skill only
-npx skills add romiluz13/mongodb-agent-skills --skill mongodb-ai -a claude-code -a codex -a cursor
+npx skills add romiluz13/mongodb-agent-skills --skill mongodb-search -a claude-code -a codex -a cursor
 
 # Remove all installed skills from this repo (if needed)
 npx skills remove romiluz13/mongodb-agent-skills --skill '*' -a claude-code -a codex -a cursor -y
@@ -63,10 +63,10 @@ If your agent can read markdown files, copy the skill folder directly:
 
 ```bash
 # Example: copy one skill for a custom/local agent setup
-cp -r plugins/mongodb-agent-skills/skills/mongodb-ai /path/to/agent/skills/mongodb-ai
+cp -r plugins/mongodb-agent-skills/skills/mongodb-search /path/to/agent/skills/mongodb-search
 
 # Minimal fallback: provide SKILL.md only
-cp plugins/mongodb-agent-skills/skills/mongodb-ai/SKILL.md /path/to/project/
+cp plugins/mongodb-agent-skills/skills/mongodb-search/SKILL.md /path/to/project/
 ```
 
 ### Verify Installation
@@ -191,6 +191,39 @@ db.logs.aggregate([{ $group: ... }])            // Memory exhaustion, no $match
 <tr>
 <td colspan="2" valign="top">
 
+### `mongodb-search`
+
+```
+┌───────────────────────────────────────────────────────────────────────────────────┐
+│  24 RULES FOR SEARCH ENGINE DESIGN, RELEVANCE, AND OPERATIONS                   │
+│  DEPLOYMENT GATES + MAPPINGS + QUERY COMPOSITION + HYBRID STAGE SAFETY          │
+└───────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Use when:**
+- Creating Atlas Search indexes and field mappings
+- Writing `$search` and `$searchMeta` pipelines
+- Choosing analyzers, synonyms, and facet-compatible field types
+- Handling Search alerts and metrics (`Max Fields Indexed`, `Max nGram Fields Indexed`)
+- Deploying and troubleshooting Search in MongoDB Community (`mongot`)
+- Enforcing `$rankFusion`/`$scoreFusion` version and stage gates
+
+| Category | Impact |
+|----------|--------|
+| Deployment Modes and Release Gates | `CRITICAL` |
+| Index Architecture and Mappings | `CRITICAL` |
+| Query Composition and Relevance | `CRITICAL` |
+| Hybrid and Vector Interop | `HIGH` |
+| Operations and Troubleshooting | `HIGH` |
+| Skill Boundary Rules | `MEDIUM` |
+
+> **Why this skill matters:** Search guidance often fails by mixing deployment tracks or using incorrect stage/operator combinations. This skill provides release-gated, deployment-aware patterns that keep search implementations stable.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top">
+
 ### `mongodb-transactions-consistency`
 
 ```
@@ -239,6 +272,8 @@ Once installed, skills activate automatically. Just ask:
 │  > Should I embed order items or reference them?                             │
 │                                                                              │
 │  > Create indexes for this collection                                        │
+│                                                                              │
+│  > Build a $search query with autocomplete + facet + score tuning           │
 │                                                                              │
 │  > Create a vector index for semantic search                                 │
 │                                                                              │

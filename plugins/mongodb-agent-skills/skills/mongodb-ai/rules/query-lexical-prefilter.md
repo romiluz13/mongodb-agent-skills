@@ -9,6 +9,8 @@ tags: lexical-prefilter, vectorSearch-operator, $search, fuzzy, phrase, wildcard
 
 **Public Preview (November 2025)**: The `vectorSearch` operator inside `$search` enables advanced text analysis filters (fuzzy, phrase, geo, wildcard) BEFORE vector search. This is distinct from the `$vectorSearch` aggregation stage.
 
+For lexical analyzer design, `$search` operator composition, and Search alert operations, use `mongodb-search`.
+
 **Key Difference:**
 
 | Feature | `$vectorSearch` Stage | `$search.vectorSearch` Operator |

@@ -17,6 +17,8 @@ AI assistants (Claude, GPT, etc.) have knowledge cutoffs and lack accurate infor
 
 This skill bridges that knowledge gap with accurate, up-to-date guidance.
 
+If the request is mainly lexical Search engine work (`$search`, analyzers, synonyms, facets, Search alerts, or Community `mongot` setup), use `mongodb-search`.
+
 ## Installation
 
 ### Claude Code plugin

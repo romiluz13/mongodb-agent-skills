@@ -4,7 +4,7 @@ This file provides guidance to AI coding agents (Claude Code, Cursor, Copilot, e
 
 ## Repository Overview
 
-A collection of skills for Claude.ai and Claude Code for MongoDB development. Skills are packaged instructions that extend Claude's capabilities for schema design, query/index optimization, AI/vector search, and transaction consistency.
+A collection of skills for Claude.ai and Claude Code for MongoDB development. Skills are packaged instructions that extend Claude's capabilities for schema design, query/index optimization, search relevance/operations, AI/vector search, and transaction consistency.
 
 ## Creating a New Skill
 

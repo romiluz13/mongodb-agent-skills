@@ -6,14 +6,14 @@
     "url": "https://github.com/romiluz13"
   },
   "metadata": {
-    "description": "MongoDB best practices skills for AI coding agents: schema design, query/index optimization, AI/vector search, and transaction consistency.",
-    "version": "1.1.0"
+    "description": "MongoDB best practices skills for AI coding agents: schema design, query/index optimization, search, AI/vector search, and transaction consistency.",
+    "version": "1.2.0"
   },
   "plugins": [
     {
       "name": "mongodb-agent-skills",
-      "description": "MongoDB best practices with 129 rules across 4 skills: Schema Design (30 rules), Query & Index Optimization (46 rules), Vector Search/AI (33 rules), and Transactions/Consistency (20 rules). Covers anti-patterns, data modeling, indexing, aggregation, vector search, RAG, transaction retries, and ACID consistency patterns.",
-      "version": "1.1.0",
+      "description": "MongoDB best practices with 153 rules across 5 skills: Schema Design (30 rules), Query & Index Optimization (46 rules), Search (24 rules), Vector Search/AI (33 rules), and Transactions/Consistency (20 rules). Covers anti-patterns, data modeling, indexing, aggregation, search relevance, vector search, RAG, transaction retries, and ACID consistency patterns.",
+      "version": "1.2.0",
       "author": {
         "name": "MongoDB",
         "email": "rom.iluz@mongodb.com",
@@ -26,6 +26,7 @@
         "mongodb",
         "schema-design",
         "query-optimization",
+        "search",
         "indexing",
         "aggregation",
         "transactions",
@@ -40,6 +41,7 @@
       "skills": [
         "./skills/mongodb-schema-design",
         "./skills/mongodb-query-and-index-optimize",
+        "./skills/mongodb-search",
         "./skills/mongodb-ai",
         "./skills/mongodb-transactions-consistency"
       ]

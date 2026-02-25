@@ -11,6 +11,8 @@ tags: hybrid, rankFusion, scoreFusion, limitations, constraints
 
 Fusion-stage behavior has evolved quickly across 8.0-8.2+. Keep rollout plans conservative and validate on your exact target release.
 
+For search-engine-first hybrid pipeline wiring (`$search`, analyzers, and operational gates), use `mongodb-search`.
+
 **Hybrid strategy decision matrix (docs-first):**
 
 | Goal | Primary Pattern | Minimum MongoDB Version | Why |
