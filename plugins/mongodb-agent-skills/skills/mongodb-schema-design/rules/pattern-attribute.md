@@ -58,6 +58,9 @@ db.items.find({
 - **Fixed schema**: If fields are stable and always present.
 - **Type-specific validation**: If each field needs strict schema rules.
 - **Single-field queries only**: A normal field may be simpler and faster.
+- **Atlas Search workloads**: The `{ k, v }` key-value structure cannot be mapped as
+  named fields in Atlas Search indexes. If you need full-text search on attribute
+  values by key name, use static named fields instead.
 
 ## Verify with
 

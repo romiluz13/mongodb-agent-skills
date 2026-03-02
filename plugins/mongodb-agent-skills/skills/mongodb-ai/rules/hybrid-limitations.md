@@ -106,7 +106,9 @@ db.products.aggregate([
 | `$vectorSearch` | Yes | Vector search |
 | `$search` | Yes | Full-text search |
 | `$match` | Yes | Filter documents |
+| `$sample` | Yes | Random sampling |
 | `$sort` | Yes | Re-order results |
+| `$skip` | Yes | Pagination |
 | `$limit` | Yes | Recommended to cap candidate/results per sub-pipeline |
 | `$geoNear` | Yes | Geographic search |
 | `$project` | **No** | Use after $rankFusion |
@@ -122,7 +124,7 @@ For Atlas hybrid-search guidance, rely on the conservative stage set above. If y
 // 1. MongoDB 8.0+ required for $rankFusion
 // 2. MongoDB 8.2+ required for $scoreFusion
 
-// 3. Sub-pipelines run SERIALLY (not parallel)
+// 3. Sub-pipelines execute independently
 // Performance tip: Limit results in each sub-pipeline
 {
   $rankFusion: {

@@ -49,6 +49,27 @@ db.docs.aggregate([
 ])
 ```
 
+## Score Debugging with scoreDetails
+
+```javascript
+// scoreDetails: understand WHY a document received its score
+// Enable during development/debugging ONLY — has a performance cost in production
+
+db.collection.aggregate([
+  { $search: {
+    compound: { must: [{ text: { query: "atlas", path: "title" } }] },
+    scoreDetails: true   // ← enable score breakdown
+  }},
+  { $project: {
+    title: 1,
+    score: { $meta: "searchScore" },
+    details: { $meta: "searchScoreDetails" }  // Lucene score explanation per operator
+  }}
+])
+// details shows: base score, boost multipliers, field weights per clause
+// Disable scoreDetails in production — it increases query CPU cost
+```
+
 **How to verify:**
 
 - Compare top-k relevance before/after score changes.

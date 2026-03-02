@@ -4,7 +4,7 @@ description: MongoDB Search engine architecture, query composition, and search o
 license: Apache-2.0
 metadata:
   author: mongodb
-  version: "1.0.1"
+  version: "1.1.0"
 ---
 
 # MongoDB Search: Engine, Relevance, and Operations

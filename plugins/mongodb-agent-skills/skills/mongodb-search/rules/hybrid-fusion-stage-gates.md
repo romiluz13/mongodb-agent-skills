@@ -11,6 +11,16 @@ tags: rankFusion, scoreFusion, version-gates, hybrid
 
 `$rankFusion` requires MongoDB 8.0+, `$scoreFusion` requires MongoDB 8.2+. Both require same-collection pipelines and allow only specific selection/ranking stages.
 
+$rankFusion subpipelines accept ONLY these stages:
+| Search Stages    | $match, $search, $vectorSearch, $sample, $geoNear |
+| Ordering Stages  | $sort |
+| Pagination Stages | $skip, $limit |
+
+$scoreFusion subpipelines accept the same stage list.
+Any other stage causes an error.
+
+For reranking, use `$rankFusion` (RRF) or `$scoreFusion`, or call an external reranking API from application code.
+
 **Incorrect (invalid version and stage usage):**
 
 ```javascript

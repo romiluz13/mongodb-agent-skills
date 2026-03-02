@@ -50,3 +50,26 @@ This makes durability intent explicit and reviewable.
 3. Run failover tests and confirm post-failover data state.
 
 Reference: [Transactions and Write Concern](https://www.mongodb.com/docs/manual/core/transactions.md#transactions-and-write-concern)
+
+## Per-Operation writeConcern in Transactions (Causes Error)
+
+Setting write concerns for individual write operations inside a transaction returns an error.
+
+```javascript
+// CRITICAL: Do NOT set writeConcern on individual operations inside a transaction
+// MongoDB returns an error if you do this:
+
+// ❌ WRONG — causes error:
+await orders.updateOne(
+  { _id: orderId },
+  { $set: { status: "paid" } },
+  { session, writeConcern: { w: "majority" } }  // ERROR: cannot set per-op wc in txn
+)
+
+// ✅ CORRECT — set writeConcern at the transaction level only:
+await session.withTransaction(async () => {
+  await orders.updateOne({ _id: orderId }, { $set: { status: "paid" } }, { session })
+}, {
+  writeConcern: { w: "majority", wtimeout: 5000 }  // ← only here
+})
+```

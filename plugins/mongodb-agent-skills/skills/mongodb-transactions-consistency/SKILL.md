@@ -4,7 +4,7 @@ description: MongoDB transaction correctness, consistency, and retry safety. Use
 license: Apache-2.0
 metadata:
   author: mongodb
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # MongoDB Transactions and Consistency
@@ -61,7 +61,7 @@ Reference these guidelines when:
 - `retry-transient-transaction-error` - Retry full transaction on transient transaction errors
 - `retry-unknown-commit-result` - Retry commit safely when commit result is unknown
 - `retry-transaction-too-large-cache` - Handle TransactionTooLargeForCache as a redesign signal
-- `retry-upsert-duplicate-key-81` - Know retry behavior changes around duplicate-key upserts
+- `retry-upsert-duplicate-key-81` - Know retry behavior changes around duplicate-key upserts (7.0.22+, 8.0.11+, 8.1+)
 
 ### 4. Operational Constraints (HIGH) - 4 rules
 

@@ -4,12 +4,12 @@ description: MongoDB query optimization and indexing strategies. Use when writin
 license: Apache-2.0
 metadata:
   author: mongodb
-  version: "2.4.0"
+  version: "2.5.0"
 ---
 
 # MongoDB Query and Index Optimization
 
-Query patterns and indexing strategies for MongoDB, maintained by MongoDB. Contains **46 rules across 5 categories**, prioritized by impact. Includes MongoDB 8.0 features: `bulkWrite` command, `$queryStats`, Query Settings, and `updateOne` sort option. Indexes are the primary tool for query performance—most slow queries are missing an appropriate index.
+Query patterns and indexing strategies for MongoDB, maintained by MongoDB. Contains **46 rules across 5 categories**, prioritized by impact. Includes MongoDB 8.0 features: `bulkWrite` command, `$queryStats` (introduced in MongoDB 6.0.7, with 8.1/8.2 enhancements), Query Settings, and `updateOne` sort option. Indexes are the primary tool for query performance—most slow queries are missing an appropriate index.
 
 ## When to Apply
 
@@ -96,7 +96,7 @@ Reference these guidelines when:
 - `perf-query-plan-cache` - Understand and manage query plan cache
 - `perf-use-hint` - Force a known-good index when the optimizer errs
 - `perf-atlas-performance-advisor` - Use Atlas suggestions for missing indexes
-- `perf-query-stats` - MongoDB 8.0 workload-based query analysis with $queryStats
+- `perf-query-stats` - Workload-based query analysis with $queryStats (introduced in MongoDB 6.0.7, with 8.1/8.2 enhancements)
 - `perf-query-settings` - MongoDB 8.0 persistent index hints with setQuerySettings
 
 ## Key Principle
@@ -120,6 +120,8 @@ db.tasks.createIndex({ status: 1, priority: 1, createdAt: 1 })
 | First | Equality | `status: "active"` | Narrows to exact matches |
 | Second | Sort | `ORDER BY priority` | Avoids in-memory sort |
 | Third | Range | `createdAt > date` | Scans within sorted data |
+
+> ERS Exception: When range predicate is highly selective, placing Range before Sort reduces sort input. Verify with explain().
 
 ## How to Use
 

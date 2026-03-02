@@ -9,6 +9,10 @@ tags: locks, timeout, maxTransactionLockRequestTimeoutMillis, contention
 
 Transactions may abort when lock acquisition exceeds `maxTransactionLockRequestTimeoutMillis`. Use this parameter intentionally for high-contention environments instead of relying on accidental defaults.
 
+Default value: 5 milliseconds. If a transaction cannot acquire its required locks
+within 5ms, it aborts with a lock timeout error. Tune upward for high-contention
+workloads where 5ms is too aggressive. Tune downward to fail-fast under severe contention.
+
 **Incorrect (ignore lock timeout behavior under contention):**
 
 ```javascript

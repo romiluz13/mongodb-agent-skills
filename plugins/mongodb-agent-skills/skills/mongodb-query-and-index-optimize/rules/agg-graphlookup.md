@@ -177,34 +177,20 @@ db.employees.createIndex({ reportsTo: 1, status: 1 })
 **Memory considerations:**
 
 ```javascript
-// $graphLookup has memory limits (100MB default for aggregation)
-// Large graphs may exceed this limit
+// $graphLookup automatically spills to disk above 100MB (MongoDB 6.0+ default behavior)
+// Unlike $facet, $graphLookup IS able to spill to disk
+// ONLY fails if allowDiskUse: false is explicitly set AND stage exceeds 100MB
 
-// Options for large graphs:
-
-// 1. Limit depth
-{
-  $graphLookup: {
-    // ...
-    maxDepth: 5  // Prevent infinite recursion, limit memory
-  }
-}
-
-// 2. Use allowDiskUse for very large results
-db.collection.aggregate([
-  { $graphLookup: { ... } }
-], { allowDiskUse: true })
-
-// 3. Filter during traversal to reduce results
-{
-  $graphLookup: {
-    // ...
-    restrictSearchWithMatch: { type: "important" }
-  }
-}
-
-// 4. Process in batches for massive graphs
-// Start from multiple root nodes separately
+// To prevent hitting the limit: use maxDepth and restrictSearchWithMatch
+{ $graphLookup: {
+    from: "employees",
+    startWith: "$managerId",
+    connectFromField: "managerId",
+    connectToField: "_id",
+    as: "reportingChain",
+    maxDepth: 4,                            // limit traversal depth
+    restrictSearchWithMatch: { active: true } // prune graph early
+}}
 ```
 
 **`$graphLookup` vs tree patterns in schema:**

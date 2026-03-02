@@ -1,15 +1,15 @@
 ---
 name: mongodb-schema-design
-description: MongoDB schema design patterns and anti-patterns. Use when designing data models, reviewing schemas, migrating from SQL, or troubleshooting performance issues caused by schema problems. Triggers on "design schema", "embed vs reference", "MongoDB data model", "schema review", "unbounded arrays", "one-to-many", "tree structure", "16MB limit", "schema validation", "JSON Schema".
+description: MongoDB schema design patterns and anti-patterns. Use when designing data models, reviewing schemas, migrating from SQL, or troubleshooting performance issues caused by schema problems. Triggers on "design schema", "embed vs reference", "MongoDB data model", "schema review", "unbounded arrays", "one-to-many", "tree structure", "16MB limit", "schema validation", "JSON Schema", "time series", "schema migration", "polymorphic", "TTL", "data lifecycle", "archive", "index explosion", "unnecessary indexes", "approximation pattern", "document versioning".
 license: Apache-2.0
 metadata:
   author: mongodb
-  version: "2.2.0"
+  version: "2.3.0"
 ---
 
 # MongoDB Schema Design
 
-Data modeling patterns and anti-patterns for MongoDB, maintained by MongoDB. Contains **30 rules across 5 categories**, prioritized by impact. Bad schema is the root cause of most MongoDB performance and cost issues—queries and indexes cannot fix a fundamentally wrong model.
+Data modeling patterns and anti-patterns for MongoDB, maintained by MongoDB. Contains **33 rules across 5 categories**, prioritized by impact. Bad schema is the root cause of most MongoDB performance and cost issues—queries and indexes cannot fix a fundamentally wrong model.
 
 ## When to Apply
 
@@ -29,15 +29,15 @@ Reference these guidelines when:
 
 | Priority | Category | Impact | Prefix | Rules |
 |----------|----------|--------|--------|-------|
-| 1 | Schema Anti-Patterns | CRITICAL | `antipattern-` | 6 |
+| 1 | Schema Anti-Patterns | CRITICAL | `antipattern-` | 7 |
 | 2 | Schema Fundamentals | HIGH | `fundamental-` | 5 |
 | 3 | Relationship Patterns | HIGH | `relationship-` | 6 |
-| 4 | Design Patterns | MEDIUM | `pattern-` | 10 |
+| 4 | Design Patterns | MEDIUM | `pattern-` | 12 |
 | 5 | Schema Validation | MEDIUM | `validation-` | 3 |
 
 ## Quick Reference
 
-### 1. Schema Anti-Patterns (CRITICAL) - 6 rules
+### 1. Schema Anti-Patterns (CRITICAL) - 7 rules
 
 - `antipattern-unbounded-arrays` - Never allow arrays to grow without limit
 - `antipattern-bloated-documents` - Keep documents under 16KB for working set
@@ -45,6 +45,7 @@ Reference these guidelines when:
 - `antipattern-unnecessary-collections` - Fewer collections, more embedding
 - `antipattern-excessive-lookups` - Reduce $lookup by denormalizing
 - `antipattern-schema-drift` - Enforce consistent structure across documents
+- `antipattern-unnecessary-indexes` - Audit and remove unused or redundant indexes
 
 ### 2. Schema Fundamentals (HIGH) - 5 rules
 
@@ -63,7 +64,7 @@ Reference these guidelines when:
 - `relationship-many-to-many` - Two-way referencing for bidirectional access
 - `relationship-tree-structures` - Parent/child/materialized path patterns
 
-### 4. Design Patterns (MEDIUM) - 10 rules
+### 4. Design Patterns (MEDIUM) - 12 rules
 
 - `pattern-archive` - Move historical data to separate storage for performance
 - `pattern-attribute` - Collapse many optional fields into key-value attributes

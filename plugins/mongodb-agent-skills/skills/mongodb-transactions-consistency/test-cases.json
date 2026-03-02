@@ -171,9 +171,9 @@
       "ruleId": "ops-restricted-operations",
       "ruleTitle": "Avoid Unsupported or Restricted Operations in Transactions",
       "type": "bad",
-      "code": "await session.withTransaction(async () => {\n  await db.collection(\"orders\").updateOne({ _id: 1 }, { $set: { status: \"paid\" } }, { session })\n\n  // Unsupported/restricted in transaction scope\n  await db.command({ createIndexes: \"orders\", indexes: [{ key: { status: 1 }, name: \"status_1\" }] })\n})",
+      "code": "await session.withTransaction(async () => {\n  await db.collection(\"orders\").updateOne({ _id: 1 }, { $set: { status: \"paid\" } }, { session })\n\n  // $out is categorically unsupported inside a transaction\n  await db.collection(\"orders\").aggregate([\n    { $match: { status: \"paid\" } },\n    { $out: \"orders_paid_archive\" }  // ERROR: $out not allowed in transactions\n  ], { session }).toArray()\n})",
       "language": "javascript",
-      "description": "running unsupported admin-style operation in transaction"
+      "description": "running unsupported $out aggregation stage inside a transaction"
     },
     {
       "ruleId": "ops-restricted-operations",
@@ -313,7 +313,7 @@
     },
     {
       "ruleId": "retry-upsert-duplicate-key-81",
-      "ruleTitle": "Handle Duplicate-Key Upsert Retry Behavior in MongoDB 8.1+",
+      "ruleTitle": "Handle Duplicate-Key Upsert Retry Behavior in MongoDB 7.0.22+/8.0.11+/8.1+",
       "type": "bad",
       "code": "await session.withTransaction(async () => {\n  await users.updateOne(\n    { email: \"a@company.com\" },\n    { $set: { name: \"A\" } },\n    { upsert: true, session }\n  )\n  // Assumes duplicate-key upsert conflict auto-retries\n})",
       "language": "javascript",
@@ -321,7 +321,7 @@
     },
     {
       "ruleId": "retry-upsert-duplicate-key-81",
-      "ruleTitle": "Handle Duplicate-Key Upsert Retry Behavior in MongoDB 8.1+",
+      "ruleTitle": "Handle Duplicate-Key Upsert Retry Behavior in MongoDB 7.0.22+/8.0.11+/8.1+",
       "type": "good",
       "code": "await session.withTransaction(async () => {\n  try {\n    await users.updateOne(\n      { email: \"a@company.com\" },\n      { $set: { name: \"A\" } },\n      { upsert: true, session }\n    )\n  } catch (e) {\n    if (e.code === 11000) {\n      await users.updateOne(\n        { email: \"a@company.com\" },\n        { $set: { name: \"A\" } },\n        { session }\n      )\n      return\n    }\n    throw e\n  }\n})",
       "language": "javascript",

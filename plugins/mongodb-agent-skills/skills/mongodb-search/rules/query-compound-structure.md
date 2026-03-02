@@ -11,6 +11,26 @@ tags: compound, must, should, filter, relevance
 
 Put scoring criteria in `must` and `should`; put non-scoring filters in `filter`. Avoid pushing core filtering to a post-`$search` `$match` stage.
 
+```javascript
+// minimumShouldMatch: controls how many should clauses must match
+// Default: 0 (but when only should clauses present, at least 1 must match)
+
+// Use case: require at least 2 of 3 optional criteria to match:
+{ $search: {
+  compound: {
+    should: [
+      { text: { query: "mongodb", path: "title" } },
+      { text: { query: "atlas", path: "title" } },
+      { text: { query: "developer", path: "content" } }
+    ],
+    minimumShouldMatch: 2  // at least 2 of the 3 must match
+  }
+}}
+
+// IMPORTANT: when ONLY should (no must), at least 1 must match regardless
+// minimumShouldMatch: 0 only means "0 required" when must is also present
+```
+
 **Incorrect (post-search match and scoring filters mixed):**
 
 ```javascript

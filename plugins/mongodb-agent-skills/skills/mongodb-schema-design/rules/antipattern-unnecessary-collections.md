@@ -102,6 +102,28 @@ This isn't denormalization—it's proper document modeling. Orders are self-cont
 // Order history from embedded snapshot
 ```
 
+**Incorrect (over-partitioned time-based collections):**
+
+```javascript
+// Creating one collection per time period — a common over-partitioning mistake
+// orders_2024_01, orders_2024_02, orders_2024_03, ...
+
+// Problems:
+// 1. Each collection gets its own default _id index — N collections = N extra indexes
+//    straining the storage engine with no query benefit
+// 2. Queries spanning time periods require $unionWith across many collections
+// 3. Atlas Performance Advisor flags this pattern as avoidable collection proliferation
+// 4. Schema validation, indexes, and TTL must be maintained on every collection separately
+
+// Correct: single orders collection with a date index and optional TTL
+db.orders.createIndex({ createdAt: 1 })
+// Optional TTL for automatic expiry:
+db.orders.createIndex({ createdAt: 1 }, { expireAfterSeconds: 7776000 }) // 90 days
+
+// Query a time range efficiently — single collection, single index
+db.orders.find({ createdAt: { $gte: ISODate("2024-01-01"), $lt: ISODate("2024-02-01") } })
+```
+
 **When to use separate collections:**
 
 | Scenario | Separate Collection | Why |

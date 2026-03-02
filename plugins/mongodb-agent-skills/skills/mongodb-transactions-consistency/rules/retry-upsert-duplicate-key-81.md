@@ -1,5 +1,5 @@
 ---
-title: Handle Duplicate-Key Upsert Retry Behavior in Transactions
+title: "Handle Duplicate-Key Upsert Retry Behavior in Transactions (7.0.22+, 8.0.11+, 8.1+)"
 impact: HIGH
 impactDescription: "Prevents incorrect assumptions about automatic retry behavior"
 tags: upsert, duplicate-key, retry, MongoDB-7.0.22, MongoDB-8.0.11, MongoDB-8.1

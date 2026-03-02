@@ -9,6 +9,8 @@ tags: views, partial-index, filter, subset
 
 Create vector indexes on Views to index only a subset of documents. Reduces index size and improves performance.
 
+**GA Status:** View Support for Atlas Search and Atlas Vector Search is generally available (GA) as of August 2025.
+
 **Version-gated workflow:**
 
 - **MongoDB 8.0+**: Create/manage view indexes with Atlas UI/Admin API, then run vector queries against the **source collection** while referencing the view-backed index.

@@ -46,6 +46,7 @@ db.products.createIndex({ type: 1, "attributes.$**": 1 })
 - A wildcard term can support one predicate path at a time in a single query shape.
 - Sorting with wildcard indexes is supported only in restricted cases (same predicate field, non-array field, wildcard index chosen for predicate).
 - Wildcard indexes can support covered queries, but only under strict conditions (single queried field, projection excludes `_id`, field is never an array).
+- Non-wildcard terms in a compound wildcard index must be single-key terms. Multikey index terms (array fields) are NOT permitted as the non-wildcard portion of a compound wildcard index.
 
 **Practical strategy:**
 

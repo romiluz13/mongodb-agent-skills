@@ -70,6 +70,10 @@ db.products.find(
 ```
 
 Projection reduces network transfer but still loads full documents into memory.
+Exception: index-covered queries (where all projected fields are served directly
+from the index) never load the document from WiredTiger at all. For real working
+set reduction, use the Subset Pattern — projection alone cannot help WiredTiger
+cache pressure for uncovered queries.
 
 **When NOT to use this pattern:**
 

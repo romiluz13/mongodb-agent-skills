@@ -11,6 +11,37 @@ tags: synonyms, relevance, lifecycle, mapping
 
 Keep synonym source collections valid and minimal. Atlas Search watches synonym source changes and updates internal synonym maps without reindex, but updates are eventually reflected.
 
+## Restrictions (correctness constraints — violations cause wrong results silently)
+
+1. **Operator scope**: Synonyms work ONLY with `text` and `phrase` operators.
+   They do NOT work with `queryString`, `wildcard`, `regex`, `autocomplete`.
+
+2. **Always use `matchCriteria`** when using synonyms with `text`:
+   - `"any"` — document matches if any synonym matches
+   - `"all"` — document matches only if ALL synonyms match
+   Without `matchCriteria`, behavior is undefined.
+
+3. **`fuzzy` and `synonyms` are mutually exclusive** on the `text` operator.
+   You cannot use both in the same `text` clause.
+
+4. **Analyzer restrictions**: Cannot use synonym mappings with:
+   - `lucene.kuromoji`, `lucene.cjk`
+   - Custom analyzers using `nGram`/`edgeGram` tokenizers or token filters
+   - `shingle`, `wordDelimiterGraph`, `daitchMokotoffSoundex` token filters
+
+5. **M0 free tier**: Maximum ONE synonym mapping per index.
+
+```javascript
+{ $search: {
+  text: {
+    query: "car",
+    path: "description",
+    synonyms: "mySynonyms",
+    matchCriteria: "any"   // ← always include this with synonyms
+  }
+}}
+```
+
 **Incorrect (invalid synonym docs in production source):**
 
 ```javascript

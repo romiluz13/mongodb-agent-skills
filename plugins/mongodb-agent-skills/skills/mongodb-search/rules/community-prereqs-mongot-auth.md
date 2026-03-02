@@ -9,6 +9,10 @@ tags: community, keyfile, searchCoordinator, authentication
 
 **Impact: CRITICAL (missing prerequisites block Search entirely)**
 
+**Requires MongoDB Community Edition v8.2.0 or higher.**
+Community Search (mongot) is not available on MongoDB 8.0 or 8.1.
+Verify: `db.version()` must return 8.2.0 or higher.
+
 Community/self-managed Search always requires a replica set and a user with the `searchCoordinator` role for `mongot` authentication. The authentication wiring differs by deployment path:
 
 - Manual Community path: follow keyfile-authenticated replica set setup.

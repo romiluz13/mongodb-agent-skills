@@ -103,6 +103,12 @@ db.products.createIndex({
 // Returns top 20 in <10ms even with 10M products
 ```
 
+### ERS Exception (Equality → Range → Sort)
+When the range predicate is **highly selective** (filters to <5% of equality-matched documents),
+placing Range before Sort (ERS order) reduces the sort input set and can outperform ESR.
+ESR avoids in-memory sort. ERS avoids sorting a large candidate set.
+Always verify with explain() — use whichever shows lower totalDocsExamined and executionTime.
+
 **When NOT to use strict ESR:**
 
 - **No sort in query**: If query has no `.sort()`, you can put range anywhere after equality fields.
@@ -150,8 +156,9 @@ if (hasInMemorySort(stats)) {
 
 // Mistake 2: Treating $in as equality (it's not always)
 // Query: { status: { $in: ["a", "b", "c"] } }.sort({ date: -1 })
-// $in with few values acts like equality
-// $in with many values acts more like range
+// $in with < 201 values: treated like equality → uses SORT_MERGE, place BEFORE sort in index
+// $in with >= 201 values: treated like range → place AFTER sort in index
+// Threshold is implementation-defined (201) — verify on your MongoDB version
 
 // Mistake 3: Forgetting sort direction matters
 // Query: .sort({ date: -1 })

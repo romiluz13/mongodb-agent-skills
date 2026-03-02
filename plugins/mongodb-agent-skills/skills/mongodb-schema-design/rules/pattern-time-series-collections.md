@@ -98,20 +98,17 @@ db.sensor_data.insertOne({
 // Granularity determines bucket time span
 // Match it to your data ingestion rate
 
-// "seconds" - Data every second or faster
-// Bucket spans: ~1 hour
+// "seconds" - DEFAULT. High-frequency ingestion. Bucket spans ~1 hour.
 db.createCollection("high_freq_metrics", {
   timeseries: { timeField: "ts", metaField: "host", granularity: "seconds" }
 })
 
-// "minutes" - Data every few seconds to minutes (DEFAULT)
-// Bucket spans: ~24 hours
+// "minutes" - Data every few seconds to minutes. Bucket spans ~24 hours.
 db.createCollection("app_metrics", {
   timeseries: { timeField: "ts", metaField: "service", granularity: "minutes" }
 })
 
-// "hours" - Data every few minutes to hours
-// Bucket spans: ~30 days
+// "hours"   - Data every few hours. Bucket spans ~30 days.
 db.createCollection("daily_reports", {
   timeseries: { timeField: "ts", metaField: "reportType", granularity: "hours" }
 })

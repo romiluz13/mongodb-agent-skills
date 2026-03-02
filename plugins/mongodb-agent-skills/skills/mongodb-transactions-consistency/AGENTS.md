@@ -845,12 +845,15 @@ Not all commands and operations are valid inside transactions. Attempting unsupp
 await session.withTransaction(async () => {
   await db.collection("orders").updateOne({ _id: 1 }, { $set: { status: "paid" } }, { session })
 
-  // Unsupported/restricted in transaction scope
-  await db.command({ createIndexes: "orders", indexes: [{ key: { status: 1 }, name: "status_1" }] })
+  // $out is categorically unsupported inside a transaction
+  await db.collection("orders").aggregate([
+    { $match: { status: "paid" } },
+    { $out: "orders_paid_archive" }  // ERROR: $out not allowed in transactions
+  ], { session }).toArray()
 })
 ```
 
-Mixing operational DDL-style work into a transaction is unsafe.
+Mixing unsupported aggregation stages like `$out` into a transaction is unsafe and causes errors.
 
 **Correct: separate transactional DML from operational commands**
 
@@ -860,8 +863,11 @@ await session.withTransaction(async () => {
   await db.collection("ledger").insertOne({ orderId: 1, event: "paid" }, { session })
 })
 
-// Execute index/admin operations outside transaction windows
-await db.command({ createIndexes: "orders", indexes: [{ key: { status: 1 }, name: "status_1" }] })
+// Execute $out or other unsupported stages outside transaction windows
+await db.collection("orders").aggregate([
+  { $match: { status: "paid" } },
+  { $out: "orders_paid_archive" }
+]).toArray()
 ```
 
 Keep transaction scope focused on supported document writes/reads.

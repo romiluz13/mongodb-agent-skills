@@ -125,6 +125,20 @@ db.products.aggregate([
 ])
 ```
 
+**Score Stage Requirement for Non-Scoring Pipelines:**
+
+```javascript
+// $vectorSearch and $search return scores automatically.
+// For pipelines that don't return a score (e.g., $match, $sort),
+// you MUST add a $score stage:
+{
+  lexical: [
+    { $match: { category: "electronics" } },
+    { $score: { score: { $meta: "textScore" } } }  // required for $match-only pipeline
+  ]
+}
+```
+
 **Score Details for Debugging:**
 
 ```javascript

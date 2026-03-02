@@ -223,9 +223,9 @@ RRF = 0.7 × (1/61) + 0.3 × (1/63) = 0.01148 + 0.00476 = 0.01624
 
 | Type | Allowed Stages |
 |------|----------------|
-| Search | `$vectorSearch`, `$search`, `$match`, `$geoNear` |
-| Ordering | `$sort` |
-| Pagination | `$limit` |
+| Search Stages | `$match`, `$search`, `$vectorSearch`, `$sample`, `$geoNear` |
+| Ordering Stages | `$sort` |
+| Pagination Stages | `$skip`, `$limit` |
 
 **Key Behaviors:**
 

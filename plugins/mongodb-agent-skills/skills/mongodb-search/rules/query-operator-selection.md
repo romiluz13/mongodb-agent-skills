@@ -15,6 +15,28 @@ Use operator semantics intentionally:
 - `autocomplete` for type-ahead
 - `queryString` for advanced fielded boolean query expressions
 
+## Operator Selection Matrix
+
+| Intent | Operator | Use in |
+|--------|----------|--------|
+| Full-text search with relevance | `text` | compound.must / compound.should |
+| Exact phrase | `phrase` | compound.must |
+| Prefix / autocomplete | `autocomplete` | standalone or compound.should |
+| User-typed free text (multi-field) | `queryString` | standalone |
+| Numeric/date range filtering | `range` | compound.filter |
+| Exact value match (bool, objectId, token) | `equals` | compound.filter |
+| Multi-value exact match | `in` | compound.filter |
+| Field presence check | `exists` | compound.filter |
+| Pattern matching (* and ?) | `wildcard` | compound.must (requires string type) |
+| Regular expression | `regex` | compound.must (performance: use sparingly) |
+| Array-of-objects queries | `embeddedDocument` | standalone (cannot use highlight inside) |
+| Similar documents | `moreLikeThis` | standalone |
+| Geo shape queries | `geoShape` / `geoWithin` | standalone or compound |
+| Typo tolerance | `fuzzy` option on `text`/`autocomplete` | add to text/autocomplete |
+
+Note: `fuzzy` and `synonyms` are mutually exclusive on the `text` operator.
+Note: `range`, `equals`, `in`, `exists` used in `compound.filter` do not affect scoring.
+
 **Incorrect (one operator for all query modes):**
 
 ```javascript

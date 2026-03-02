@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.3.0] - 2026-03-02
+
+### Added
+- New rule: `mongodb-schema-design/rules/antipattern-unnecessary-indexes` — write cost, $indexStats, hide→drop workflow, Atlas Advisor flags (CRITICAL)
+- New rule: `mongodb-schema-design/rules/pattern-approximation` — threshold-based write reduction for counters/page views (MEDIUM)
+- New rule: `mongodb-schema-design/rules/pattern-document-versioning` — full snapshot history in revisions collection for compliance use cases (MEDIUM)
+
+### Changed
+- **mongodb-schema-design**: granularity default corrected (seconds, not minutes); covered-query WiredTiger exception added; time-partitioned collections antipattern scenario added; Atlas Search incompatibility caveat for Attribute Pattern; `$graphLookup` parent field guidance for tree structures; 10 new trigger keywords; per-category rule counts corrected (7 anti-patterns, 12 design patterns)
+- **mongodb-query-and-index-optimize**: `$graphLookup` auto-spill behavior corrected for MongoDB 6.0+ (no allowDiskUse rescue needed); ERS exception documented with <5% selectivity heuristic; `$in` threshold clarified (201 boundary); `workingMillis` vs `durationMillis` semantics correctly separated; text index sort limitation documented; compound wildcard multikey restriction added; `$queryStats` version corrected to 6.0.7
+- **mongodb-ai**: Atlas automated embedding Private Preview syntax removed (not yet available on Atlas); CE 8.2+ autoEmbed syntax preserved; `$sample` added to $rankFusion allowed stages; sub-pipeline serial claim corrected to independent execution; `$score` stage requirement documented for non-scoring $scoreFusion pipelines; View Support GA status (August 2025) noted
+- **mongodb-transactions-consistency**: per-operation writeConcern error section added; duplicate-key upsert retry version range corrected to 7.0.22+/8.0.11+/8.1+; 60s transaction limit qualifier removed; 1000-document best practice with batching pattern added; 5ms lock timeout default documented; test-cases.json and AGENTS.md updated to use `$out` as restricted-operations example
+- **mongodb-search**: MongoDB 8.2+ requirement added as first bullet to Community prereqs; $rankFusion/$scoreFusion stage gates table updated with $sample and explicit Pagination Stages row; `minimumShouldMatch` documented; synonyms Restrictions section with 5 constraints; `scoreDetails` debugging added to score-tuning and ops-debugging; 14-row operator intent matrix added; numBuckets defaults and deprecated facet types documented; `returnScope` requires `returnStoredSource: true` constraint added
+
+### Version Bumps
+- `mongodb-schema-design`: `2.2.0` → `2.3.0`
+- `mongodb-query-and-index-optimize`: `2.4.0` → `2.5.0`
+- `mongodb-search`: `1.0.1` → `1.1.0`
+- `mongodb-ai`: `1.5.0` → `1.6.0`
+- `mongodb-transactions-consistency`: `1.0.0` → `1.1.0`
+- Plugin release version: `1.2.0` → `1.3.0`
+
 ## [1.2.0] - 2026-02-18
 
 ### Added

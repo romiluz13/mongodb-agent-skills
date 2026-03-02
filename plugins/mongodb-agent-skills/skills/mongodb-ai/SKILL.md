@@ -4,7 +4,7 @@ description: MongoDB Atlas Vector Search and AI integration. Use when creating v
 license: Apache-2.0
 metadata:
   author: mongodb
-  version: "1.5.0"
+  version: "1.6.0"
 ---
 
 # MongoDB AI: Vector Search and AI Integration

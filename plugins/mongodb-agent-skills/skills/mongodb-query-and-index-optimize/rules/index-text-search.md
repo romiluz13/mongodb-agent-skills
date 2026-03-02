@@ -156,6 +156,11 @@ db.articles.createIndex(
 
 **Text index limitations:**
 
+Text indexes cannot improve performance for sort operations.
+After a $text search, any .sort() operation on non-text fields always runs in memory —
+the text index provides no sort optimization. For sorted full-text results, consider
+Atlas Search which supports sorting natively.
+
 ```javascript
 // ONE text index per collection
 db.articles.createIndex({ title: "text" })

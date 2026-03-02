@@ -10,7 +10,7 @@ tags: automated-embedding, autoEmbed, vectorSearch, voyage, preview, self-manage
 MongoDB automated embedding now has deployment-specific behavior. Use the syntax that matches your deployment:
 
 - **Self-managed MongoDB Community Edition 8.2+ with Search/Vector Search (`mongot`)**: Preview feature that uses `autoEmbed`.
-- **Atlas clusters**: separate Atlas-only preview track exists with different syntax and enrollment requirements.
+- **Atlas clusters**: automated embedding is not yet available; use manual embedding pipelines instead.
 
 Using the wrong syntax for the wrong deployment type causes failures or incorrect assumptions.
 
@@ -65,16 +65,11 @@ db.listingsAndReviews.aggregate([
 ])
 ```
 
-**Atlas Private Preview Syntax (enrollment-required, different from `autoEmbed`):**
-
 ```javascript
-db.movies.createSearchIndex("auto_embed_index", "vectorSearch", {
-  fields: [{
-    type: "text",
-    path: "fullplot",
-    model: "voyage-3.5"
-  }]
-})
+// Atlas automated embedding: not yet available.
+// For Atlas deployments, use manual embedding pipelines (generate embeddings
+// in application code, store in the vector field, then index with $vectorSearch).
+// Watch the Atlas changelog for automated embedding availability.
 ```
 
 **Community 8.2+ Supported Models (`autoEmbed`):**
@@ -92,11 +87,9 @@ db.movies.createSearchIndex("auto_embed_index", "vectorSearch", {
   - Self-managed MongoDB Community Edition 8.2+ with Search/Vector Search (`mongot`)
   - Voyage API key(s) configured for indexing/query
   - Preview feature: validate behavior per release before production use
-- **Atlas preview path**:
-  - Atlas M10+ cluster
-  - Private-preview enrollment and constraints apply
-  - Atlas preview docs use a different index syntax (`type: "text"` with `model`) than Community `autoEmbed`
-  - If you are not enrolled, use manual embedding pipelines
+- **Atlas**:
+  - Automated embedding is not yet available on Atlas
+  - Use manual embedding pipelines: generate embeddings in application code, store in the vector field, then index with `$vectorSearch`
 
 **When Automated Embedding is Triggered:**
 
@@ -119,7 +112,7 @@ await db.products.insertMany(documents)
 **Deployment-Specific Notes:**
 
 1. Community 8.2+ preview guidance uses `autoEmbed` (with `modality` + model) in index definitions.
-2. Atlas preview guidance uses a separate `text` + `model` syntax and rollout path.
+2. Atlas automated embedding is not yet available; use manual embedding pipelines on Atlas.
 3. Keep deployment assumptions explicit in playbooks; do not mix syntax from one track into the other.
 
 **Combining Automated Embedding with Pre-Filtering:**
@@ -170,7 +163,7 @@ db.listingsAndReviews.aggregate([
 - You need full control over embedding provider/model lifecycle
 - You must reuse raw embedding vectors outside MongoDB workflows
 - Your compliance or platform constraints don't match preview/deployment requirements
-- You are on Atlas without automated-embedding preview access
+- You are on Atlas (automated embedding not yet available; use manual pipelines)
 
 ## Verify with
 

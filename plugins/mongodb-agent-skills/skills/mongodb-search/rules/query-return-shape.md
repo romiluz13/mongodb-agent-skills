@@ -11,6 +11,23 @@ tags: highlight, storedSource, returnStoredSource, returnScope
 
 Use `highlight` for explainable UX snippets and `returnStoredSource` for lean payloads when your index defines `storedSource`. Use `returnScope` only with embedded-document retrieval requirements.
 
+```javascript
+// returnScope REQUIRES returnStoredSource: true — using it without causes an error
+
+// ✅ CORRECT:
+{ $search: {
+  returnStoredSource: true,   // ← required when using returnScope
+  returnScope: { path: "reviews" },
+  ...
+}}
+
+// ❌ WRONG — will error:
+{ $search: {
+  returnScope: { path: "reviews" },  // missing returnStoredSource: true
+  ...
+}}
+```
+
 **Incorrect (always full-document fetch):**
 
 ```javascript

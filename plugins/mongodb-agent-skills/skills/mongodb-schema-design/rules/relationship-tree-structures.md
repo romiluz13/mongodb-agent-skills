@@ -110,6 +110,29 @@ db.categories.find({ ancestors: "Databases" })
 db.categories.find({ _id: { $in: node.ancestors } })
 ```
 
+Including a `parent` field alongside the ancestors array enables `$graphLookup` traversal without application-side recursion.
+
+```javascript
+// Include the parent field alongside ancestors for $graphLookup compatibility
+{
+  _id: "programming",
+  name: "Programming",
+  parent: "books",          // ← add this alongside ancestors array
+  ancestors: ["books", "technology"]
+}
+// $graphLookup uses connectFromField/connectToField — requires a direct parent ref
+db.categories.aggregate([
+  { $match: { _id: "programming" } },
+  { $graphLookup: {
+    from: "categories",
+    startWith: "$parent",
+    connectFromField: "parent",
+    connectToField: "_id",
+    as: "ancestorDocs"
+  }}
+])
+```
+
 ### Pattern 4: Materialized Paths
 
 **Best for:** Finding subtrees, regex-based queries, sorting

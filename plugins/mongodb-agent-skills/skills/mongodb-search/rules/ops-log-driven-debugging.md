@@ -30,6 +30,28 @@ db.movies.explain("executionStats").aggregate([
 Then correlate with Search metrics and active alerts before changing mappings.
 ```
 
+## Relevance Debugging: scoreDetails
+
+For relevance debugging (wrong ranking, unexpected scores):
+- `explain()` shows query plan and index usage
+- `scoreDetails` shows per-operator score contributions
+
+Use both together: `explain()` to diagnose index problems, `scoreDetails` to diagnose scoring.
+
+```javascript
+db.collection.aggregate([
+  { $search: {
+    compound: { must: [{ text: { query: "atlas", path: "title" } }] },
+    scoreDetails: true
+  }},
+  { $project: {
+    title: 1,
+    score: { $meta: "searchScore" },
+    details: { $meta: "searchScoreDetails" }
+  }}
+])
+```
+
 **How to verify:**
 
 - Every tuning change is tied to explain/metric evidence.

@@ -64,21 +64,24 @@ db.getProfilingStatus()
 db.setProfilingLevel(1, { slowms: 100, sampleRate: 0.5 })
 // Logs 50% of slow operations (reduces overhead)
 
-// MongoDB 8.0+: filter by workingMillis for CPU/work-based thresholds
-db.setProfilingLevel(1, {
-  filter: { workingMillis: { $gte: 200 } }
-})
-// When filter is set, slowms and sampleRate are ignored
-
 // Disable profiling
 db.setProfilingLevel(0)
 ```
 
-**MongoDB 8.0+ timing semantics:**
+**MongoDB timing semantics and workingMillis:**
 
-- Slow-operation analysis uses `workingMillis` (time MongoDB actively spends working), not only end-to-end latency.
-- `durationMillis` can still be useful for understanding total latency (including waits).
-- If you set `filter`, `slowms` and `sampleRate` do not control profiler/slow-log capture.
+```javascript
+// durationMillis: wall-clock end-to-end time (what slowms always measures)
+// workingMillis: time MongoDB actively spent working (excludes queue wait)
+//   → Only applies when using profiler filter option (MongoDB 8.0+)
+//   → slowms still uses durationMillis unless you set an explicit filter
+
+// To use workingMillis as threshold (8.0+ only):
+db.setProfilingLevel(1, {
+  filter: { workingMillis: { $gt: 100 } }  // captures ops where active work > 100ms
+})
+// Note: this OVERRIDES slowms threshold when filter is set
+```
 
 **Query the profiler collection:**
 
