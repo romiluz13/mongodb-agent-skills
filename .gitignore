@@ -5,3 +5,8 @@ dist/
 .claude/
 audit/
 packages/
+
+# mongodb-transactions-consistency removed from public repo per MongoDB request (2026-03-02)
+# Skill is kept locally only — do not re-add
+plugins/mongodb-agent-skills/skills/mongodb-transactions-consistency/
+skills/mongodb-transactions-consistency
