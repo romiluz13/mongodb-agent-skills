@@ -7,7 +7,7 @@ tags: snapshot, readConcern, majority, transaction
 
 ## Understand Snapshot Read Concern Requirements
 
-`snapshot` read concern gives a point-in-time view in transactions, but guarantees are tied to deployment and write concern behavior. Do not assume snapshot means globally durable visibility by itself.
+`snapshot` read concern returns data from a snapshot of majority-committed data **only if** the transaction commits with write concern `majority`. If the transaction does not use `w: "majority"` for the commit, the `snapshot` read concern provides **no** guarantee that read operations used a snapshot of majority-committed data. Do not assume snapshot isolation applies when committing with weaker write concerns.
 
 **Incorrect (assuming snapshot alone guarantees fully durable global view):**
 

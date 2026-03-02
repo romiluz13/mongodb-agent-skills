@@ -7,7 +7,12 @@ tags: causal-consistency, majority, readConcern, writeConcern
 
 ## Pair Majority Read and Write Concerns for Causal Consistency
 
-Causal consistency guarantees rely on majority semantics. For workflows requiring monotonic reads and read-your-writes across requests, pair majority read and write concerns.
+MongoDB provides two levels of causal consistency:
+
+- **With data durability (recommended):** pair `readConcern: "majority"` + `writeConcern: "majority"` — guarantees all four causal properties (read-own-writes, monotonic reads, monotonic writes, writes-follow-reads) even under network partitions.
+- **Without data durability:** `readConcern: "majority"` + `writeConcern: { w: 1 }` provides causal consistency but committed writes can roll back after failover.
+
+For production workflows where correctness matters, use majority+majority.
 
 **Incorrect (mixed concerns for causally-sensitive workflow):**
 

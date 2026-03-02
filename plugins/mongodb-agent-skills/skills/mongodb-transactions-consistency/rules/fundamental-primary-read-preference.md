@@ -7,7 +7,7 @@ tags: readPreference, primary, transaction, consistency
 
 ## Use Primary Read Preference for Transactions
 
-Transactions use transaction-level read preference. Use `primary` for transactional workflows to keep reads and writes aligned with authoritative state.
+Transactions that contain read operations must use read preference `primary`. This is a hard requirement, not a recommendation: all operations in a given transaction must route to the same member.
 
 **Incorrect (secondary read preference in transaction options):**
 
@@ -23,7 +23,7 @@ await session.withTransaction(async () => {
 }, txOptions)
 ```
 
-Secondary preference can violate assumptions for read-your-write workflows inside transaction logic.
+MongoDB rejects transactions with read operations that do not use `primary` read preference.
 
 **Correct (primary read preference):**
 

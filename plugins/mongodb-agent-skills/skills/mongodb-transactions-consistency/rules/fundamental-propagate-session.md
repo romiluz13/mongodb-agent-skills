@@ -7,7 +7,7 @@ tags: session, transaction, drivers, correctness
 
 ## Pass the Same Session to Every Transaction Operation
 
-When using drivers, every read/write in a transaction must receive the same session. Missing the session on one operation can silently execute work outside the transaction boundary.
+When using drivers, every read/write in a transaction must receive the same session. Missing the session on one operation causes that operation to execute outside the transaction boundary, as if it were a standalone write.
 
 **Incorrect (one operation missing session):**
 

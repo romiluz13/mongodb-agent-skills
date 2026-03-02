@@ -60,10 +60,11 @@ Keep each transaction bounded by time and operation count.
 3. Tune batch sizes so transactions stay comfortably below limits.
 
 Reference: [Production Considerations](https://www.mongodb.com/docs/manual/core/transactions-production-consideration.md)
+Reference (1,000-doc guideline): [Performance Best Practices: Transactions and Read/Write Concerns](https://www.mongodb.com/blog/post/performance-best-practices-transactions-and-read-write-concerns)
 
 ## Document Modification Limit (Best Practice)
 
-MongoDB recommends modifying no more than 1,000 documents per transaction (not a hard limit). For bulk operations exceeding this, batch into multiple transactions:
+MongoDB recommends modifying no more than 1,000 documents per transaction (not a hard limit). This guidance comes from the MongoDB engineering blog, not the formal server documentation. For bulk operations exceeding this, batch into multiple transactions:
 
 ```javascript
 const BATCH_SIZE = 500  // stay well under the 1,000 modified-doc guideline
