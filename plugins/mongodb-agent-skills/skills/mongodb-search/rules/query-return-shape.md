@@ -9,21 +9,29 @@ tags: highlight, storedSource, returnStoredSource, returnScope
 
 **Impact: HIGH (default full-document fetch can increase latency and cost)**
 
-Use `highlight` for explainable UX snippets and `returnStoredSource` for lean payloads when your index defines `storedSource`. Use `returnScope` only with embedded-document retrieval requirements.
+Use `highlight` for explainable UX snippets and `returnStoredSource` for lean payloads when your index defines `storedSource`. Use `returnScope` only with embedded-document retrieval requirements, and keep the `$search` versus `$searchMeta` requirements separate.
 
 ```javascript
-// returnScope REQUIRES returnStoredSource: true — using it without causes an error
+// In $search, returnScope REQUIRES returnStoredSource: true.
+// In $searchMeta, current docs say returnStoredSource must be true
+// only on clusters running MongoDB versions earlier than 8.2.
 
-// ✅ CORRECT:
+// ✅ CORRECT for $search:
 { $search: {
   returnStoredSource: true,   // ← required when using returnScope
   returnScope: { path: "reviews" },
   ...
 }}
 
-// ❌ WRONG — will error:
+// ❌ WRONG for $search — will error:
 { $search: {
   returnScope: { path: "reviews" },  // missing returnStoredSource: true
+  ...
+}}
+
+// ✅ CURRENT $searchMeta guidance on MongoDB 8.2+:
+{ $searchMeta: {
+  returnScope: { path: "reviews" },
   ...
 }}
 ```
@@ -61,6 +69,7 @@ db.docs.aggregate([
 
 - Confirm `storedSource` exists in index definition before enabling `returnStoredSource`.
 - Validate highlight output with `$meta: "searchHighlights"`.
+- Validate `returnScope` behavior against the exact operator and cluster version you are targeting.
 
 **When NOT to use this pattern:**
 
@@ -69,3 +78,4 @@ db.docs.aggregate([
 Reference: [Highlight Search Terms](https://www.mongodb.com/docs/atlas/atlas-search/highlighting.md)
 Reference: [Return Stored Source Fields](https://www.mongodb.com/docs/atlas/atlas-search/return-stored-source.md)
 Reference: [Query, Filter, and Retrieve Arrays of Objects](https://www.mongodb.com/docs/atlas/atlas-search/return-scope.md)
+Reference: [Track Scores and Search Highlights for Search Terms](https://www.mongodb.com/docs/atlas/atlas-search/return-stored-source/#std-label-return-stored-source-score-highlight)

@@ -7,7 +7,7 @@ tags: index, compound-index, field-order, esr-rule, performance, query-optimizat
 
 ## Order Compound Index Fields Correctly (ESR Rule)
 
-**The ESR rule (Equality → Sort → Range) is the single most important concept for compound index design.** Wrong field order forces MongoDB to scan massive portions of the index and perform expensive in-memory sorts. A 10ms query becomes a 10-second query with incorrect ordering. This is the #1 cause of index-related performance issues.
+**The ESR rule (Equality → Sort → Range) is a strong default guideline for compound index design.** Wrong field order can force MongoDB to scan larger portions of the index and perform expensive in-memory sorts, so use ESR as a starting point and confirm with `explain()`.
 
 **Incorrect (range field before sort—kills performance):**
 

@@ -1,6 +1,6 @@
 # MongoDB Schema Design Best Practices
 
-**Version 2.2.0**
+**Version 2.4.0**
 MongoDB
 January 2026
 
@@ -43,7 +43,7 @@ MongoDB schema design patterns and anti-patterns for AI agents and developers. C
 4. [Design Patterns](#4-design-patterns) — **MEDIUM**
    - 4.1 [Use Archive Pattern for Historical Data](#41-use-archive-pattern-for-historical-data)
    - 4.2 [Use Attribute Pattern for Sparse or Variable Fields](#42-use-attribute-pattern-for-sparse-or-variable-fields)
-   - 4.3 [Use Bucket Pattern for Time-Series Data](#43-use-bucket-pattern-for-time-series-data)
+   - 4.3 [Use Manual Bucket Pattern Only When Time Series Collections Are Not a Fit](#43-use-manual-bucket-pattern-only-when-time-series-collections-are-not-a-fit)
    - 4.4 [Use Computed Pattern for Expensive Calculations](#44-use-computed-pattern-for-expensive-calculations)
    - 4.5 [Use Extended Reference Pattern](#45-use-extended-reference-pattern)
    - 4.6 [Use Outlier Pattern for Exceptional Documents](#46-use-outlier-pattern-for-exceptional-documents)
@@ -62,7 +62,7 @@ MongoDB schema design patterns and anti-patterns for AI agents and developers. C
 
 **Impact: CRITICAL**
 
-Anti-patterns are the #1 cause of MongoDB production outages. A single unbounded array will crash your application when documents hit the 16MB BSON limit—we've seen this take down production systems handling millions of users at 3 AM. Bloated documents exhaust RAM, forcing MongoDB to page to disk and turning 5ms queries into 500ms nightmares. Atlas Performance Advisor and Compass flag these automatically, but catching them during development saves painful zero-downtime migrations. Every pattern in this section represents real production incidents we've seen repeatedly.
+These anti-patterns commonly lead to document growth, extra memory pressure, and harder migrations. Unbounded arrays push documents toward the 16MB BSON limit, bloated documents reduce working-set efficiency, and unnecessary joins add application and query complexity. Atlas and schema-analysis tools can help surface some of these patterns, but it is better to model them out before they become operational problems.
 
 ### 1.1 Avoid Bloated Documents
 
@@ -182,7 +182,7 @@ Reference: [https://mongodb.com/docs/manual/data-modeling/design-antipatterns/bl
 
 **Impact: CRITICAL (Prevents 16MB document crashes and 10-100× write performance degradation)**
 
-**Unbounded arrays are the #1 cause of MongoDB production outages.** When arrays grow indefinitely, documents approach the 16MB BSON limit and eventually crash your application. Even before hitting the limit, large arrays cause 10-100× slower updates because MongoDB must rewrite the entire document and potentially relocate it on disk.
+**Unbounded arrays are a common schema anti-pattern.** When arrays grow indefinitely, documents approach the 16MB BSON limit. Before that point, growing arrays can strain memory and index performance and make updates more expensive.
 
 **Incorrect: array grows forever**
 
@@ -409,7 +409,7 @@ db.setProfilingLevel(1, { slowms: 100 })
 
 - **Infrequent writes**: If array is updated once per day, 200ms writes may be acceptable.
 
-Reference: [https://mongodb.com/blog/post/building-with-patterns-the-subset-pattern](https://mongodb.com/blog/post/building-with-patterns-the-subset-pattern)
+Reference: [https://www.mongodb.com/docs/manual/data-modeling/design-patterns/group-data/subset-pattern/](https://www.mongodb.com/docs/manual/data-modeling/design-patterns/group-data/subset-pattern/)
 
 ### 1.4 Prevent Schema Drift
 
@@ -903,7 +903,7 @@ db.system.profile.find({
 }).count()
 // High count = over-normalized schema
 
-// Check if collections are always accessed together
+// Check if collections are commonly accessed together
 // If orders always needs customer, items, addresses
 // → they should be embedded
 db.system.profile.aggregate([
@@ -936,13 +936,13 @@ Get fundamentals wrong, and you'll spend months planning a migration. Get them r
 
 ### 2.1 Embed vs Reference Decision Framework
 
-**Impact: HIGH (Determines query patterns for lifetime of application—wrong choice costs 2-10× performance)**
+**Impact: HIGH (Determines long-term query and update paths in your application data model)**
 
-**This is the most important schema decision you'll make.** Choose embedding or referencing based on access patterns, not entity relationships. Getting this wrong means living with 2-10× slower queries or painful migrations later.
+**Choose embedding or referencing based on access patterns, not just entity relationships.** This decision shapes query complexity, write patterns, and future migration effort.
 
 **Embed when:**
 
-- Data is always accessed together (1:1 or 1:few relationships)
+- Data is commonly accessed together (1:1 or 1:few relationships)
 
 - Child data doesn't make sense without parent
 
@@ -964,7 +964,7 @@ Get fundamentals wrong, and you'll spend months planning a migration. Get them r
 
 ```javascript
 // User with embedded profile - single document
-// Always consistent, always atomic
+// Single-document reads are simple, and single-document updates remain atomic
 {
   _id: "user123",
   email: "alice@example.com",
@@ -1673,7 +1673,7 @@ Reference: [https://mongodb.com/docs/manual/core/schema-validation/](https://mon
 
 **Impact: HIGH**
 
-Every relationship in your application needs a modeling decision: embed or reference? One-to-one is almost always embedded. One-to-few (comments on a post, addresses for a user) benefits from embedding with bounded arrays. One-to-many (orders for a customer), one-to-squillions (activity logs, events), and many-to-many (students/courses) require references. Tree structures need special patterns (parent reference, child reference, materialized path). Wrong decisions create either bloated documents that hit the 16MB limit, or chatty applications that make 50 round-trips to load a single page. These patterns give you the decision framework.
+Every relationship in your application needs a modeling decision: embed or reference. One-to-one is often embedded when the data is accessed together. One-to-few usually works well with bounded embedded arrays. One-to-many, one-to-squillions, and many-to-many often require references or hybrid patterns. Tree structures need specialized patterns such as parent reference, child reference, or materialized path. These patterns provide a decision framework; they are not one-size-fits-all rules.
 
 ### 3.1 Model Many-to-Many Relationships
 
@@ -1873,7 +1873,7 @@ Reference: [https://mongodb.com/docs/manual/tutorial/model-embedded-many-to-many
 
 **Impact: HIGH (Single query for bounded arrays, no $lookup overhead)**
 
-**Embed bounded, small arrays directly in the parent document.** When a parent entity has a small, predictable number of children that are always accessed together, embed them as an array. This eliminates $lookup operations and keeps related data atomic.
+**Embed bounded, small arrays directly in the parent document.** When a parent entity has a small, predictable number of children that are commonly accessed together, embedding can eliminate `$lookup` operations and keep related data atomic within one document.
 
 **Incorrect: separate collection for few items**
 
@@ -2206,7 +2206,7 @@ Reference: [https://mongodb.com/docs/manual/tutorial/model-referenced-one-to-man
 
 **Impact: HIGH (Single read operation vs 2 queries, atomic updates guaranteed)**
 
-**Embed one-to-one related data directly in the parent document.** When two pieces of data always belong together and are always accessed together, they should live in the same document. Separating 1:1 data into two collections doubles your queries and breaks atomicity.
+**Embed one-to-one related data directly in the parent document when it is commonly accessed together.** Separating simple 1:1 data into two collections can add extra queries and give up single-document atomicity without a compensating benefit.
 
 **Incorrect: separate collections for one-to-one data**
 
@@ -2913,11 +2913,11 @@ db.items.find({
 
 Reference: [https://mongodb.com/docs/manual/data-modeling/design-patterns/group-data/attribute-pattern/](https://mongodb.com/docs/manual/data-modeling/design-patterns/group-data/attribute-pattern/)
 
-### 4.3 Use Bucket Pattern for Time-Series Data
+### 4.3 Use Manual Bucket Pattern Only When Time Series Collections Are Not a Fit
 
-**Impact: MEDIUM (100-3600× fewer documents, 10-50× smaller indexes, 5-20× faster range queries)**
+**Impact: MEDIUM (Useful for custom bucketing workflows when native time series collections are not the right fit)**
 
-**Group time-series data into buckets instead of one document per event.** A sensor generating 1 reading/second creates 86,400 documents/day with naive schema—bucketing by hour reduces this to 24 documents with 3,600× less index overhead.
+MongoDB docs recommend time series collections for most applications that involve bucketing data by time. Use the manual bucket pattern only when you need custom bucket documents, per-bucket aggregates in the same document, or application-controlled bucket lifecycle that native time series collections do not fit.
 
 **Incorrect: one document per event**
 
@@ -3037,7 +3037,7 @@ db.sensor_data.aggregate([
 
 - **Varied event sizes**: Bucketing works best when events are uniform size.
 
-Reference: [https://mongodb.com/blog/post/building-with-patterns-the-bucket-pattern](https://mongodb.com/blog/post/building-with-patterns-the-bucket-pattern)
+Reference: [https://www.mongodb.com/docs/manual/data-modeling/design-patterns/group-data/bucket-pattern/](https://www.mongodb.com/docs/manual/data-modeling/design-patterns/group-data/bucket-pattern/)
 
 ### 4.4 Use Computed Pattern for Expensive Calculations
 
@@ -3391,7 +3391,7 @@ db.system.profile.aggregate([
 
 - **Writes >> Reads**: If you write 100× more than read, caching adds overhead.
 
-Reference: [https://mongodb.com/blog/post/building-with-patterns-the-extended-reference-pattern](https://mongodb.com/blog/post/building-with-patterns-the-extended-reference-pattern)
+Reference: [https://www.mongodb.com/docs/manual/data-modeling/design-patterns/handle-duplicate-data/extended-reference-pattern/](https://www.mongodb.com/docs/manual/data-modeling/design-patterns/handle-duplicate-data/extended-reference-pattern/)
 
 ### 4.6 Use Outlier Pattern for Exceptional Documents
 
@@ -4431,7 +4431,7 @@ db.serverStatus().wiredTiger.cache
 
 - **Write-heavy cold data**: If reviews are written 100× more than read, keeping them embedded may simplify writes.
 
-Reference: [https://mongodb.com/blog/post/building-with-patterns-the-subset-pattern](https://mongodb.com/blog/post/building-with-patterns-the-subset-pattern)
+Reference: [https://www.mongodb.com/docs/manual/data-modeling/design-patterns/group-data/subset-pattern/](https://www.mongodb.com/docs/manual/data-modeling/design-patterns/group-data/subset-pattern/)
 
 ### 4.10 Use Time Series Collections for Time Series Data
 
@@ -5345,7 +5345,7 @@ Reference: [https://mongodb.com/docs/manual/core/schema-validation/handle-invali
 5. [https://www.mongodb.com/docs/manual/data-modeling/referencing.md](https://www.mongodb.com/docs/manual/data-modeling/referencing.md)
 6. [https://www.mongodb.com/docs/manual/applications/data-models-tree-structures.md](https://www.mongodb.com/docs/manual/applications/data-models-tree-structures.md)
 7. [https://mongodb.com/docs/manual/data-modeling/design-patterns/](https://mongodb.com/docs/manual/data-modeling/design-patterns/)
-8. [https://mongodb.com/blog/post/building-with-patterns-a-summary](https://mongodb.com/blog/post/building-with-patterns-a-summary)
+8. [https://www.mongodb.com/docs/manual/data-modeling/design-patterns/](https://www.mongodb.com/docs/manual/data-modeling/design-patterns/)
 9. [https://mongodb.com/docs/manual/core/schema-validation/](https://mongodb.com/docs/manual/core/schema-validation/)
 10. [https://www.mongodb.com/docs/atlas/performance-advisor/schema-suggestions.md](https://www.mongodb.com/docs/atlas/performance-advisor/schema-suggestions.md)
 11. [https://mongodb.com/docs/manual/core/timeseries-collections/](https://mongodb.com/docs/manual/core/timeseries-collections/)

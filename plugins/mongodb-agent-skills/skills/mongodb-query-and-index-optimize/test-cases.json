@@ -401,7 +401,7 @@
     },
     {
       "ruleId": "index-text-search",
-      "ruleTitle": "Use Text Indexes for Full-Text Search",
+      "ruleTitle": "Use Text Indexes for Built-In $text Search",
       "type": "bad",
       "code": "// Search for articles about \"running\"\ndb.articles.find({ content: /running/i })\n\n// Problems:\n// 1. COLLSCAN: Scans every document (unanchored regex)\n// 2. No stemming: Misses \"run\", \"runs\", \"runner\"\n// 3. No ranking: All matches treated equally\n// 4. Case handling: Manual /i flag needed\n// 5. Performance: O(n) where n = all documents\n\n// On 1M articles: 30+ seconds for a simple search\n\n// Trying to match variations manually:\ndb.articles.find({\n  content: { $regex: /\\b(run|runs|running|runner)\\b/i }\n})\n// Still COLLSCAN, and you missed \"ran\"",
       "language": "javascript",
@@ -409,7 +409,7 @@
     },
     {
       "ruleId": "index-text-search",
-      "ruleTitle": "Use Text Indexes for Full-Text Search",
+      "ruleTitle": "Use Text Indexes for Built-In $text Search",
       "type": "good",
       "code": "// Create text index\ndb.articles.createIndex({ title: \"text\", content: \"text\" })\n\n// Search with $text operator\ndb.articles.find({\n  $text: { $search: \"running\" }\n})\n\n// Automatic features:\n// - Stemming: \"running\" matches run, runs, running, runner\n// - Stop words: Common words (the, is, a) ignored\n// - Case insensitive: Built-in\n// - Relevance score: Available via $meta\n\n// With relevance ranking:\ndb.articles.find(\n  { $text: { $search: \"running marathon training\" } },\n  { score: { $meta: \"textScore\" } }\n).sort({ score: { $meta: \"textScore\" } })\n\n// Returns articles ranked by relevance\n// More matches = higher score",
       "language": "javascript",

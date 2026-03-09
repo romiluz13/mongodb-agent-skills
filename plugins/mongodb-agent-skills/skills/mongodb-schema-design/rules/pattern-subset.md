@@ -165,4 +165,4 @@ db.serverStatus().wiredTiger.cache
 // If cache pressure is high, evaluate subset split candidates
 ```
 
-Reference: [Building with Patterns - Subset Pattern](https://mongodb.com/blog/post/building-with-patterns-the-subset-pattern)
+Reference: [Subset Pattern](https://www.mongodb.com/docs/manual/data-modeling/design-patterns/group-data/subset-pattern/)

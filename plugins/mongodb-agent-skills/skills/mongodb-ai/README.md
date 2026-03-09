@@ -1,12 +1,12 @@
 # MongoDB AI Skill
 
-MongoDB Atlas Vector Search and AI integration patterns for AI agents and developers.
+MongoDB Vector Search and AI integration patterns for AI agents and developers across Atlas clusters, self-managed deployments, and local Atlas deployments created with Atlas CLI.
 
 ## Why This Skill Exists
 
 AI assistants (Claude, GPT, etc.) have knowledge cutoffs and lack accurate information about MongoDB's newer AI capabilities:
 
-- **Atlas Vector Search** syntax and configuration
+- **MongoDB Vector Search** syntax and configuration
 - **$vectorSearch** aggregation stage
 - **numCandidates** tuning (the 20x rule)
 - **Vector Quantization** (scalar/binary)
@@ -50,7 +50,7 @@ Add the skill to project knowledge or paste `SKILL.md` contents into the convers
 - Vector index definition (type, path, numDimensions, similarity)
 - Similarity function selection (cosine vs euclidean vs dotProduct)
 - Filter field indexing for pre-filtering
-- Vector quantization for scale (scalar: 3.75x, binary: 24x RAM reduction)
+- Vector quantization for scale with docs-backed memory/quality trade-offs
 - $vectorSearch syntax and constraints
 - numCandidates tuning (the 20x rule)
 - ANN vs ENN search selection

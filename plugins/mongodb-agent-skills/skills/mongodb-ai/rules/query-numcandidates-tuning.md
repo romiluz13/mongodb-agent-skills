@@ -84,15 +84,7 @@ numCandidates = 20 × limit
 | 50 | 1,000 | 2,500 | 10,000 |
 | 100 | 2,000 | 5,000 | 10,000 |
 
-**Trade-off Visualization:**
-
-```
-numCandidates   Recall Trend   Latency Trend
-     20x        Baseline       Lower
-     50x        Higher         Medium
-    100x        Higher         Higher
-    200x        Highest        Highest
-```
+Higher `numCandidates` usually improves recall and usually increases latency. Treat 20x as a starting point, not an endpoint.
 
 **How to Measure Recall:**
 
@@ -129,14 +121,13 @@ const ennResults = db.products.aggregate([
 // Step 3: Calculate recall
 const annIds = new Set(annResults.map(d => d._id.toString()))
 const matches = ennResults.filter(d => annIds.has(d._id.toString())).length
-const recall = matches / ennResults.length  // Should be > 0.9
+const recall = matches / ennResults.length  // Compare against your own quality target
 ```
 
 **When to Increase numCandidates:**
 
 - Recall in testing is below your quality target
 - High-stakes searches where missing results is costly
-- Low-dimensional vectors (< 256 dims)
 - After enabling quantization
 
 **When NOT to use this pattern:**

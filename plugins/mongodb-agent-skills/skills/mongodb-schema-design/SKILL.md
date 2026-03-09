@@ -4,7 +4,7 @@ description: MongoDB schema design patterns and anti-patterns. Use when designin
 license: Apache-2.0
 metadata:
   author: mongodb
-  version: "2.3.0"
+  version: "2.4.0"
 ---
 
 # MongoDB Schema Design

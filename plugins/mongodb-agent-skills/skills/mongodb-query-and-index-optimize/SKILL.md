@@ -1,10 +1,10 @@
 ---
 name: mongodb-query-and-index-optimize
-description: MongoDB query optimization and indexing strategies. Use when writing queries, creating indexes, building aggregation pipelines, or debugging slow operations. Triggers on "slow query", "create index", "optimize query", "aggregation pipeline", "explain output", "COLLSCAN", "ESR rule", "compound index", "partial index", "TTL index", "text search", "geospatial", "$indexStats", "profiler".
+description: MongoDB query optimization and indexing strategies. Use when writing queries, creating indexes, building aggregation pipelines, debugging slow operations, or optimizing built-in $text search on self-managed deployments. Triggers on "slow query", "create index", "optimize query", "aggregation pipeline", "explain output", "COLLSCAN", "ESR rule", "compound index", "partial index", "TTL index", "$text", "text index", "geospatial", "$indexStats", "profiler".
 license: Apache-2.0
 metadata:
   author: mongodb
-  version: "2.5.0"
+  version: "2.6.0"
 ---
 
 # MongoDB Query and Index Optimization
@@ -20,11 +20,13 @@ Reference these guidelines when:
 - Reviewing explain() output
 - Seeing Performance Advisor suggestions
 - Optimizing aggregation pipelines
-- Implementing full-text search
+- Implementing built-in `$text` search with text indexes
 - Adding geospatial queries
 - Setting up TTL (time-to-live) for data expiration
 - Analyzing index usage with $indexStats
 - Profiling slow operations
+
+Use `mongodb-search` instead when the request is about Atlas Search, `$search`, `$searchMeta`, analyzers, synonyms, autocomplete, or search-specific relevance tuning on Atlas-hosted data.
 
 ## Rule Categories by Priority
 
@@ -56,7 +58,7 @@ Reference these guidelines when:
 - `index-partial` - Index subset of documents to reduce size
 - `index-sparse` - Skip documents missing the indexed field
 - `index-ttl` - Automatic document expiration for sessions/logs
-- `index-text-search` - Full-text search with stemming and relevance
+- `index-text-search` - Built-in `$text` search with stemming and relevance
 - `index-wildcard` - Dynamic field indexing for polymorphic schemas
 - `index-multikey` - Array field indexing (one entry per element)
 - `index-geospatial` - 2dsphere indexes for location queries

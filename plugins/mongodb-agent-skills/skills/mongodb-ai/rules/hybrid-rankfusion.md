@@ -11,6 +11,8 @@ tags: hybrid, rankFusion, vector-search, text-search, MongoDB-8.0, RRF
 
 Treat fusion behavior and output contracts as release-sensitive and re-validate during upgrades.
 
+For allowed sub-pipeline stages, deployment routing, and hybrid stage legality, use `mongodb-search`. This rule focuses on when rank-based fusion is the right retrieval strategy.
+
 Version gates to apply:
 
 - `\$rankFusion` stage availability: **MongoDB 8.0+**
@@ -232,7 +234,7 @@ RRF = 0.7 × (1/61) + 0.3 × (1/63) = 0.01148 + 0.00476 = 0.01624
 - **De-duplication**: Documents appear at most once in output, even if matched by multiple pipelines
 - **Single collection only**: Cannot span multiple collections (use `$unionWith` for cross-collection)
 - **Pipeline names**: Cannot start with `$`, cannot contain `.` or null character
-- **Views support**: `$rankFusion` can run on views on MongoDB 8.0+ (but can't run inside a view definition)
+- **Views support**: verify current view support and restrictions with `mongodb-search` before rollout
 
 **When to use $rankFusion over $scoreFusion:**
 
@@ -240,7 +242,7 @@ RRF = 0.7 × (1/61) + 0.3 × (1/63) = 0.01148 + 0.00476 = 0.01624
 - Position/rank matters more than score magnitude
 - Simpler hybrid search without normalization needs
 - Established RRF algorithm behavior desired
-- Need view support on MongoDB 8.0+ with documented view limitations
+- Need rank-based fusion behavior more than score-aware tuning
 
 **When NOT to use this pattern:**
 

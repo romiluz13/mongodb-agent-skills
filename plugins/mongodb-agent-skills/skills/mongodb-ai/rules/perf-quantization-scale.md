@@ -1,19 +1,18 @@
 ---
 title: Enable Quantization at Scale
 impact: HIGH
-impactDescription: 3.75x-24x RAM reduction for large vector datasets
-tags: quantization, scale, RAM, performance, 100k
+impactDescription: Use quantization when vector memory pressure becomes a real sizing constraint
+tags: quantization, scale, RAM, performance, required-memory
 ---
 
 ## Enable Quantization at Scale
 
-Enable quantization when your vector count grows large (typically 100K+ vectors). Use this as a starting guideline and benchmark on your own workload.
+Enable quantization when vector memory requirements become material. MongoDB docs recommend considering quantization for larger datasets, typically `100,000+` vectors, and performance guidance also calls it out when vector memory grows beyond roughly `3 GB`. Use those as starting signals, then benchmark on your own workload.
 
 **Incorrect (no quantization on large dataset):**
 
 ```javascript
-// WRONG: 500K vectors without quantization
-// RAM required: ~3GB just for vectors
+// WRONG: large vector index with no quantization plan
 db.products.createSearchIndex("vector_index", "vectorSearch", {
   fields: [{
     type: "vector",
@@ -28,66 +27,31 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
 **Correct (quantization enabled):**
 
 ```javascript
-// Dataset size determines quantization type
-const vectorCount = await db.products.countDocuments({ embedding: { $exists: true } })
-
-if (vectorCount > 1000000) {
-  // > 1M vectors: Use binary (24x reduction)
-  db.products.createSearchIndex("vector_index", "vectorSearch", {
-    fields: [{
-      type: "vector",
-      path: "embedding",
-      numDimensions: 1536,
-      similarity: "cosine",
-      quantization: "binary"
-    }]
-  })
-} else if (vectorCount > 100000) {
-  // 100K-1M vectors: Use scalar (3.75x reduction)
-  db.products.createSearchIndex("vector_index", "vectorSearch", {
-    fields: [{
-      type: "vector",
-      path: "embedding",
-      numDimensions: 1536,
-      similarity: "cosine",
-      quantization: "scalar"
-    }]
-  })
-}
+// Use docs-backed signals first:
+// - large datasets (typically 100K+ vectors)
+// - Atlas Required Memory / vector memory pressure
+// Then benchmark scalar vs binary on your own workload.
+db.products.createSearchIndex("vector_index", "vectorSearch", {
+  fields: [{
+    type: "vector",
+    path: "embedding",
+    numDimensions: 1536,
+    similarity: "cosine",
+    quantization: "scalar"
+  }]
+})
 ```
 
-**RAM Calculation Guide:**
+**Docs-backed rollout guidance:**
 
-```
-Base RAM per vector:
-  numDimensions × 4 bytes (float32)
-  1536 dims × 4 = 6,144 bytes = 6 KB
-
-Without quantization (1M vectors × 1536 dims):
-  1,000,000 × 6 KB = 6 GB
-
-With scalar quantization:
-  6 GB / 3.75 = 1.6 GB
-
-With binary quantization:
-  6 GB / 24 = 0.25 GB
-```
-
-**Decision Matrix:**
-
-Treat these ranges as starting heuristics, not hard limits.
-
-| Vector Count | Quantization | RAM (1536 dims) |
-|--------------|--------------|-----------------|
-| < 100K | none | < 600 MB |
-| 100K - 500K | scalar | 160 - 800 MB |
-| 500K - 1M | scalar or binary | 160 MB - 1.6 GB |
-| > 1M | binary | < 1 GB |
+- Use Atlas `Required Memory` and Search metrics as the primary sizing signals.
+- Benchmark `scalar` and `binary` on representative queries before rollout.
+- Re-run quality checks after quantization changes because memory savings and recall are a trade-off, not a free win.
 
 **Monitoring Vector Index Size:**
 
 ```javascript
-// Check index status and size
+// Check index status
 db.products.getSearchIndexes().forEach(idx => {
   if (idx.type === "vectorSearch") {
     print(`Index: ${idx.name}`)
@@ -96,8 +60,7 @@ db.products.getSearchIndexes().forEach(idx => {
   }
 })
 
-// Atlas UI: Check "Required Memory" metric
-// Path: Database > Collections > Search Indexes > vector_index
+// Atlas UI: check "Required Memory" and Search metrics
 ```
 
 **Migrating to Quantization:**
@@ -114,7 +77,7 @@ db.runCommand({
       path: "embedding",
       numDimensions: 1536,
       similarity: "cosine",
-      quantization: "binary"  // Add quantization
+      quantization: "binary"
     }]
   }
 })
@@ -122,7 +85,7 @@ db.runCommand({
 
 **When NOT to use this pattern:**
 
-- Small datasets (< 100K vectors) where accuracy is critical
+- Small datasets where memory pressure is minimal
 - Already using pre-quantized embeddings from model
 - Testing/development environments
 

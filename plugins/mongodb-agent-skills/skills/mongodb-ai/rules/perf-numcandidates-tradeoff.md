@@ -24,7 +24,7 @@ db.products.aggregate([
     }
   }
 ])
-// Result: Fast but recall can be poor for many workloads
+// Result: lower overlap with exact search on many workloads
 
 // WRONG: Too high - unnecessary latency
 db.products.aggregate([
@@ -56,7 +56,7 @@ db.products.aggregate([
     }
   }
 ])
-// Result: Lower latency profile for interactive workloads
+// Result: useful baseline for interactive workloads
 
 // Quality-focused search: Optimize for recall
 db.products.aggregate([
@@ -70,7 +70,7 @@ db.products.aggregate([
     }
   }
 ])
-// Result: Higher recall profile with moderate latency cost
+// Result: higher recall profile with more latency cost
 
 // Critical search: Maximum recall
 db.legalDocs.aggregate([
@@ -84,7 +84,7 @@ db.legalDocs.aggregate([
     }
   }
 ])
-// Result: Near-exact behavior for critical workloads, with higher latency
+// Result: very high candidate breadth, with correspondingly higher latency
 ```
 
 **Benchmark Your Specific Dataset:**
@@ -204,16 +204,6 @@ numCandidates | Recall Trend | Latency Trend | Notes
  medium       | better       | medium        | Often a practical balance
  higher       | highest      | highest       | Diminishing returns likely
 ```
-
-**Use Case Guidelines:**
-
-| Use Case | Recommended | Rationale |
-|----------|-------------|-----------|
-| Autocomplete | Lower range | Speed > precision |
-| Product search | Mid range | Balance |
-| RAG context | Mid range | Context relevance with latency control |
-| Legal discovery | Higher range | Prioritize recall |
-| Duplicate detection | Higher range | Higher precision/recall goals |
 
 **When NOT to use this pattern:**
 

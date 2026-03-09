@@ -89,8 +89,8 @@ db.products.getSearchIndexes()
 
 **When NOT to use this pattern:**
 
-- Defining an Automated Embedding field (use deployment-specific automated-embedding syntax: Community `autoEmbed` vs Atlas preview `text`+`model`)
-- Creating traditional search indexes (use Atlas Search)
+- Defining an automated-embedding field (use `index-automated-embedding`; current docs distinguish self-managed Community `autoEmbed` from manual-embedding workflows on Atlas)
+- Creating lexical Search indexes or `$search` mappings (use `mongodb-search`)
 
 ## Verify with
 

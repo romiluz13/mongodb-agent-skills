@@ -1,10 +1,10 @@
 ---
 name: mongodb-search
-description: MongoDB Search engine architecture, query composition, and search operations. Use when creating Atlas Search indexes, writing $search or $searchMeta pipelines, choosing analyzers, tuning lexical relevance, handling Search alerts/metrics, deploying Search in Community, or orchestrating hybrid search with $rankFusion/$scoreFusion. Triggers on "Atlas Search", "$search", "$searchMeta", "autocomplete", "synonyms", "facet", "compound", "search score", "highlight", "storedSource", "returnStoredSource", "returnScope", "mongot", "searchCoordinator", "Search Max Fields Indexed", "nGram fields", "$rankFusion", "$scoreFusion", and "hybrid search".
+description: MongoDB Search engine architecture, query composition, and search operations. Use when creating Search indexes, writing $search or $searchMeta pipelines, choosing analyzers, tuning lexical relevance, handling Search alerts/metrics, deploying Search in Community, or orchestrating hybrid search with $rankFusion/$scoreFusion. Triggers on "MongoDB Search", "Atlas Search", "$search", "$searchMeta", "autocomplete", "synonyms", "facet", "compound", "search score", "highlight", "storedSource", "returnStoredSource", "returnScope", "mongot", "searchCoordinator", "Search Max Fields Indexed", "nGram fields", "$rankFusion", "$scoreFusion", and "hybrid search".
 license: Apache-2.0
 metadata:
   author: mongodb
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # MongoDB Search: Engine, Relevance, and Operations
@@ -18,7 +18,7 @@ MongoDB Search guidance for Atlas and self-managed deployments. This skill conta
 ## When to Apply
 
 Use this skill when you are:
-- Creating or updating Atlas Search indexes and mappings
+- Creating or updating Search indexes and mappings
 - Building `$search` and `$searchMeta` pipelines
 - Choosing analyzers, autocomplete settings, synonyms, and facets
 - Debugging relevance quality or response shape (`highlight`, `returnStoredSource`, `returnScope`)
@@ -49,7 +49,7 @@ This skill owns search engine semantics and operations. Hand off to `mongodb-ai`
 ### 1. Deployment Modes and Release Gates (CRITICAL) - 5 rules
 - `deploy-track-detection` - Detect Atlas vs local Atlas vs Community before commands
 - `release-status-gating` - Tag guidance as GA/Preview/Public Preview
-- `community-preview-safety` - Treat Community Search as preview and gate production use
+- `community-preview-safety` - Check current release status before recommending Community Search for production
 - `community-prereqs-mongot-auth` - Replica set, keyfile auth, and `searchCoordinator` user requirements
 - `community-mongot-health-check` - Validate `mongot` health and queryability before tuning
 

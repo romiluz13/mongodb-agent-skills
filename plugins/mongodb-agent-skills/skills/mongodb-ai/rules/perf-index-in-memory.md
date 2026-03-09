@@ -1,20 +1,19 @@
 ---
-title: Vector Index Must Fit in RAM
+title: Keep the Vector Index Working Set in Memory When Sizing
 impact: HIGH
 impactDescription: Disk spillover can cause severe latency and throughput degradation
 tags: RAM, memory, index-size, performance, mongot
 ---
 
-## Vector Index Must Fit in RAM
+## Keep the Vector Index Working Set in Memory When Sizing
 
-Vector indexes use HNSW graphs that must fit in RAM for acceptable performance. Disk spillover causes severe latency degradation.
+For best performance, size vector search so the active index working set can stay in memory on the Search process or Search Nodes. If the working set is too large, latency and throughput can degrade sharply.
 
 **Incorrect (index exceeds available RAM):**
 
 ```javascript
-// WRONG: Large index on small instance
-// 2M vectors × 1536 dims = ~12GB index
-// Running on M30 with 8GB RAM = spillover to disk
+// WRONG: Large vector index on a cluster with too little Search memory
+// The index working set no longer fits comfortably in memory.
 
 db.products.createSearchIndex("vector_index", "vectorSearch", {
   fields: [{
@@ -22,10 +21,10 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
     path: "embedding",
     numDimensions: 1536,
     similarity: "cosine"
-    // No quantization on 2M vectors = 12GB needed
+    // No quantization and no memory-sizing validation
   }]
 })
-// Result: Query latency becomes unstable and can degrade significantly
+// Result: Query latency becomes unstable and degrades under load
 ```
 
 **Correct (size index to fit RAM):**
@@ -38,12 +37,11 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
     path: "embedding",
     numDimensions: 1536,
     similarity: "cosine",
-    quantization: "binary"  // Reduces to ~0.5GB
+    quantization: "binary"
   }]
 })
 
-// Option 2: Upgrade cluster tier
-// M30 (8GB) → M40 (16GB) → M50 (32GB)
+// Option 2: Increase available Search memory or Search Node capacity
 
 // Option 3: Use partial indexing approach
 // Only index active/recent documents
@@ -66,32 +64,7 @@ db.products.createSearchIndex("active_vector_index", "vectorSearch", {
 
 **Sizing Guidance:**
 
-Use this estimate only as a starting point, then validate against Atlas "Required Memory" and runtime metrics.
-
-**Calculate Your Index Size:**
-
-```javascript
-// Estimate index RAM requirement
-function estimateVectorIndexRAM(vectorCount, dimensions, quantization = "none") {
-  const bytesPerVector = {
-    "none": dimensions * 4,      // float32
-    "scalar": dimensions * 1,    // int8
-    "binary": dimensions / 8     // int1
-  }
-
-  const vectorBytes = vectorCount * bytesPerVector[quantization]
-  const hnswOverhead = 1.3  // Coarse estimate; validate with measured metrics
-
-  return (vectorBytes * hnswOverhead) / (1024 * 1024 * 1024)  // GB
-}
-
-// Example
-const count = await db.products.countDocuments({ embedding: { $exists: true } })
-console.log(`Vectors: ${count}`)
-console.log(`RAM (no quant): ${estimateVectorIndexRAM(count, 1536, "none").toFixed(2)} GB`)
-console.log(`RAM (scalar): ${estimateVectorIndexRAM(count, 1536, "scalar").toFixed(2)} GB`)
-console.log(`RAM (binary): ${estimateVectorIndexRAM(count, 1536, "binary").toFixed(2)} GB`)
-```
+Use Atlas `Required Memory`, Search metrics, and explain output as the authoritative sizing signals. Atlas docs recommend RAM at least 10% larger than total vector size. Treat any local estimate as a rough planning aid, not a rule.
 
 **Monitor Index Memory in Atlas:**
 
@@ -109,10 +82,10 @@ GET /api/atlas/v1.0/groups/{groupId}/processes/{processId}/measurements
 
 **Signs of Memory Pressure:**
 
-- Query latency spikes (50ms → 500ms+)
+- Query latency spikes
 - Inconsistent query times
-- "Memory limit exceeded" in logs
-- Atlas alerts for search process memory
+- Atlas alerts for Search process memory
+- Search metrics showing sustained memory pressure
 
 **When NOT to use this pattern:**
 
@@ -125,3 +98,4 @@ GET /api/atlas/v1.0/groups/{groupId}/processes/{processId}/measurements
 3. Confirm version-gated behavior on your target MongoDB release before production rollout.
 
 Reference: [MongoDB Atlas Cluster Tier Selection](https://mongodb.com/docs/atlas/sizing-tier-selection/)
+Reference: [MongoDB Vector Quantization](https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-quantization/)

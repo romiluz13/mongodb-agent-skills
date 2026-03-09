@@ -25,7 +25,7 @@ Production Architecture:
 ┌─────────────────┐     ┌─────────────────┐
 │  Database Node  │     │   Search Node   │
 │     (mongod)    │────▶│    (mongot)     │
-│    M10+ tier    │     │ sized per usage │
+│ dedicated tier  │     │ sized per usage │
 └─────────────────┘     └─────────────────┘
         │                       │
    Database ops           Vector Search
@@ -34,41 +34,15 @@ Production Architecture:
 
 **Deployment Recommendations:**
 
-- Use a dedicated cluster (`M10+`) and dedicated Search Nodes for production workloads.
-- Size Search Nodes from measured required memory + query throughput, not fixed tier pairings.
-- Start from observed metrics and scale Search Nodes vertically or horizontally as load grows.
-
-**Sizing Your Search Nodes:**
-
-```javascript
-// Calculate required RAM
-function calculateSearchNodeSize(vectorCount, dimensions, quantization = "none") {
-  const bytesPerVector = {
-    "none": dimensions * 4,
-    "scalar": dimensions * 1,
-    "binary": dimensions / 8
-  }
-
-  const indexBytes = vectorCount * bytesPerVector[quantization]
-  const graphOverhead = 1.3  // ~30% for HNSW graph
-  const jvmOverhead = 1.1    // ~10% for JVM
-
-  const totalBytes = indexBytes * graphOverhead * jvmOverhead
-  const requiredGB = totalBytes / (1024 ** 3)
-
-  // Recommend 10% headroom
-  return requiredGB * 1.1
-}
-
-// Example: 1M vectors, 1536 dims, no quantization
-const requiredGB = calculateSearchNodeSize(1000000, 1536, "none")
-console.log(`Required: ${requiredGB.toFixed(2)} GB`)  // choose nearest tier with headroom
-```
+- Atlas Search Nodes are available on dedicated clusters, not on free, Flex, serverless, or global clusters.
+- Atlas creates an S20 Search Node by default for workload isolation; Atlas docs recommend low-CPU Search Nodes for Vector Search workloads.
+- Size Search Nodes from Atlas `Required Memory`, query throughput, and observed metrics, not from fixed tier pairings or homemade formulas.
+- Atlas docs recommend node RAM at least 10% larger than total vector size.
 
 **Migration to Search Nodes:**
 
 ```
-Step 1: Ensure cluster is M10 or higher
+Step 1: Ensure the deployment uses a dedicated Atlas cluster
 Step 2: Select region with Search Node support
 Step 3: Enable "Search Nodes for workload isolation"
 Step 4: Choose search tier based on index size
@@ -85,32 +59,15 @@ Step 5: Monitor metrics during migration
 | Query latency | Variable | Predictable |
 | Concurrent queries | Limited | Optimized |
 
-**Cloud Provider Availability:**
-
-```
-AWS:     Available in select regions
-Azure:   Available in select regions
-GCP:     Broadly available
-
-Always verify current regional availability in Atlas before rollout.
-```
-
 **Monitoring Search Nodes:**
 
-```javascript
-// Key metrics to monitor:
-// 1. Search Normalized Process CPU - Should stay < 80%
-// 2. System Memory - Available should exceed used
-// 3. Page Faults - Should be near zero
-// 4. Index Size - Must fit in Search Node RAM
-```
+- Use the Vector Search dashboard and Search Node metrics to watch `Required Memory`, query latency, and process pressure.
+- Validate isolation benefits with live workload metrics instead of assuming a fixed tier mapping.
 
 **When NOT to use this pattern:**
 
-- Development/testing (M10/M20 shared is sufficient)
-- Small datasets (< 100K vectors)
-- Cost-sensitive prototypes
-- Regions without Search Node support
+- Development or prototype workloads where shared resources are acceptable
+- Deployments where Search Nodes are unavailable for the chosen cluster type or region
 
 ## Verify with
 

@@ -11,7 +11,7 @@ tags: hybrid, rankFusion, scoreFusion, limitations, constraints
 
 Fusion-stage behavior has evolved quickly across 8.0-8.2+. Keep rollout plans conservative and validate on your exact target release.
 
-For search-engine-first hybrid pipeline wiring (`$search`, analyzers, and operational gates), use `mongodb-search`.
+For search-engine-first hybrid pipeline wiring (`$search`, analyzers, stage legality, and operational gates), use `mongodb-search`. This rule stays focused on retrieval-strategy constraints and rollout cautions.
 
 **Hybrid strategy decision matrix (docs-first):**
 
@@ -99,24 +99,7 @@ db.products.aggregate([
 ])
 ```
 
-**Allowed Stages in Sub-Pipelines:**
-
-| Stage | Allowed | Notes |
-|-------|---------|-------|
-| `$vectorSearch` | Yes | Vector search |
-| `$search` | Yes | Full-text search |
-| `$match` | Yes | Filter documents |
-| `$sample` | Yes | Random sampling |
-| `$sort` | Yes | Re-order results |
-| `$skip` | Yes | Pagination |
-| `$limit` | Yes | Recommended to cap candidate/results per sub-pipeline |
-| `$geoNear` | Yes | Geographic search |
-| `$project` | **No** | Use after $rankFusion |
-| `$group` | **No** | Not supported |
-| `$lookup` | **No** | Same collection only |
-| `$unwind` | **No** | Not supported |
-
-For Atlas hybrid-search guidance, rely on the conservative stage set above. If you use additional stages from server-manual examples, validate behavior on your target patch release first.
+For the exact allowed-stage matrix and version/legality checks, defer to `mongodb-search`.
 
 **Key Limitations:**
 

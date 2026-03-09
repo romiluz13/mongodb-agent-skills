@@ -7,10 +7,10 @@ tags: schema, embedding, referencing, relationships, fundamentals
 
 ## Embed vs Reference Decision Framework
 
-**This is one of the most important schema decisions you'll make.** Choose embedding or referencing based on access patterns, not just entity relationships.
+**This is a core schema decision.** Choose embedding or referencing based on access patterns, not just entity relationships.
 
 **Embed when:**
-- Data is always accessed together (1:1 or 1:few relationships)
+- Data is commonly accessed together (1:1 or 1:few relationships)
 - Child data doesn't make sense without parent
 - Updates to both happen atomically
 - Child array is clearly bounded by product constraints
@@ -24,7 +24,7 @@ tags: schema, embedding, referencing, relationships, fundamentals
 **Incorrect (reference when should embed):**
 
 ```javascript
-// Separate collections for 1:1 data - always accessed together
+// Separate collections for 1:1 data that is commonly read together
 // users: { _id, email }
 // profiles: { userId, name, avatar, bio }
 
@@ -40,7 +40,7 @@ const profile = await db.profiles.findOne({ userId })    // Query 2
 
 ```javascript
 // User with embedded profile - single document
-// Always consistent, always atomic
+// Single-document reads are simple, and single-document updates remain atomic
 {
   _id: "user123",
   email: "alice@example.com",

@@ -147,7 +147,7 @@
       "ruleId": "fundamental-embed-vs-reference",
       "ruleTitle": "Embed vs Reference Decision Framework",
       "type": "bad",
-      "code": "// User with embedded profile - single document\n// Always consistent, always atomic\n{\n  _id: \"user123\",\n  email: \"alice@example.com\",\n  profile: {\n    name: \"Alice Smith\",\n    avatar: \"https://cdn.example.com/alice.jpg\",\n    bio: \"Software developer\"\n  },\n  createdAt: ISODate(\"2024-01-01\")\n}\n\n// Single query returns everything\nconst user = await db.users.findOne({ _id: userId })\n// Atomic updates - profile can't exist without user\ndb.users.updateOne(\n  { _id: userId },\n  { $set: { \"profile.name\": \"Alice Johnson\" } }\n)",
+      "code": "// User with embedded profile - single document\n// Single-document reads are simple, and single-document updates remain atomic\n{\n  _id: \"user123\",\n  email: \"alice@example.com\",\n  profile: {\n    name: \"Alice Smith\",\n    avatar: \"https://cdn.example.com/alice.jpg\",\n    bio: \"Software developer\"\n  },\n  createdAt: ISODate(\"2024-01-01\")\n}\n\n// Single query returns everything\nconst user = await db.users.findOne({ _id: userId })\n// Atomic updates stay within one document\ndb.users.updateOne(\n  { _id: userId },\n  { $set: { \"profile.name\": \"Alice Johnson\" } }\n)",
       "language": "javascript",
       "description": "reference when should embed"
     },
@@ -217,7 +217,7 @@
     },
     {
       "ruleId": "pattern-bucket",
-      "ruleTitle": "Use Bucket Pattern for Time-Series Data",
+      "ruleTitle": "Use Manual Bucket Pattern Only When Time Series Collections Are Not a Fit",
       "type": "bad",
       "code": "// Sensor readings: 1 document per reading\n// Each document ~100 bytes + index entries\n{ sensorId: \"temp-01\", ts: ISODate(\"2024-01-15T10:00:00Z\"), value: 22.5 }\n{ sensorId: \"temp-01\", ts: ISODate(\"2024-01-15T10:00:01Z\"), value: 22.6 }\n{ sensorId: \"temp-01\", ts: ISODate(\"2024-01-15T10:00:02Z\"), value: 22.5 }\n// ...\n\n// Per sensor per year:\n// 86,400 docs/day \u00d7 365 days = 31,536,000 documents\n// 31M index entries for {sensorId, ts} compound index\n// Query for 1 day: scan 86,400 index entries",
       "language": "javascript",
@@ -225,7 +225,7 @@
     },
     {
       "ruleId": "pattern-bucket",
-      "ruleTitle": "Use Bucket Pattern for Time-Series Data",
+      "ruleTitle": "Use Manual Bucket Pattern Only When Time Series Collections Are Not a Fit",
       "type": "good",
       "code": "// One document per sensor per hour\n// Readings array bounded to ~3,600 elements\n{\n  sensorId: \"temp-01\",\n  bucket: ISODate(\"2024-01-15T10:00:00Z\"),  // Hour start\n  readings: [\n    { m: 0, s: 0, value: 22.5 },   // Minute 0, second 0\n    { m: 0, s: 1, value: 22.6 },   // Minute 0, second 1\n    { m: 0, s: 2, value: 22.5 },\n    // ... up to 3,600 readings\n  ],\n  count: 3600,\n  // Pre-computed aggregates - no need to scan array\n  sum: 81234.5,\n  min: 21.2,\n  max: 24.8,\n  avg: 22.56\n}\n\n// Per sensor per year:\n// 24 docs/day \u00d7 365 days = 8,760 documents (3,600\u00d7 fewer)\n// 8,760 index entries (3,600\u00d7 smaller index)\n// Query for 1 day: scan 24 index entries",
       "language": "javascript",

@@ -11,61 +11,56 @@ The query embedding model must use the same embedding space as the document embe
 
 Do not assume cross-model compatibility unless the provider explicitly documents it. For example, Voyage documents compatibility across the Voyage 4 text-embedding series.
 
-**Incorrect (mismatched models):**
+**Incorrect (mismatched embedding space):**
 
 ```javascript
-// Data was embedded with OpenAI text-embedding-3-small
-// db.products documents have embeddings from OpenAI
+// Documents were embedded with provider-A model v1
 
-// WRONG: Query using different model (Cohere)
-const queryEmbedding = await cohereClient.embed({
-  texts: ["laptop for programming"],
-  model: "embed-english-v3.0"  // WRONG MODEL!
+// WRONG: Query embedding generated with a different model family
+const queryEmbedding = await embeddingClient.embed({
+  input: ["laptop for programming"],
+  model: "provider-b-model-v1"
 })
 
 db.products.aggregate([
   {
     $vectorSearch: {
       index: "vector_index",
-      path: "embedding",  // Contains OpenAI embeddings
-      queryVector: queryEmbedding,  // Cohere embedding - INCOMPATIBLE!
+      path: "embedding",
+      queryVector: queryEmbedding.data[0].embedding,
       numCandidates: 200,
       limit: 10
     }
   }
 ])
-// Result: Garbage results or no meaningful matches
 
-// WRONG: Using a different model family without compatibility guarantees
-// Data embedded with text-embedding-ada-002
-const queryEmbedding = await openai.embeddings.create({
-  input: "laptop for programming",
-  model: "voyage-4"  // Different family and embedding space
+// WRONG: Same provider, but different model family without documented compatibility
+const secondQueryEmbedding = await embeddingClient.embed({
+  input: ["laptop for programming"],
+  model: "provider-a-model-v2"
 })
-// Result: Garbage results or no meaningful matches
 ```
 
 **Correct (consistent model usage):**
 
 ```javascript
-// Data embedded with OpenAI text-embedding-3-small
-// Query with SAME model
+// Ingestion and query use the same documented embedding model id
 
 // Ingestion (store with model info)
-const docEmbedding = await openai.embeddings.create({
-  input: document.content,
-  model: "text-embedding-3-small"
+const docEmbedding = await embeddingClient.embed({
+  input: [document.content],
+  model: "provider-a-model-v1"
 })
 await db.products.insertOne({
   content: document.content,
   embedding: docEmbedding.data[0].embedding,
-  embeddingModel: "text-embedding-3-small"  // Track which model
+  embeddingModel: "provider-a-model-v1"
 })
 
 // Query (use same model)
-const queryEmbedding = await openai.embeddings.create({
-  input: "laptop for programming",
-  model: "text-embedding-3-small"  // SAME MODEL!
+const queryEmbedding = await embeddingClient.embed({
+  input: ["laptop for programming"],
+  model: "provider-a-model-v1"
 })
 
 db.products.aggregate([
@@ -180,8 +175,8 @@ Before rollout, validate three invariants together:
   content: "Product description...",
   embedding: [0.1, 0.2, ...],
   metadata: {
-    embeddingModel: "text-embedding-3-small",
-    embeddingDimensions: 1536,
+    embeddingModel: "provider-a-model-v1",
+    embeddingDimensions: 1024,
     embeddedAt: ISODate("2024-01-15")
   }
 }
@@ -203,8 +198,8 @@ async function reEmbedCollection(newModel) {
   const cursor = db.products.find({ content: { $exists: true } })
 
   for await (const doc of cursor) {
-    const newEmbedding = await openai.embeddings.create({
-      input: doc.content,
+    const newEmbedding = await embeddingClient.embed({
+      input: [doc.content],
       model: newModel
     })
 
@@ -220,8 +215,6 @@ async function reEmbedCollection(newModel) {
     )
   }
 
-  // Update index if dimensions changed
-  // (text-embedding-3-large = 3072, text-embedding-3-small = 1536)
 }
 ```
 
@@ -248,7 +241,7 @@ db.products.findOne({}, { "metadata.embeddingModel": 1 })
 
 **When NOT to use this pattern:**
 
-- Using MongoDB's Automated Embedding feature (model handled automatically)
+- Using MongoDB's automated embedding feature (model handled automatically by the deployment-specific workflow)
 - Multi-model hybrid systems (requires separate indexes)
 - Provider-documented compatible model families that share embedding space (for example, Voyage 4 series), as long as dimensions and semantics remain aligned
 - Dimensionality reduction (requires careful handling)

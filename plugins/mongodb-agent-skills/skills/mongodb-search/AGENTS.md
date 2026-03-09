@@ -1,8 +1,8 @@
 # MongoDB Search Best Practices
 
-**Version 1.0.1**
+**Version 1.2.0**
 MongoDB
-February 2026
+March 2026
 
 ## Abstract
 

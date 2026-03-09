@@ -22,9 +22,9 @@ db.orders.createIndex({ shippingAddress.city: 1 }) // 200MB
 db.orders.createIndex({ totalAmount: 1 })          // 80MB
 db.orders.createIndex({ customerId: 1, status: 1 })// 180MB
 db.orders.createIndex({ status: 1, createdAt: -1 })// 200MB
-// Total: 1.2GB of indexes for this one collection!
-// Server has 2GB WiredTiger cache → indexes don't fit!
-// Result: Constant page eviction, 10× slower queries
+// Total: 1.2GB of indexes for this one collection
+// Server has 2GB WiredTiger cache → active pages may not fit comfortably
+// Result: More cache pressure, evictions, and less predictable latency
 ```
 
 **Correct (strategic indexing with memory awareness):**

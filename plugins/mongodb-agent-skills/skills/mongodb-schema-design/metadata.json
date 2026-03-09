@@ -1,7 +1,7 @@
 {
-  "version": "2.2.0",
+  "version": "2.4.0",
   "organization": "MongoDB",
-  "date": "January 2026",
+  "date": "March 2026",
   "abstract": "MongoDB schema design patterns and anti-patterns for AI agents and developers. Contains 30 rules across 5 categories: Schema Anti-Patterns (CRITICAL - unbounded arrays, bloated documents, schema drift), Schema Fundamentals (HIGH - embed vs reference, document model, 16MB awareness), Relationship Patterns (HIGH - one-to-one, one-to-few, one-to-many, one-to-squillions, many-to-many, tree structures), Design Patterns (MEDIUM - bucket, time series collections, attribute, polymorphic, schema versioning, computed, subset, outlier, extended reference), and Schema Validation (MEDIUM - JSON Schema, validation levels, rollout strategy). Each rule includes incorrect/correct code examples with quantified impact metrics, 'When NOT to use' exceptions, and verification diagnostics.",
   "references": [
     "https://mongodb.com/docs/manual/data-modeling/",
@@ -11,7 +11,7 @@
     "https://www.mongodb.com/docs/manual/data-modeling/referencing.md",
     "https://www.mongodb.com/docs/manual/applications/data-models-tree-structures.md",
     "https://mongodb.com/docs/manual/data-modeling/design-patterns/",
-    "https://mongodb.com/blog/post/building-with-patterns-a-summary",
+    "https://www.mongodb.com/docs/manual/data-modeling/design-patterns/group-data/subset-pattern/",
     "https://mongodb.com/docs/manual/core/schema-validation/",
     "https://www.mongodb.com/docs/atlas/performance-advisor/schema-suggestions.md",
     "https://mongodb.com/docs/manual/core/timeseries-collections/",

@@ -1,6 +1,6 @@
 # MongoDB Query & Index Optimization
 
-**Version 2.4.0**
+**Version 2.6.0**
 MongoDB
 February 2026
 
@@ -37,7 +37,7 @@ MongoDB query optimization and indexing strategies for AI agents and developers.
    - 1.14 [Use Hidden Indexes to Test Removals Safely](#114-use-hidden-indexes-to-test-removals-safely)
    - 1.15 [Use Partial Indexes to Reduce Size](#115-use-partial-indexes-to-reduce-size)
    - 1.16 [Use Sparse Indexes for Optional Fields](#116-use-sparse-indexes-for-optional-fields)
-   - 1.17 [Use Text Indexes for Full-Text Search](#117-use-text-indexes-for-full-text-search)
+   - 1.17 [Use Text Indexes for Built-In $text Search](#117-use-text-indexes-for-built-in-text-search)
    - 1.18 [Use TTL Indexes for Automatic Data Expiration](#118-use-ttl-indexes-for-automatic-data-expiration)
    - 1.19 [Use Unique Indexes to Enforce Constraints](#119-use-unique-indexes-to-enforce-constraints)
    - 1.20 [Use Wildcard Indexes for Dynamic Fields](#120-use-wildcard-indexes-for-dynamic-fields)
@@ -77,13 +77,13 @@ MongoDB query optimization and indexing strategies for AI agents and developers.
 
 **Impact: CRITICAL**
 
-Without an index, every query is a collection scan—MongoDB reads every document to find matches. On a 10M document collection, that's 10M document reads for every single query, turning 5ms indexed lookups into 30-second full scans. Compound index field order matters: {status, date} supports queries on status alone OR status+date, but NOT date alone. The ESR rule (Equality-Sort-Range) determines optimal field ordering. Covered queries return results directly from the index without touching documents, making them 10-100× faster. Getting indexes wrong is the #1 cause of "MongoDB is slow" complaints—it's almost never MongoDB, it's missing or misconfigured indexes.
+Without an appropriate index, queries may require broad scans as collections grow. Compound index field order matters: `{ status, date }` supports queries on `status` alone or `status + date`, but not `date` alone. ESR (Equality, Sort, Range) is a strong default heuristic for compound index ordering, not a substitute for `explain()`. Covered queries can return results directly from the index without touching documents. Index design is one of the most common reasons an otherwise healthy MongoDB workload becomes slow.
 
 ### 1.1 Consider Index Size and Memory Impact
 
-**Impact: HIGH (Indexes must fit in RAM for optimal performance—10 indexes × 100MB each = 1GB of working set)**
+**Impact: HIGH (Index memory pressure can make query latency slower and less predictable)**
 
-**Indexes must fit in RAM for optimal performance—when indexes don't fit, queries hit disk and become orders of magnitude slower.** Each index on a 10M document collection might be 100-500MB. Create 10 indexes and you need 1-5GB just for indexes. Monitor index sizes, remove unused indexes, and use partial indexes to keep your working set in memory.
+**Indexes should fit in RAM for best performance.** When the active index working set does not fit comfortably in memory, queries can become slower and less predictable. Monitor index sizes, remove unused indexes, and use partial indexes when they match the workload.
 
 **Incorrect: creating indexes without considering memory impact**
 
@@ -98,9 +98,9 @@ db.orders.createIndex({ shippingAddress.city: 1 }) // 200MB
 db.orders.createIndex({ totalAmount: 1 })          // 80MB
 db.orders.createIndex({ customerId: 1, status: 1 })// 180MB
 db.orders.createIndex({ status: 1, createdAt: -1 })// 200MB
-// Total: 1.2GB of indexes for this one collection!
-// Server has 2GB WiredTiger cache → indexes don't fit!
-// Result: Constant page eviction, 10× slower queries
+// Total: 1.2GB of indexes for this one collection
+// Server has 2GB WiredTiger cache → active pages may not fit comfortably
+// Result: More cache pressure, evictions, and less predictable latency
 ```
 
 **Correct: strategic indexing with memory awareness**
@@ -1081,7 +1081,7 @@ Reference: [https://mongodb.com/docs/manual/tutorial/analyze-query-plan/](https:
 
 **Impact: CRITICAL (10-100× query performance—wrong order forces full index scan + in-memory sort)**
 
-**The ESR rule (Equality → Sort → Range) is the single most important concept for compound index design.** Wrong field order forces MongoDB to scan massive portions of the index and perform expensive in-memory sorts. A 10ms query becomes a 10-second query with incorrect ordering. This is the #1 cause of index-related performance issues.
+**The ESR rule (Equality → Sort → Range) is a strong default guideline for compound index design.** Wrong field order can force MongoDB to scan larger portions of the index or perform in-memory sorts, so use ESR as a starting point and confirm with `explain()`.
 
 **Incorrect: range field before sort—kills performance**
 
@@ -3054,11 +3054,13 @@ analyzeSparseIndex("users", "twitterHandle")
 
 Reference: [https://mongodb.com/docs/manual/core/index-sparse/](https://mongodb.com/docs/manual/core/index-sparse/)
 
-### 1.17 Use Text Indexes for Full-Text Search
+### 1.17 Use Text Indexes for Built-In $text Search
 
 **Impact: HIGH (Keyword search across documents: text index with stemming and ranking vs regex COLLSCAN)**
 
-**Text indexes enable efficient keyword search with stemming, stop words, and relevance ranking.** Searching for "running" matches "run", "runs", "runner" automatically. Without text indexes, you'd need regex patterns that can't use regular indexes and scan every document. For production search, consider Atlas Search for more features.
+Use this rule for built-in `$text` queries and text indexes. If the workload is Atlas Search, `$search`, `$searchMeta`, analyzers, synonyms, or autocomplete on Atlas-hosted data, use `mongodb-search` instead.
+
+**Text indexes enable efficient keyword search with stemming, stop words, and relevance ranking.** Searching for "running" matches "run", "runs", "runner" automatically. Without text indexes, you'd need regex patterns that can't use regular indexes and scan every document.
 
 **Incorrect: regex for keyword search—COLLSCAN**
 
@@ -3918,13 +3920,13 @@ Reference: [https://mongodb.com/docs/manual/core/indexes/index-types/index-wildc
 
 **Impact: HIGH**
 
-Even with perfect indexes, bad query patterns force collection scans. $ne and $nin cannot use indexes efficiently—they must scan everything to find "not equal" matches. Unanchored regex /pattern/ scans every document; anchored regex /^pattern/ uses the index. $exists:false forces scans because indexes don't contain missing values. The $in operator is optimized but has limits—1000+ values may be slower than multiple queries. Projections reduce network transfer and memory usage by 50-90% when you only need specific fields. MongoDB 8.0 introduced the `bulkWrite` command for single-request cross-collection batch operations (use transactions when you need all-or-nothing atomicity), and added the `sort` option to updateOne/replaceOne for deterministic updates when multiple documents match. These patterns determine whether your indexes actually get used or sit idle while MongoDB scans.
+Even with good indexes, bad query patterns can still lead to broad scans or poor selectivity. Negation operators are often low-selectivity, regex index use depends on pattern shape, `$exists` behavior depends on index type and missing-field semantics, and `$or` benefits when each clause is index-supportable. Projections reduce network transfer and memory usage when you only need specific fields. MongoDB 8.0 introduced the `bulkWrite` command for single-request cross-collection batch operations, and added the `sort` option to `updateOne()` and `replaceOne()` for deterministic single-document updates.
 
 ### 3.1 Anchor Regex Patterns with ^
 
 **Impact: HIGH (Anchored regex uses index (5ms); unanchored forces COLLSCAN (30 seconds on 10M docs))**
 
-**Only regex patterns starting with `^` can use indexes—unanchored patterns force a full collection scan.** An index on `email` makes `/^alice/` fast (seeks to "alice" range), but `/gmail/` must check every single document regardless of indexes. This is often a 1000× performance difference.
+**Regex index behavior depends on pattern shape.** Case-sensitive regex queries can use an index when one exists, and prefix expressions such as `/^alice/` are optimized best because MongoDB can bound the index range. Broad non-prefix regex patterns often degrade to wide scans.
 
 **Incorrect: unanchored regex—COLLSCAN regardless of index**
 
@@ -4027,13 +4029,13 @@ db.packages.find({ version: /^2\./ })
 
 | `/^prefix.*suffix$/` | ⚠️ Partial | Uses index for prefix, filters suffix |
 
-| `/suffix$/` | ❌ No | End anchor—must scan all |
+| `/suffix$/` | ❌ Usually no | End anchor often leads to broad scan behavior |
 
-| `/contains/` | ❌ No | Substring—must scan all |
+| `/contains/` | ❌ Usually no | Substring pattern often leads to broad scan behavior |
 
-| `/.*any.*/` | ❌ No | Greedy match—must scan all |
+| `/.*any.*/` | ❌ Usually no | Greedy pattern often leads to broad scan behavior |
 
-| `/^(a|b|c)/` | ❌ No | Alternation breaks anchoring |
+| `/^(a|b|c)/` | ⚠️ Verify with explain | Alternation can change index behavior; verify on the exact pattern |
 
 **Alternatives for substring search:**
 
@@ -4116,7 +4118,7 @@ Reference: [https://mongodb.com/docs/manual/reference/operator/query/regex/](htt
 
 **Impact: HIGH (Negation scans 90%+ of index—$in with positive values is 10-100× faster)**
 
-**Negation operators ($ne, $nin, $not) cannot efficiently use indexes—they scan everything except the excluded values.** If your collection has 1 million documents and you query `{ status: { $ne: "deleted" } }`, MongoDB scans 950,000 index entries to exclude 50,000. Use positive matching with $in instead, or restructure your schema to avoid negation patterns.
+**Negation operators ($ne, $nin, $not) are often low-selectivity and may perform no better than broad scans.** If your collection has 1 million documents and you query `{ status: { $ne: "deleted" } }`, MongoDB may still examine most of the index or documents. Prefer positive matching with `$in` when practical, or model explicit active predicates.
 
 **Incorrect: negation—scans almost entire index**
 
@@ -4508,7 +4510,7 @@ Reference: [https://mongodb.com/docs/manual/core/query-optimization/](https://mo
 
 **Impact: HIGH (Missing one index = full collection scan; all indexed = parallel index scans merged)**
 
-**If ANY clause in a `$or` query lacks an index, MongoDB performs a full collection scan.** Unlike `$and` where one indexed clause helps, `$or` requires ALL clauses to have indexes. With proper indexes, MongoDB performs parallel index scans and merges results efficiently. Without them, you're scanning every document.
+**For `$or` queries, each clause should be index-supported if you want an index-based `$or` plan.** If one clause is not supportable by an index, the optimizer can fall back to a broader scan strategy.
 
 **Incorrect: one clause missing index—full collection scan**
 
@@ -4525,9 +4527,8 @@ db.tasks.find({
 })
 
 // What happens:
-// MongoDB cannot use partial indexes for $or
-// Falls back to COLLSCAN of entire collection
-// Even though 2 of 3 clauses have indexes!
+// Because one clause is not index-supportable,
+// the optimizer may choose a broader scan strategy.
 
 // explain() shows:
 {

@@ -129,15 +129,16 @@ db.products.aggregate([
 
 ```javascript
 // $vectorSearch and $search return scores automatically.
-// For pipelines that don't return a score (e.g., $match, $sort),
-// you MUST add a $score stage:
+// For pipelines that do not return a score on their own, add $score:
 {
-  lexical: [
+  categoryBoost: [
     { $match: { category: "electronics" } },
-    { $score: { score: { $meta: "textScore" } } }  // required for $match-only pipeline
+    { $score: { score: 0.15 } }
   ]
 }
 ```
+
+Do not try to read `$meta: "textScore"` from a plain `$match` pipeline. That metadata exists only when a preceding stage actually produces it.
 
 **Score Details for Debugging:**
 
@@ -202,3 +203,4 @@ db.products.aggregate([
 3. Confirm version-gated behavior on your target MongoDB release before production rollout.
 
 Reference: [MongoDB $scoreFusion](https://mongodb.com/docs/manual/reference/operator/aggregation/scoreFusion/)
+Reference: [MongoDB $score](https://www.mongodb.com/docs/manual/reference/operator/aggregation/score/)

@@ -148,4 +148,4 @@ db.system.profile.aggregate([
 // High count = candidate for extended reference
 ```
 
-Reference: [Building with Patterns - Extended Reference](https://mongodb.com/blog/post/building-with-patterns-the-extended-reference-pattern)
+Reference: [Extended Reference Pattern](https://www.mongodb.com/docs/manual/data-modeling/design-patterns/handle-duplicate-data/extended-reference-pattern/)

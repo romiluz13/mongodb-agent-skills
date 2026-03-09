@@ -9,30 +9,32 @@ tags: community, preview, production-safety, mongot
 
 **Impact: CRITICAL (misclassifying preview systems can cause outages)**
 
-MongoDB Search and Vector Search in MongoDB Community are preview features. Treat them as evaluation tracks unless the user explicitly accepts preview risk.
+Self-managed Community Search guidance is release-sensitive. Before treating it as a production-ready path, confirm the current release status and the exact versioned Community Search docs for the deployment you are targeting.
 
-**Incorrect (production recommendation without caveat):**
+If the current release-status source marks the feature Preview or Public Preview, keep the recommendation evaluation-focused and require staging validation before production.
+
+**Incorrect (status-blind production recommendation):**
 
 ```text
-"Run business-critical workloads on Community Search without additional risk controls."
+"Recommend Community Search for strict-SLA production without checking current release status or versioned docs."
 ```
 
-**Correct (preview-safe recommendation):**
+**Correct (release-status-gated recommendation):**
 
 ```text
-- Label Community Search as Preview.
-- Recommend staging/perf testing before production.
-- For strict production SLAs, recommend Atlas Search or a fully supported path.
+- Check the current release-status source and Community Search docs for the target version.
+- Record whether the feature is GA, Preview, or Public Preview.
+- If it is Preview/Public Preview, require staging/perf validation and explicit risk acceptance before production.
 ```
 
 **How to verify:**
 
-- Guidance includes explicit Preview label.
-- Production path includes risk acceptance or managed alternative.
+- Guidance includes a current status label and source URL.
+- Production recommendations include exact version/deployment prerequisites.
 
 **When NOT to use this pattern:**
 
 - The user is only running local experimentation and accepts preview limitations.
 
-Reference: [Install MongoDB Community Edition](https://www.mongodb.com/docs/manual/administration/install-community.md)
-Reference: [Install MongoDB Search and MongoDB Vector Search (Community)](https://www.mongodb.com/docs/manual/administration/install-community.md#install-mongodb-search-and-mongodb-vector-search)
+Reference: [Preview Features](https://www.mongodb.com/docs/preview-features.md)
+Reference: [Connect to MongoDB Search Community](https://www.mongodb.com/docs/manual/core/search-in-community/connect-to-search.md)

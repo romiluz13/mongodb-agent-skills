@@ -1,13 +1,15 @@
 ---
-title: Use Bucket Pattern for Time-Series Data
+title: Use Manual Bucket Pattern Only When Time Series Collections Are Not a Fit
 impact: MEDIUM
-impactDescription: "Can reduce document/index volume and improve time-range query efficiency for suitable workloads"
+impactDescription: "Useful for custom bucketing workflows when native time series collections are not the right fit"
 tags: schema, patterns, bucket, time-series, iot, metrics, aggregation
 ---
 
-## Use Bucket Pattern for Time-Series Data
+## Use Manual Bucket Pattern Only When Time Series Collections Are Not a Fit
 
-**Group time-series data into buckets instead of one document per event.** For high-frequency measurements, bucketing can drastically reduce document and index volume while keeping time-range queries efficient.
+MongoDB docs recommend **time series collections for most applications that involve bucketing data by time**. Use this manual bucket pattern only when you specifically need custom bucket documents, per-bucket aggregates stored in the same document, or application-controlled bucket lifecycle that native time series collections do not fit.
+
+Use `pattern-time-series-collections` first. Fall back to this rule when native time series collections are not the right match.
 
 **Incorrect (one document per event):**
 
@@ -108,7 +110,7 @@ db.sensor_data.findOne(
 )
 ```
 
-**Alternative: MongoDB Time Series Collections (5.0+):**
+**Preferred default: MongoDB Time Series Collections (5.0+):**
 
 ```javascript
 // Native time-series support - handles bucketing automatically
@@ -131,6 +133,7 @@ db.sensor_data.insertOne({
 
 **When NOT to use this pattern:**
 
+- **Most time-bucketed workloads**: Start with time series collections before considering manual buckets.
 - **Random access patterns**: If you frequently query individual events by ID, not time ranges.
 - **Low volume**: If event volume is low, bucketing complexity may outweigh benefits.
 - **Varied event sizes**: Bucketing works best when events are uniform size.
@@ -150,4 +153,5 @@ db.sensor_data.aggregate([
 // Compare average document size with query latency and index growth trends
 ```
 
-Reference: [Building with Patterns - Bucket Pattern](https://mongodb.com/blog/post/building-with-patterns-the-bucket-pattern)
+Reference: [Bucket Pattern](https://www.mongodb.com/docs/manual/data-modeling/design-patterns/group-data/bucket-pattern/)
+Reference: [Time Series Collections](https://www.mongodb.com/docs/manual/core/timeseries/timeseries-collections/)

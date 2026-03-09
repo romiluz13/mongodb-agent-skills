@@ -139,7 +139,7 @@
       "ruleId": "index-dimensions-match",
       "ruleTitle": "numDimensions Must Match Embedding Model",
       "type": "bad",
-      "code": "// WRONG: OpenAI text-embedding-3-small outputs 1536 dims\n// but index specifies 768\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 768,  // WRONG! Model outputs 1536\n    similarity: \"cosine\"\n  }]\n})\n// Result: Documents won't be indexed, queries return nothing\n\n// WRONG: Guessing dimensions\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 512,  // Guessing is dangerous\n    similarity: \"cosine\"\n  }]\n})\n\n// WRONG: Exceeding maximum supported dimensions\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 9000,  // Exceeds maximum supported (8192)\n    similarity: \"cosine\"\n  }]\n})",
+      "code": "// WRONG: Stored/query vectors are length 1024\n// but the index is defined as 768\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 768,\n    similarity: \"cosine\"\n  }]\n})\n// Result: indexing/querying will fail or behave incorrectly\n\n// WRONG: Guessing dimensions\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 512,\n    similarity: \"cosine\"\n  }]\n})\n\n// WRONG: Exceeding maximum supported dimensions\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 9000,\n    similarity: \"cosine\"\n  }]\n})",
       "language": "javascript",
       "description": "wrong dimensions"
     },
@@ -147,7 +147,7 @@
       "ruleId": "index-dimensions-match",
       "ruleTitle": "numDimensions Must Match Embedding Model",
       "type": "good",
-      "code": "// CORRECT: OpenAI text-embedding-3-small = 1536 dimensions\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\"\n  }]\n})\n\n// CORRECT: OpenAI text-embedding-3-large = 3072 dimensions\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 3072,\n    similarity: \"cosine\"\n  }]\n})\n\n// CORRECT: Cohere embed-english-v3.0 = 1024 dimensions\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1024,\n    similarity: \"cosine\"\n  }]\n})",
+      "code": "// CORRECT: Match the actual vector length you store and query\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1024,\n    similarity: \"cosine\"\n  }]\n})",
       "language": "javascript",
       "description": "matching model dimensions"
     },
@@ -211,7 +211,7 @@
       "ruleId": "index-quantization",
       "ruleTitle": "Vector Quantization for Scale",
       "type": "bad",
-      "code": "// WRONG: 1M vectors at 1536 dimensions without quantization\n// RAM usage: ~6GB just for vectors + HNSW graph\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\"\n    // Missing quantization!\n  }]\n})",
+      "code": "// WRONG: large vector index with no quantization or measurement plan\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\"\n    // Missing quantization!\n  }]\n})",
       "language": "javascript",
       "description": "no quantization on large dataset"
     },
@@ -219,7 +219,7 @@
       "ruleId": "index-quantization",
       "ruleTitle": "Vector Quantization for Scale",
       "type": "good",
-      "code": "// CORRECT: Scalar quantization (3.75x RAM reduction)\n// Good for most embedding models\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\",\n    quantization: \"scalar\"  // int8 quantization\n  }]\n})\n\n// CORRECT: Binary quantization (24x RAM reduction)\n// Best for normalized embeddings (OpenAI, Voyage AI)\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\",\n    quantization: \"binary\"  // int1 quantization with rescoring\n  }]\n})",
+      "code": "// CORRECT: Scalar quantization\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\",\n    quantization: \"scalar\"\n  }]\n})\n\n// CORRECT: Binary quantization\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\",\n    quantization: \"binary\"\n  }]\n})",
       "language": "javascript",
       "description": "quantization enabled"
     },
@@ -289,17 +289,17 @@
     },
     {
       "ruleId": "perf-index-in-memory",
-      "ruleTitle": "Vector Index Must Fit in RAM",
+      "ruleTitle": "Keep the Vector Index Working Set in Memory When Sizing",
       "type": "bad",
-      "code": "// WRONG: Large index on small instance\n// 2M vectors \u00d7 1536 dims = ~12GB index\n// Running on M30 with 8GB RAM = spillover to disk\n\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\"\n    // No quantization on 2M vectors = 12GB needed\n  }]\n})\n// Result: Query latency goes from 50ms to 5000ms",
+      "code": "// WRONG: Large vector index with no memory-sizing validation\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\"\n    // No quantization and no Required Memory check\n  }]\n})",
       "language": "javascript",
       "description": "index exceeds available RAM"
     },
     {
       "ruleId": "perf-index-in-memory",
-      "ruleTitle": "Vector Index Must Fit in RAM",
+      "ruleTitle": "Keep the Vector Index Working Set in Memory When Sizing",
       "type": "good",
-      "code": "// Option 1: Enable quantization to reduce RAM\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\",\n    quantization: \"binary\"  // Reduces to ~0.5GB\n  }]\n})\n\n// Option 2: Upgrade cluster tier\n// M30 (8GB) \u2192 M40 (16GB) \u2192 M50 (32GB)\n\n// Option 3: Use partial indexing approach\n// Only index active/recent documents\ndb.products.createSearchIndex(\"active_vector_index\", \"vectorSearch\", {\n  fields: [\n    {\n      type: \"vector\",\n      path: \"embedding\",\n      numDimensions: 1536,\n      similarity: \"cosine\"\n    },\n    {\n      type: \"filter\",\n      path: \"status\"\n    }\n  ]\n})\n// Then always filter: filter: { status: \"active\" }",
+      "code": "// Option 1: Enable quantization\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\",\n    quantization: \"binary\"\n  }]\n})\n\n// Option 2: Increase available Search memory or Search Node capacity\n\n// Option 3: Use partial indexing approach\ndb.products.createSearchIndex(\"active_vector_index\", \"vectorSearch\", {\n  fields: [\n    {\n      type: \"vector\",\n      path: \"embedding\",\n      numDimensions: 1536,\n      similarity: \"cosine\"\n    },\n    {\n      type: \"filter\",\n      path: \"status\"\n    }\n  ]\n})",
       "language": "javascript",
       "description": "size index to fit RAM"
     },
@@ -307,7 +307,7 @@
       "ruleId": "perf-numcandidates-tradeoff",
       "ruleTitle": "numCandidates Trade-offs",
       "type": "bad",
-      "code": "// WRONG: Too low - poor recall\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 20,  // Too low for limit of 10\n      limit: 10\n    }\n  }\n])\n// Result: ~60% recall, fast but missing relevant results\n\n// WRONG: Too high - unnecessary latency\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 10000,  // Maximum - overkill for most cases\n      limit: 10\n    }\n  }\n])\n// Result: ~99.9% recall, but 5x slower than needed",
+      "code": "// WRONG: Too low - poor recall\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 20,\n      limit: 10\n    }\n  }\n])\n// Result: lower overlap with exact search\n\n// WRONG: Too high - unnecessary latency\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 10000,\n      limit: 10\n    }\n  }\n])\n// Result: higher latency without proving the quality gain is needed",
       "language": "javascript",
       "description": "extreme values"
     },
@@ -315,7 +315,7 @@
       "ruleId": "perf-numcandidates-tradeoff",
       "ruleTitle": "numCandidates Trade-offs",
       "type": "good",
-      "code": "// Real-time search: Optimize for latency\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 100,  // 10x limit - fast, acceptable recall\n      limit: 10\n    }\n  }\n])\n// Result: ~85% recall, < 20ms latency\n\n// Quality-focused search: Optimize for recall\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 500,  // 50x limit - high recall\n      limit: 10\n    }\n  }\n])\n// Result: ~97% recall, < 50ms latency\n\n// Critical search: Maximum recall\ndb.legalDocs.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 2000,  // 200x limit\n      limit: 10\n    }\n  }\n])\n// Result: ~99% recall, < 100ms latency",
+      "code": "// Interactive baseline\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10\n    }\n  }\n])\n\n// Higher-recall trial\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 500,\n      limit: 10\n    }\n  }\n])\n\n// High-breadth trial\ndb.legalDocs.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 2000,\n      limit: 10\n    }\n  }\n])",
       "language": "javascript",
       "description": "tuned for use case"
     },
@@ -323,7 +323,7 @@
       "ruleId": "perf-prefilter-narrow",
       "ruleTitle": "Pre-filter to Narrow Candidate Set",
       "type": "bad",
-      "code": "// WRONG: Searching 1M vectors without filtering\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10\n      // No filter - searches ALL 1M products\n    }\n  }\n])\n// Result: Slower queries, potentially irrelevant results",
+      "code": "// WRONG: Searching a broad vector corpus without filtering\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10\n      // No filter - searches the entire broad corpus\n    }\n  }\n])\n// Result: Slower queries, potentially irrelevant results",
       "language": "javascript",
       "description": "no filtering on large dataset"
     },
@@ -331,7 +331,7 @@
       "ruleId": "perf-prefilter-narrow",
       "ruleTitle": "Pre-filter to Narrow Candidate Set",
       "type": "good",
-      "code": "// Filter by category first\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10,\n      filter: { category: \"electronics\" }  // 1M \u2192 100K candidates\n    }\n  }\n])\n\n// Multi-filter for targeted search\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10,\n      filter: {\n        $and: [\n          { category: \"electronics\" },\n          { brand: \"Apple\" },\n          { inStock: true }\n        ]\n      }\n    }\n  }\n])\n// 1M \u2192 5K candidates = 200x fewer comparisons",
+      "code": "// Filter by category first\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10,\n      filter: { category: \"electronics\" }\n    }\n  }\n])\n\n// Multi-filter for targeted search\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 200,\n      limit: 10,\n      filter: {\n        $and: [\n          { category: \"electronics\" },\n          { brand: \"Apple\" },\n          { inStock: true }\n        ]\n      }\n    }\n  }\n])",
       "language": "javascript",
       "description": "strategic pre-filtering"
     },
@@ -339,7 +339,7 @@
       "ruleId": "perf-quantization-scale",
       "ruleTitle": "Enable Quantization at Scale",
       "type": "bad",
-      "code": "// WRONG: 500K vectors without quantization\n// RAM required: ~3GB just for vectors\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\"\n    // No quantization - expensive!\n  }]\n})",
+      "code": "// WRONG: large vector index with no quantization plan\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\"\n    // No quantization - expensive!\n  }]\n})",
       "language": "javascript",
       "description": "no quantization on large dataset"
     },
@@ -347,7 +347,7 @@
       "ruleId": "perf-quantization-scale",
       "ruleTitle": "Enable Quantization at Scale",
       "type": "good",
-      "code": "// Dataset size determines quantization type\nconst vectorCount = await db.products.countDocuments({ embedding: { $exists: true } })\n\nif (vectorCount > 1000000) {\n  // > 1M vectors: Use binary (24x reduction)\n  db.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n    fields: [{\n      type: \"vector\",\n      path: \"embedding\",\n      numDimensions: 1536,\n      similarity: \"cosine\",\n      quantization: \"binary\"\n    }]\n  })\n} else if (vectorCount > 100000) {\n  // 100K-1M vectors: Use scalar (3.75x reduction)\n  db.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n    fields: [{\n      type: \"vector\",\n      path: \"embedding\",\n      numDimensions: 1536,\n      similarity: \"cosine\",\n      quantization: \"scalar\"\n    }]\n  })\n}",
+      "code": "// Use docs-backed signals first:\n// - large datasets (typically 100K+ vectors)\n// - Atlas Required Memory / vector memory pressure\n// Then benchmark scalar vs binary on your own workload.\ndb.products.createSearchIndex(\"vector_index\", \"vectorSearch\", {\n  fields: [{\n    type: \"vector\",\n    path: \"embedding\",\n    numDimensions: 1536,\n    similarity: \"cosine\",\n    quantization: \"scalar\"\n  }]\n})",
       "language": "javascript",
       "description": "quantization enabled"
     },
@@ -363,7 +363,7 @@
       "ruleId": "perf-search-nodes",
       "ruleTitle": "Dedicated Search Nodes for Production",
       "type": "good",
-      "code": "Production Architecture:\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510     \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  Database Node  \u2502     \u2502   Search Node   \u2502\n\u2502     (mongod)    \u2502\u2500\u2500\u2500\u2500\u25b6\u2502    (mongot)     \u2502\n\u2502    M40 tier     \u2502     \u2502    S30 tier     \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518     \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n        \u2502                       \u2502\n   Database ops           Vector Search\n   (reads/writes)          (queries)",
+      "code": "Production Architecture:\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510     \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  Database Node  \u2502     \u2502   Search Node   \u2502\n\u2502     (mongod)    \u2502\u2500\u2500\u2500\u2500\u25b6\u2502    (mongot)     \u2502\n\u2502 dedicated tier \u2502     \u2502 sized per usage \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518     \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n        \u2502                       \u2502\n   Database ops           Vector Search\n   (reads/writes)          (queries)",
       "language": "javascript",
       "description": "dedicated Search Nodes"
     },
@@ -371,7 +371,7 @@
       "ruleId": "query-ann-vs-enn",
       "ruleTitle": "ANN vs ENN Search",
       "type": "bad",
-      "code": "// WRONG: Using ENN for real-time user queries (too slow)\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      exact: true,  // Too slow for real-time!\n      limit: 10\n    }\n  }\n])\n// Result: 500ms+ latency on large datasets\n\n// WRONG: Using low numCandidates ANN for critical searches\ndb.legalDocs.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 50,  // Too low for legal discovery\n      limit: 10\n    }\n  }\n])\n// Result: Missed relevant documents in critical search",
+      "code": "// WRONG: Using ENN for broad interactive search without validating latency\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      exact: true,\n      limit: 10\n    }\n  }\n])\n\n// WRONG: Using low numCandidates ANN for critical searches\ndb.legalDocs.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 50,\n      limit: 10\n    }\n  }\n])",
       "language": "javascript",
       "description": "always using one approach"
     },
@@ -379,7 +379,7 @@
       "ruleId": "query-ann-vs-enn",
       "ruleTitle": "ANN vs ENN Search",
       "type": "good",
-      "code": "// ANN: Real-time user-facing search (fast, good enough)\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: userQueryEmbedding,\n      numCandidates: 200,  // ANN with 20x rule\n      limit: 10\n    }\n  }\n])\n// Result: ~10ms latency, ~90%+ recall\n\n// ENN: Batch processing / critical searches (accurate)\ndb.legalDocs.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: searchEmbedding,\n      exact: true,  // ENN for perfect recall\n      limit: 100\n    }\n  }\n])\n// Result: ~500ms latency, 100% recall\n\n// ENN: Measuring recall accuracy of ANN\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: testQueryEmbedding,\n      exact: true,  // Ground truth for testing\n      limit: 10\n    }\n  }\n])",
+      "code": "// ANN: interactive search baseline\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: userQueryEmbedding,\n      numCandidates: 200,\n      limit: 10\n    }\n  }\n])\n\n// ENN: batch processing / critical search\n db.legalDocs.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: searchEmbedding,\n      exact: true,\n      limit: 100\n    }\n  }\n])\n\n// ENN: measuring ANN overlap\n db.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: testQueryEmbedding,\n      exact: true,\n      limit: 10\n    }\n  }\n])",
       "language": "javascript",
       "description": "choosing based on use case"
     },
@@ -401,7 +401,7 @@
     },
     {
       "ruleId": "query-lexical-prefilter",
-      "ruleTitle": "Lexical Prefilters for Vector Search",
+      "ruleTitle": "Route Lexical Prefilter Wiring to mongodb-search",
       "type": "bad",
       "code": "// LIMITED: $vectorSearch only supports basic MQL pre-filters\n// Cannot use fuzzy search, phrase matching, or wildcard patterns\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: [...],\n      numCandidates: 100,\n      limit: 10,\n      filter: {\n        category: \"electronics\"  // Basic equality only\n        // Cannot do: fuzzy match on \"electronnics\"\n        // Cannot do: phrase match on \"high performance laptop\"\n        // Cannot do: wildcard \"electro*\"\n      }\n    }\n  }\n])",
       "language": "javascript",
@@ -409,7 +409,7 @@
     },
     {
       "ruleId": "query-lexical-prefilter",
-      "ruleTitle": "Lexical Prefilters for Vector Search",
+      "ruleTitle": "Route Lexical Prefilter Wiring to mongodb-search",
       "type": "good",
       "code": "// ADVANCED: $search.vectorSearch supports Atlas Search operators\ndb.products.aggregate([\n  {\n    $search: {\n      index: \"search_vector_index\",  // Atlas Search index with vector type\n      vectorSearch: {\n        path: \"embedding\",\n        queryVector: queryEmbedding,\n        numCandidates: 100,\n        limit: 10,\n        filter: {\n          compound: {\n            must: [\n              {\n                text: {\n                  query: \"laptop\",\n                  path: \"description\",\n                  fuzzy: { maxEdits: 1 }  // Fuzzy matching!\n                }\n              }\n            ],\n            should: [\n              {\n                phrase: {\n                  query: \"high performance\",\n                  path: \"title\"  // Phrase matching!\n                }\n              }\n            ]\n          }\n        }\n      }\n    }\n  },\n  {\n    $project: {\n      title: 1,\n      score: { $meta: \"searchScore\" }\n    }\n  }\n])",
       "language": "javascript",
@@ -451,7 +451,7 @@
       "ruleId": "query-same-embedding-model",
       "ruleTitle": "Use Same Embedding Model for Data and Query",
       "type": "bad",
-      "code": "// Data was embedded with OpenAI text-embedding-3-small\n// db.products documents have embeddings from OpenAI\n\n// WRONG: Query using different model (Cohere)\nconst queryEmbedding = await cohereClient.embed({\n  texts: [\"laptop for programming\"],\n  model: \"embed-english-v3.0\"  // WRONG MODEL!\n})\n\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",  // Contains OpenAI embeddings\n      queryVector: queryEmbedding,  // Cohere embedding - INCOMPATIBLE!\n      numCandidates: 200,\n      limit: 10\n    }\n  }\n])\n// Result: Garbage results or no meaningful matches\n\n// WRONG: Using different model version\n// Data embedded with text-embedding-ada-002\nconst queryEmbedding = await openai.embeddings.create({\n  input: \"laptop for programming\",\n  model: \"text-embedding-3-small\"  // Different version!\n})\n// Result: Suboptimal results due to different vector spaces",
+      "code": "// Documents were embedded with provider-A model v1\n\n// WRONG: Query embedding generated with a different model family\nconst queryEmbedding = await embeddingClient.embed({\n  input: [\"laptop for programming\"],\n  model: \"provider-b-model-v1\"\n})\n\ndb.products.aggregate([\n  {\n    $vectorSearch: {\n      index: \"vector_index\",\n      path: \"embedding\",\n      queryVector: queryEmbedding.data[0].embedding,\n      numCandidates: 200,\n      limit: 10\n    }\n  }\n])\n\n// WRONG: Same provider, but different model family without documented compatibility\nconst secondQueryEmbedding = await embeddingClient.embed({\n  input: [\"laptop for programming\"],\n  model: \"provider-a-model-v2\"\n})",
       "language": "javascript",
       "description": "mismatched models"
     },
@@ -459,7 +459,7 @@
       "ruleId": "query-same-embedding-model",
       "ruleTitle": "Use Same Embedding Model for Data and Query",
       "type": "good",
-      "code": "// Store model information with documents\n{\n  _id: ObjectId(\"...\"),\n  content: \"Product description...\",\n  embedding: [0.1, 0.2, ...],\n  metadata: {\n    embeddingModel: \"text-embedding-3-small\",\n    embeddingDimensions: 1536,\n    embeddedAt: ISODate(\"2024-01-15\")\n  }\n}\n\n// Check model consistency before querying\nconst sampleDoc = await db.products.findOne(\n  { embedding: { $exists: true } },\n  { \"metadata.embeddingModel\": 1 }\n)\nconsole.log(\"Collection uses:\", sampleDoc.metadata.embeddingModel)\n// Ensure query uses same model",
+      "code": "// Store model information with documents\n{\n  _id: ObjectId(\"...\"),\n  content: \"Product description...\",\n  embedding: [0.1, 0.2, ...],\n  metadata: {\n    embeddingModel: \"provider-a-model-v1\",\n    embeddingDimensions: 1024,\n    embeddedAt: ISODate(\"2024-01-15\")\n  }\n}\n\n// Check model consistency before querying\nconst sampleDoc = await db.products.findOne(\n  { embedding: { $exists: true } },\n  { \"metadata.embeddingModel\": 1 }\n)\nconsole.log(\"Collection uses:\", sampleDoc.metadata.embeddingModel)\n// Ensure query uses same model",
       "language": "javascript",
       "description": "consistent model usage"
     },

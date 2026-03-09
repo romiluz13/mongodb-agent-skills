@@ -9,15 +9,20 @@ tags: rankFusion, scoreFusion, version-gates, hybrid
 
 **Impact: HIGH (unsupported fusion usage fails at runtime)**
 
-`$rankFusion` requires MongoDB 8.0+, `$scoreFusion` requires MongoDB 8.2+. Both require same-collection pipelines and allow only specific selection/ranking stages.
+`$rankFusion` requires MongoDB 8.0+, `$scoreFusion` requires MongoDB 8.2+. Both require same-collection pipelines, but their allowed selection-pipeline stages are not identical.
 
-$rankFusion subpipelines accept ONLY these stages:
-| Search Stages    | $match, $search, $vectorSearch, $sample, $geoNear |
-| Ordering Stages  | $sort |
+`$rankFusion` selection pipelines accept only:
+| Search Stages | $match, $search, $vectorSearch, $sample, $geoNear |
+| Ordering Stages | $sort |
 | Pagination Stages | $skip, $limit |
 
-$scoreFusion subpipelines accept the same stage list.
-Any other stage causes an error.
+`$scoreFusion` selection pipelines accept only:
+| Search Stages | $match, $search, $vectorSearch, $geoNear |
+| Ordering Stages | $sort |
+| Pagination Stages | $skip, $limit |
+| Scoring Stages | $score |
+
+Any other stage causes an error. Use `$score` in `$scoreFusion` when a pipeline otherwise would not produce a score.
 
 For reranking, use `$rankFusion` (RRF) or `$scoreFusion`, or call an external reranking API from application code.
 
@@ -40,15 +45,19 @@ For reranking, use `$rankFusion` (RRF) or `$scoreFusion`, or call an external re
 
 ```javascript
 // 1) Check server version before choosing fusion operator.
-// 2) Keep subpipelines to allowed stages only.
-// 3) For $scoreFusion, ensure each pipeline is a scoring pipeline.
+// 2) Keep selection pipelines to the operator-specific allowed stages only.
+// 3) For $scoreFusion, ensure each pipeline returns a score.
 {
   $scoreFusion: {
     input: {
       normalization: "none",
       pipelines: {
         lexical: [{ $search: { text: { query: "laptop", path: "description" } } }, { $limit: 50 }],
-        semantic: [{ $vectorSearch: { index: "vector_idx", path: "embedding", queryVector: [0.1, 0.2], numCandidates: 200, limit: 50 } }]
+        semantic: [{ $vectorSearch: { index: "vector_idx", path: "embedding", queryVector: [0.1, 0.2], numCandidates: 200, limit: 50 } }],
+        categoryBoost: [
+          { $match: { category: "electronics" } },
+          { $score: { score: 0.15 } }
+        ]
       }
     },
     combination: {
@@ -61,7 +70,8 @@ For reranking, use `$rankFusion` (RRF) or `$scoreFusion`, or call an external re
 **How to verify:**
 
 - Deployment version is validated before pipeline generation.
-- Subpipelines pass allowed-stage checks (`$search`, `$vectorSearch`, `$match`, `$sort`, `$geoNear`, plus pagination stages where supported; `rankFusion` also permits `$sample`).
+- `rankFusion` pipelines pass allowed-stage checks (`$match`, `$search`, `$vectorSearch`, `$sample`, `$geoNear`, `$sort`, `$skip`, `$limit`).
+- `scoreFusion` pipelines pass allowed-stage checks (`$match`, `$search`, `$vectorSearch`, `$geoNear`, `$sort`, `$skip`, `$limit`, `$score`).
 - `rankFusion`/`scoreFusion` pipelines run against one collection only.
 - For `$scoreFusion`, each pipeline returns a score (or includes `$score` when needed).
 

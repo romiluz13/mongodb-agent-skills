@@ -2,6 +2,40 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.4.0] - 2026-03-09
+
+### Changed
+- Ran a new independent audit against current official MongoDB docs pages and treated docs-site guidance as the canonical source for skill wording, version gates, and examples.
+- **mongodb-ai**:
+  - broadened scope beyond Atlas-only assumptions where current docs support multiple deployment tracks
+  - removed stale Atlas automated-embedding preview paths and third-party model-dimension tables
+  - tightened hybrid-search boundaries with `mongodb-search`
+  - replaced unsupported RAM formulas, tier pairings, benchmark numbers, and hard quantization heuristics with docs-backed memory/Required Memory guidance
+  - normalized ANN/ENN, `numCandidates`, HNSW, Search Nodes, and quantization guidance to focus on current defaults plus benchmark/measurement workflows
+- **mongodb-search**:
+  - corrected Community Search guidance to require checking current release status and versioned docs before production recommendations
+  - corrected `$rankFusion`/`$scoreFusion` stage gating and `$search` vs `$searchMeta` return-shape guidance
+  - removed unsupported absolute runbook wording in operations guidance
+- **mongodb-query-and-index-optimize**:
+  - narrowed text-search guidance to built-in `$text` and routed Atlas Search semantics to `mongodb-search`
+  - softened ESR, regex, `$or`, and index-memory claims where prior wording was stronger than current docs
+- **mongodb-schema-design**:
+  - made time series collections the default recommendation for most time-bucketed workloads
+  - replaced remaining blog references with current docs pages
+  - reduced overlap with query/index cleanup guidance and softened unsupported absolutes in compiled mirrors
+- **mongodb-transactions-consistency**:
+  - removed the blog-sourced `1,000 documents per transaction` rule from canonical guidance
+  - corrected duplicate-key upsert retry behavior to `7.0.22+ / 8.0.11+ / 8.1+`
+  - fixed compiled observability guidance so it no longer discouraged production instrumentation
+
+### Version Bumps
+- `mongodb-ai`: `1.6.0` → `1.7.0`
+- `mongodb-query-and-index-optimize`: `2.5.0` → `2.6.0`
+- `mongodb-schema-design`: `2.3.0` → `2.4.0`
+- `mongodb-search`: `1.1.0` → `1.2.0`
+- `mongodb-transactions-consistency`: `1.1.0` → `1.2.0`
+- Plugin release version: `1.3.0` → `1.4.0`
+
 ## [1.3.0] - 2026-03-02
 
 ### Added

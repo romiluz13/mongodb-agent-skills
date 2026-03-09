@@ -1,6 +1,6 @@
 # MongoDB AI & Vector Search Best Practices
 
-**Version 1.5.0**
+**Version 1.7.0**
 MongoDB
 February 2026
 
@@ -14,7 +14,7 @@ February 2026
 
 ## Abstract
 
-MongoDB Atlas Vector Search and AI integration patterns for AI agents and developers. Contains 33 rules across 6 categories: Vector Index Creation (CRITICAL - vector field definition, similarity functions, filter fields, quantization, dimension matching, multi-tenant architecture, Views for partial indexing, HNSW options, automated embedding), $vectorSearch Queries (CRITICAL - first-stage requirement, numCandidates tuning, ANN vs ENN search, pre-filtering with $exists/$ne/$not, lexical prefilters via $search.vectorSearch for fuzzy/phrase/geo, score retrieval, embedding model consistency), Performance Tuning (HIGH - quantization at scale, index memory requirements, numCandidates trade-offs, pre-filter optimization, explain for vector search, dedicated Search Nodes), RAG Patterns (HIGH - ingestion patterns, retrieval patterns, context window management, metadata filtering), Hybrid Search (MEDIUM - $rankFusion usage, $scoreFusion for score-based combination, weight tuning, sub-pipeline limitations), AI Agent Integration (MEDIUM - memory schema design, semantic memory retrieval, session context storage). Each rule includes incorrect/correct code examples with quantified impact metrics, 'When NOT to use' exceptions, and verification commands. This skill bridges the critical knowledge gap where AI assistants have outdated information about MongoDB Vector Search features.
+MongoDB Vector Search and AI integration patterns for AI agents and developers. Contains 33 rules across 6 categories: Vector Index Creation (CRITICAL - vector field definition, similarity functions, filter fields, quantization, dimension matching, multi-tenant architecture, Views for partial indexing, HNSW options, automated embedding), $vectorSearch Queries (CRITICAL - first-stage requirement, numCandidates tuning, ANN vs ENN search, pre-filtering with supported MQL operators, score retrieval, embedding model consistency), Performance Tuning (HIGH - quantization at scale, index memory requirements, numCandidates trade-offs, pre-filter optimization, explain for vector search, dedicated Search Nodes), RAG Patterns (HIGH - ingestion patterns, retrieval patterns, context window management, metadata filtering), Hybrid Search (MEDIUM - fusion-vs-rerank strategy, score-based combination, and weight tuning), AI Agent Integration (MEDIUM - memory schema design, semantic memory retrieval, session context storage). This skill covers Atlas clusters, self-managed deployments, and local Atlas deployments created with Atlas CLI. Lexical search-engine semantics and hybrid stage/operator legality are owned by mongodb-search.
 
 ---
 
@@ -33,7 +33,7 @@ MongoDB Atlas Vector Search and AI integration patterns for AI agents and develo
 2. [$vectorSearch Queries](#2-$vectorsearch-queries) — **CRITICAL**
    - 2.1 [$vectorSearch Must Be First Pipeline Stage](#21-vectorsearch-must-be-first-pipeline-stage)
    - 2.2 [ANN vs ENN Search](#22-ann-vs-enn-search)
-   - 2.3 [Lexical Prefilters for Vector Search](#23-lexical-prefilters-for-vector-search)
+   - 2.3 [Route Lexical Prefilter Wiring to mongodb-search](#23-route-lexical-prefilter-wiring-to-mongodb-search)
    - 2.4 [numCandidates Tuning (The 20x Rule)](#24-numcandidates-tuning-the-20x-rule)
    - 2.5 [Pre-Filtering Vector Search](#25-pre-filtering-vector-search)
    - 2.6 [Retrieving Vector Search Scores](#26-retrieving-vector-search-scores)
@@ -44,7 +44,7 @@ MongoDB Atlas Vector Search and AI integration patterns for AI agents and develo
    - 3.3 [Explain Vector Search Queries](#33-explain-vector-search-queries)
    - 3.4 [numCandidates Trade-offs](#34-numcandidates-trade-offs)
    - 3.5 [Pre-filter to Narrow Candidate Set](#35-pre-filter-to-narrow-candidate-set)
-   - 3.6 [Vector Index Must Fit in RAM](#36-vector-index-must-fit-in-ram)
+   - 3.6 [Keep the Vector Index Working Set in Memory When Sizing](#36-keep-the-vector-index-working-set-in-memory-when-sizing)
 4. [RAG Patterns](#4-rag-patterns) — **HIGH**
    - 4.1 [Managing LLM Context Window Limits](#41-managing-llm-context-window-limits)
    - 4.2 [RAG Ingestion Pattern](#42-rag-ingestion-pattern)
@@ -66,7 +66,7 @@ MongoDB Atlas Vector Search and AI integration patterns for AI agents and develo
 
 **Impact: CRITICAL**
 
-Vector indexes are fundamentally different from traditional MongoDB indexes. They require specific parameters that AI assistants often get wrong due to knowledge cutoffs. The index definition must include: `type: "vector"`, `path` to the embedding field, `numDimensions` that EXACTLY matches your embedding model output (e.g., 1536 for OpenAI text-embedding-3-small), and `similarity` function (cosine, euclidean, or dotProduct). Getting numDimensions wrong results in indexing failures. Choosing the wrong similarity function produces incorrect rankings. Filter fields require separate `type: "filter"` definitions. Quantization (scalar or binary) can reduce RAM by 3.75x to 24x but requires understanding the trade-offs. Multi-tenant architectures should use a single collection with `tenant_id` pre-filtering. Views enable partial indexing for specific document subsets. HNSW parameters (maxEdges, numEdgeCandidates) can be tuned for specific workloads. Automated embedding eliminates client-side embedding code. These are the foundational decisions that determine whether vector search works at all.
+Vector indexes are fundamentally different from traditional MongoDB indexes. They require parameters that AI assistants often get wrong: `type: "vector"`, `path` to the embedding field, `numDimensions` that exactly matches the vector length you store and query, and a `similarity` function (`cosine`, `euclidean`, or `dotProduct`). Getting `numDimensions` wrong breaks indexing or query correctness. Filter fields require separate `type: "filter"` definitions. Quantization reduces memory requirements but has trade-offs that should be validated against Atlas metrics. Multi-tenant architectures should use a single collection with `tenant_id` pre-filtering. Views enable partial indexing for specific document subsets. HNSW parameters (`maxEdges`, `numEdgeCandidates`) are release-sensitive tuning controls, not a default tuning requirement. Automated embedding is deployment-specific and should be routed through the dedicated rule.
 
 ### 1.1 Automated Embedding Generation
 
@@ -76,7 +76,7 @@ MongoDB automated embedding now has deployment-specific behavior. Use the syntax
 
 - **Self-managed MongoDB Community Edition 8.2+ with Search/Vector Search (`mongot`)**: Preview feature that uses `autoEmbed`.
 
-- **Atlas**: separate Private Preview track with different setup and syntax expectations.
+- **Atlas clusters and local Atlas deployments created with Atlas CLI**: automated embedding is not yet available; use manual embedding pipelines instead.
 
 Using the wrong syntax for the wrong deployment type causes failures or incorrect assumptions.
 
@@ -153,13 +153,11 @@ db.listingsAndReviews.aggregate([
 
   - Preview feature: validate behavior per release before production use
 
-- **Atlas private preview path**:
+- **Atlas**:
 
-  - M10+ cluster
+  - Automated embedding is not yet available on Atlas
 
-  - private-preview enrollment and constraints apply
-
-  - inference service currently runs on GCP even if your cluster is on another provider
+  - Use manual embedding pipelines: generate embeddings in application code, store in the vector field, then index with `$vectorSearch`
 
 **When Automated Embedding is Triggered:**
 
@@ -183,7 +181,7 @@ await db.products.insertMany(documents)
 
 1. Community 8.2+ preview guidance uses `autoEmbed` (with `modality` + model) in index definitions.
 
-2. Atlas private preview guidance has separate docs and can differ in exact syntax and supported model list.
+2. Atlas automated embedding is not yet available; use manual embedding pipelines on Atlas.
 
 3. Keep deployment assumptions explicit in playbooks; do not mix syntax from one track into the other.
 
@@ -377,26 +375,41 @@ Reference: [https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-typ
 
 HNSW (Hierarchical Navigable Small World) graph parameters control index build quality and search accuracy. Tune for your workload only after baseline testing with defaults.
 
-**Incorrect: ignoring HNSW options**
+`hnswOptions` is documented as a Preview capability. Treat non-default tuning as release-sensitive and re-validate on upgrades.
+
+**Incorrect: cargo-cult tuning without evidence**
 
 ```javascript
-// Using only defaults without considering workload
+// WRONG: copying non-default values into production without testing
+db.products.createSearchIndex("vector_index", "vectorSearch", {
+  fields: [{
+    type: "vector",
+    path: "embedding",
+    numDimensions: 1536,
+    similarity: "cosine",
+    hnswOptions: {
+      maxEdges: 64,
+      numEdgeCandidates: 800
+    }
+  }]
+})
+// Result: higher build and memory cost without proof it improves this workload
+```
+
+**Correct: start from defaults; tune only after measurement**
+
+```javascript
+// Baseline: use current defaults first
 db.products.createSearchIndex("vector_index", "vectorSearch", {
   fields: [{
     type: "vector",
     path: "embedding",
     numDimensions: 1536,
     similarity: "cosine"
-    // No hnswOptions - uses defaults
   }]
 })
-// Result: May be suboptimal for specific use cases
-```
 
-**Correct: configured HNSW options**
-
-```javascript
-// High-recall configuration (better accuracy)
+// Tune only after baseline tests show a need
 db.products.createSearchIndex("vector_index", "vectorSearch", {
   fields: [{
     type: "vector",
@@ -404,22 +417,8 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
     numDimensions: 1536,
     similarity: "cosine",
     hnswOptions: {
-      maxEdges: 64,           // More connections per node
-      numEdgeCandidates: 400  // More candidates during build
-    }
-  }]
-})
-
-// Fast-build configuration (quicker indexing)
-db.products.createSearchIndex("vector_index", "vectorSearch", {
-  fields: [{
-    type: "vector",
-    path: "embedding",
-    numDimensions: 1536,
-    similarity: "cosine",
-    hnswOptions: {
-      maxEdges: 16,           // Fewer connections
-      numEdgeCandidates: 100  // Minimum valid value
+      maxEdges: 32,
+      numEdgeCandidates: 200
     }
   }]
 })
@@ -428,81 +427,15 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
 **HNSW Parameters Explained:**
 
 | Parameter | Default | Range | Effect |
-
 |-----------|---------|-------|--------|
-
 | `maxEdges` | 16 | 16-64 | Connections per node in graph |
-
 | `numEdgeCandidates` | 100 | 100-3200 | Candidates evaluated during build |
-
-**Trade-offs:**
-
-```javascript
-Higher maxEdges / numEdgeCandidates:
-  + Better recall
-  + More accurate results
-  - Larger index size
-  - Slower index build
-  - More memory usage
-
-Lower maxEdges / numEdgeCandidates:
-  + Faster index build
-  + Smaller index size
-  + Less memory usage
-  - Lower recall
-  - May miss relevant results
-```
-
-**Recommended Configurations:**
-
-| Use Case | maxEdges | numEdgeCandidates | Notes |
-
-|----------|----------|-------------------|-------|
-
-| Default | 16 | 100 | Good baseline before tuning |
-
-| High precision | 32-64 | 400-800 | Higher recall, higher resource cost |
-
-| Large scale | 16-32 | 100-300 | Control index cost at scale |
-
-| Rapid prototyping | 16 | 100 | Fastest valid build profile |
 
 **When to Adjust:**
 
-```javascript
-// Scenario 1: Low recall despite high numCandidates in queries
-// Solution: Increase maxEdges for better graph connectivity
-{
-  hnswOptions: { maxEdges: 32, numEdgeCandidates: 400 }
-}
-
-// Scenario 2: Index build taking too long
-// Solution: Reduce numEdgeCandidates
-{
-  hnswOptions: { maxEdges: 16, numEdgeCandidates: 150 }
-}
-
-// Scenario 3: Index too large for available RAM
-// Solution: Reduce both parameters
-{
-  hnswOptions: { maxEdges: 16, numEdgeCandidates: 120 }
-}
-```
-
-**Memory Impact:**
-
-```javascript
-Index memory ≈ numVectors × (dimensions × 4 bytes + maxEdges × 8 bytes)
-
-Example: 1M vectors, 1536 dims, maxEdges=32
-  Vectors: 1M × 1536 × 4 = 6.14 GB
-  Graph:   1M × 32 × 8   = 0.26 GB
-  Total:   ~6.4 GB
-
-With maxEdges=64:
-  Graph:   1M × 64 × 8   = 0.51 GB
-  Total:   ~6.65 GB
-```
+- Only after baseline testing with defaults.
+- When recall is still below target after query-level tuning.
+- When index build time or memory cost is a validated bottleneck.
 
 **Verify Configuration:**
 
@@ -522,12 +455,8 @@ db.products.getSearchIndexes().forEach(idx => {
 **When NOT to use this pattern:**
 
 - Default settings work well for most cases
-
-- Small datasets (< 100K vectors) - minimal impact
-
-- Using quantization (already optimizes memory)
-
-- Teams without reproducible benchmark data for recall/latency trade-offs
+- The target release or deployment path does not support `hnswOptions`
+- You do not have reproducible benchmark data for recall/latency/build-cost trade-offs
 
 1. Run the "Correct" index or query example on a staging dataset.
 
@@ -861,24 +790,22 @@ Reference: [https://mongodb.com/docs/atlas/atlas-vector-search/multi-tenant-arch
 
 **Impact: CRITICAL (Mismatched dimensions cause index failure or zero search results)**
 
-The `numDimensions` in your index MUST exactly match the output dimensions of your embedding model. Mismatches cause silent failures.
-
-**Maximum supported dimensions: 8192** (increased from 4096 in March 2025).
+The `numDimensions` in your index must exactly match the length of the vectors you index and query. MongoDB docs currently support up to `8192` dimensions for the vector field type.
 
 **Incorrect: wrong dimensions**
 
 ```javascript
-// WRONG: OpenAI text-embedding-3-small outputs 1536 dims
-// but index specifies 768
+// WRONG: Stored/query vectors are length 1024
+// but the index is defined as 768
 db.products.createSearchIndex("vector_index", "vectorSearch", {
   fields: [{
     type: "vector",
     path: "embedding",
-    numDimensions: 768,  // WRONG! Model outputs 1536
+    numDimensions: 768,
     similarity: "cosine"
   }]
 })
-// Result: Documents won't be indexed, queries return nothing
+// Result: indexing/querying will fail or behave incorrectly
 
 // WRONG: Guessing dimensions
 db.products.createSearchIndex("vector_index", "vectorSearch", {
@@ -901,30 +828,9 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
 })
 ```
 
-**Correct: matching model dimensions**
+**Correct: matching actual vector length**
 
 ```javascript
-// CORRECT: OpenAI text-embedding-3-small = 1536 dimensions
-db.products.createSearchIndex("vector_index", "vectorSearch", {
-  fields: [{
-    type: "vector",
-    path: "embedding",
-    numDimensions: 1536,
-    similarity: "cosine"
-  }]
-})
-
-// CORRECT: OpenAI text-embedding-3-large = 3072 dimensions
-db.products.createSearchIndex("vector_index", "vectorSearch", {
-  fields: [{
-    type: "vector",
-    path: "embedding",
-    numDimensions: 3072,
-    similarity: "cosine"
-  }]
-})
-
-// CORRECT: Cohere embed-english-v3.0 = 1024 dimensions
 db.products.createSearchIndex("vector_index", "vectorSearch", {
   fields: [{
     type: "vector",
@@ -935,31 +841,7 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
 })
 ```
 
-**Common Embedding Model Dimensions:**
-
-| Model | Dimensions |
-
-|-------|------------|
-
-| OpenAI text-embedding-3-small | 1536 |
-
-| OpenAI text-embedding-3-large | 3072 |
-
-| OpenAI text-embedding-ada-002 | 1536 |
-
-| Cohere embed-english-v3.0 | 1024 |
-
-| Cohere embed-multilingual-v3.0 | 1024 |
-
-| Voyage voyage-3-large | 1024 |
-
-| Voyage voyage-3.5 | 1024 |
-
-| Google text-embedding-004 | 768 |
-
-| HuggingFace all-MiniLM-L6-v2 | 384 |
-
-| HuggingFace all-mpnet-base-v2 | 768 |
+Provider output dimensions are provider-defined. Treat the provider response and a sample of stored vectors as the source of truth before creating or changing the index.
 
 **How to Check Your Embedding Dimensions:**
 
@@ -970,7 +852,7 @@ db.products.aggregate([
   { $limit: 1 },
   { $project: { dimensions: { $size: "$embedding" } } }
 ])
-// Output: { dimensions: 1536 }
+// Output: { dimensions: 1024 }
 
 // Verify all vectors have consistent dimensions
 db.products.aggregate([
@@ -1303,7 +1185,7 @@ db.products.getSearchIndexes()
 
 **When NOT to use this pattern:**
 
-- Using Automated Embedding feature (use `type: "text"` instead)
+- Using automated embedding (use the dedicated automated-embedding rule; current docs distinguish self-managed Community `autoEmbed` from manual-embedding workflows on Atlas)
 
 - Creating traditional search indexes (use Atlas Search)
 
@@ -1317,15 +1199,14 @@ Reference: [https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-typ
 
 ### 1.9 Vector Quantization for Scale
 
-**Impact: CRITICAL (Reduces RAM usage by 3.75x-24x for large vector datasets)**
+**Impact: CRITICAL (Reduces vector memory usage and can improve vector-search efficiency at scale)**
 
-Quantization compresses vectors to reduce RAM usage. Essential for datasets over 100K vectors. Scalar reduces RAM by 3.75x, binary by 24x.
+Quantization compresses vectors to reduce memory usage. MongoDB docs recommend considering quantization for larger datasets, typically `100,000+` vectors, and performance guidance also calls it out when vector memory requirements are large (for example, indexes over roughly `3 GB`). Benchmark before locking in the choice.
 
 **Incorrect: no quantization on large dataset**
 
 ```javascript
-// WRONG: 1M vectors at 1536 dimensions without quantization
-// RAM usage: ~6GB just for vectors + HNSW graph
+// WRONG: large vector index with no quantization or measurement plan
 db.products.createSearchIndex("vector_index", "vectorSearch", {
   fields: [{
     type: "vector",
@@ -1340,87 +1221,51 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
 **Correct: quantization enabled**
 
 ```javascript
-// CORRECT: Scalar quantization (3.75x RAM reduction)
-// Good for most embedding models
+// CORRECT: Scalar quantization
 db.products.createSearchIndex("vector_index", "vectorSearch", {
   fields: [{
     type: "vector",
     path: "embedding",
     numDimensions: 1536,
     similarity: "cosine",
-    quantization: "scalar"  // int8 quantization
+    quantization: "scalar"
   }]
 })
 
-// CORRECT: Binary quantization (24x RAM reduction)
-// Best for normalized embeddings (OpenAI, Voyage AI)
+// CORRECT: Binary quantization
 db.products.createSearchIndex("vector_index", "vectorSearch", {
   fields: [{
     type: "vector",
     path: "embedding",
     numDimensions: 1536,
     similarity: "cosine",
-    quantization: "binary"  // int1 quantization with rescoring
+    quantization: "binary"
   }]
 })
 ```
 
 **Quantization Comparison:**
 
-| Type | RAM Reduction | Accuracy | Best For |
+| Type | Memory Effect | Notes |
+|------|---------------|-------|
+| `none` | baseline | highest-fidelity baseline |
+| `scalar` | about `75%` less memory than full precision | docs position this as the general-purpose quantized option |
+| `binary` | about `97%` less memory than full precision | use with oversampling/rescoring; best results depend on embedding/model behavior |
 
-|------|---------------|----------|----------|
-
-| `none` | 1x (baseline) | Highest | < 100K vectors |
-
-| `scalar` | 3.75x | Good | Most models, < 1M vectors |
-
-| `binary` | 24x | Good* | Normalized embeddings, > 1M vectors |
-
-*Binary uses rescoring to maintain accuracy
-
-**RAM Calculation Example:**
-
-```javascript
-Without quantization:
-  1M vectors × 1536 dims × 4 bytes = 6.14 GB
-
-With scalar quantization:
-  1M vectors × 1536 dims × 1 byte + HNSW = ~1.64 GB
-
-With binary quantization:
-  1M vectors × 1536 dims × 0.125 bytes + rescoring = ~0.26 GB
-```
-
-**When to Enable Quantization:**
-
-```javascript
-// Check your vector count
-db.products.countDocuments({ embedding: { $exists: true } })
-
-// Rule of thumb:
-// < 100K vectors: quantization optional
-// 100K - 1M vectors: use scalar
-// > 1M vectors: use binary
-```
+MongoDB docs explicitly recommend using `dotProduct` similarity with normalized vectors to get the best results from vector quantization.
 
 **How to Verify RAM Usage:**
 
 ```javascript
-// Check index size in Atlas UI:
-// Clusters > Collection > Search Indexes > Size / Required Memory
-
-// Or via aggregation (estimate):
-db.products.aggregate([
-  { $collStats: { storageStats: {} } }
-])
+// Atlas UI:
+// Collections > Search Indexes > Required Memory
+//
+// Re-run representative ANN/ENN comparisons after changing quantization.
 ```
 
 **When NOT to use this pattern:**
 
-- Small datasets (< 100K vectors) where accuracy is paramount
-
-- When using low-dimensional models (< 256 dims) - less benefit
+- Small datasets where memory pressure is not a concern
 
 - Pre-quantized vectors from embedding model (use native format)
 
@@ -1438,7 +1283,7 @@ Reference: [https://mongodb.com/docs/atlas/atlas-vector-search/vector-quantizati
 
 **Impact: CRITICAL**
 
-The `$vectorSearch` aggregation stage has strict requirements that differ from standard MongoDB queries. It MUST be the first stage in any aggregation pipeline—placing it after $match or any other stage causes errors. The queryVector must have the SAME dimensions as indexed vectors, generated by the SAME embedding model. numCandidates controls the recall/latency trade-off: too low means missed relevant results, too high means slow queries. The 20x rule (numCandidates = 20 × limit) is the recommended starting point. Pre-filtering with the `filter` parameter uses indexed filter fields to narrow candidates BEFORE vector comparison, which is far more efficient than post-filtering. New pre-filter operators include `$exists` (November 2025), `$ne` to null (September 2025), and `$not` (August 2024). For advanced text filtering (fuzzy, phrase, geo, wildcard), use the `$search.vectorSearch` operator (Lexical Prefilters - November 2025 Public Preview), which is distinct from the `$vectorSearch` aggregation stage. Scores are retrieved via `$meta: "vectorSearchScore"`, not computed manually. These query patterns are where AI assistants make the most mistakes.
+The `$vectorSearch` aggregation stage has strict requirements that differ from standard MongoDB queries. It MUST be the first stage in any aggregation pipeline where it appears. The query vector must match the indexed vector field in dimensions and model semantics. `numCandidates` controls the recall/latency trade-off; the 20x rule (`numCandidates = 20 x limit`) is a useful starting point, not a law. Pre-filtering with the `filter` parameter uses indexed filter fields to narrow candidates before vector comparison. Keep advanced Atlas Search operator filtering and hybrid-stage legality in `mongodb-search`; this AI mirror is not the canonical source for `$search.vectorSearch` operator details. Scores are retrieved via `$meta: "vectorSearchScore"`, not computed manually.
 
 ### 2.1 $vectorSearch Must Be First Pipeline Stage
 
@@ -1650,7 +1495,7 @@ db.products.aggregate([
     }
   }
 ])
-// Result: 500ms+ latency on large datasets
+// Result: higher latency risk on large, unfiltered datasets
 
 // WRONG: Using low numCandidates ANN for critical searches
 db.legalDocs.aggregate([
@@ -1682,7 +1527,7 @@ db.products.aggregate([
     }
   }
 ])
-// Result: ~10ms latency, ~90%+ recall
+// Result: low-latency ANN behavior for interactive workloads
 
 // ENN: Batch processing / critical searches (accurate)
 db.legalDocs.aggregate([
@@ -1696,7 +1541,7 @@ db.legalDocs.aggregate([
     }
   }
 ])
-// Result: ~500ms latency, 100% recall
+// Result: exact-recall behavior with higher compute cost
 
 // ENN: Measuring recall accuracy of ANN
 db.products.aggregate([
@@ -1720,9 +1565,9 @@ db.products.aggregate([
 
 | Parameter | `numCandidates: N` | `exact: true` |
 
-| Speed | Fast (10-50ms) | Slower (100ms-1s+) |
+| Speed | Lower latency | Higher latency |
 
-| Recall | ~90-99% | 100% |
+| Recall | Approximate | Exact |
 
 | Scaling | Scales well | Linear with data size |
 
@@ -1761,7 +1606,6 @@ db.products.aggregate([
 // - Scientific research
 // - Measuring ANN accuracy
 // - Batch processing
-// - Small datasets (< 10K vectors)
 // - Perfect recall required
 ```
 
@@ -1786,7 +1630,7 @@ db.products.aggregate([
 
 **When NOT to use this pattern:**
 
-- ENN on > 100K vectors without filtering (too slow)
+- ENN on large, broad, unfiltered candidate sets (high latency risk)
 
 - ANN with very low numCandidates (poor recall)
 
@@ -1800,31 +1644,27 @@ db.products.aggregate([
 
 Reference: [https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-stage/#std-label-vectorSearch-exact](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-stage/#std-label-vectorSearch-exact)
 
-### 2.3 Lexical Prefilters for Vector Search
+### 2.3 Route Lexical Prefilter Wiring to mongodb-search
 
-**Impact: CRITICAL (Advanced text filtering (fuzzy, phrase, geo, wildcard) before vector search)**
+**Impact: CRITICAL (Prevents mixing MQL metadata filters with Atlas Search operator filters)**
 
-**Public Preview (November 2025)**: The `vectorSearch` operator inside `$search` enables advanced text analysis filters (fuzzy, phrase, geo, wildcard) BEFORE vector search. This is distinct from the `$vectorSearch` aggregation stage.
+Current MongoDB docs separate two filter surfaces: `$vectorSearch.filter` for supported MQL metadata filters and `$search.vectorSearch.filter` for Atlas Search operator filters. This AGENTS mirror is abbreviated; detailed lexical operator wiring belongs to `mongodb-search`.
 
-**Key Difference:**
+This skill owns the retrieval-strategy decision:
 
-| Feature | `$vectorSearch` Stage | `$search.vectorSearch` Operator |
+- use `$vectorSearch` when MQL metadata filtering is enough
+- switch to `$search.vectorSearch` when you need analyzed lexical filters before vector retrieval
 
-|---------|----------------------|--------------------------------|
+`mongodb-search` owns the detailed wiring:
 
-| Pipeline Position | First stage in aggregation | Inside `$search` stage |
+- Atlas Search operator composition
+- analyzer and mapping choices
+- preview/GA gating for `vectorSearch` operator features
+- hybrid stage legality when the query also uses `$rankFusion` or `$scoreFusion`
 
-| Pre-filter Type | MQL filters only | Atlas Search operators (fuzzy, phrase, geo, etc.) |
-
-| Index Type | `vectorSearch` type | Atlas Search index with `vector` field type |
-
-| Use Case | Basic filtering | Advanced lexical + semantic search |
-
-**Incorrect: basic $vectorSearch with limited filtering**
+**Incorrect: trying to use Atlas Search operators inside `$vectorSearch.filter`**
 
 ```javascript
-// LIMITED: $vectorSearch only supports basic MQL pre-filters
-// Cannot use fuzzy search, phrase matching, or wildcard patterns
 db.products.aggregate([
   {
     $vectorSearch: {
@@ -1834,133 +1674,10 @@ db.products.aggregate([
       numCandidates: 100,
       limit: 10,
       filter: {
-        category: "electronics"  // Basic equality only
-        // Cannot do: fuzzy match on "electronnics"
-        // Cannot do: phrase match on "high performance laptop"
-        // Cannot do: wildcard "electro*"
-      }
-    }
-  }
-])
-```
-
-**Correct: using $search.vectorSearch with lexical prefilters**
-
-```javascript
-// ADVANCED: $search.vectorSearch supports Atlas Search operators
-db.products.aggregate([
-  {
-    $search: {
-      index: "search_vector_index",  // Atlas Search index with vector type
-      vectorSearch: {
-        path: "embedding",
-        queryVector: queryEmbedding,
-        numCandidates: 100,
-        limit: 10,
-        filter: {
-          compound: {
-            must: [
-              {
-                text: {
-                  query: "laptop",
-                  path: "description",
-                  fuzzy: { maxEdits: 1 }  // Fuzzy matching!
-                }
-              }
-            ],
-            should: [
-              {
-                phrase: {
-                  query: "high performance",
-                  path: "title"  // Phrase matching!
-                }
-              }
-            ]
-          }
-        }
-      }
-    }
-  },
-  {
-    $project: {
-      title: 1,
-      score: { $meta: "searchScore" }
-    }
-  }
-])
-```
-
-**Index Definition for Lexical Prefilters:**
-
-```javascript
-// Atlas Search index with vector type (NOT vectorSearch type!)
-db.products.createSearchIndex("search_vector_index", {
-  mappings: {
-    fields: {
-      // Vector field for semantic search
-      embedding: {
-        type: "vector",
-        numDimensions: 1536,
-        similarity: "cosine"
-      },
-      // Text fields for lexical prefilters
-      title: {
-        type: "string",
-        analyzer: "lucene.standard"
-      },
-      description: {
-        type: "string",
-        analyzer: "lucene.standard"
-      },
-      // Location for geo prefilters
-      location: {
-        type: "geo"
-      }
-    }
-  }
-})
-```
-
-**Supported Lexical Prefilter Types:**
-
-| Filter Type | Operator | Example Use Case |
-
-|-------------|----------|------------------|
-
-| Fuzzy Search | `text` with `fuzzy` | Match "electronnics" → "electronics" |
-
-| Phrase Match | `phrase` | Match exact phrases "high performance" |
-
-| Wildcard | `wildcard` | Match patterns "electro*" |
-
-| Geo Filter | `geoWithin`, `geoShape` | Filter by location before vector search |
-
-| Range | `range` | Date/number ranges |
-
-| Regex | `regex` | Pattern matching |
-
-| Compound | `compound` | Boolean logic (must, should, mustNot) |
-
-**Geo Prefilter Example:**
-
-```javascript
-db.stores.aggregate([
-  {
-    $search: {
-      index: "store_search_index",
-      vectorSearch: {
-        path: "embedding",
-        queryVector: queryEmbedding,
-        numCandidates: 100,
-        limit: 10,
-        filter: {
-          geoWithin: {
-            path: "location",
-            circle: {
-              center: { type: "Point", coordinates: [-73.98, 40.75] },
-              radius: 5000  // 5km radius
-            }
-          }
+        text: {
+          query: "laptop",
+          path: "description",
+          fuzzy: { maxEdits: 1 }
         }
       }
     }
@@ -1968,57 +1685,29 @@ db.stores.aggregate([
 ])
 ```
 
-**Wildcard Prefilter Example:**
+**Correct: keep MQL metadata filters here and route Atlas Search operator wiring to `mongodb-search`**
 
 ```javascript
 db.products.aggregate([
   {
-    $search: {
-      index: "product_search_index",
-      vectorSearch: {
-        path: "embedding",
-        queryVector: queryEmbedding,
-        numCandidates: 100,
-        limit: 10,
-        filter: {
-          wildcard: {
-            path: "sku",
-            query: "ELEC-*-2025"  // Match pattern
-          }
-        }
+    $vectorSearch: {
+      index: "vector_index",
+      path: "embedding",
+      queryVector: queryEmbedding,
+      numCandidates: 100,
+      limit: 10,
+      filter: {
+        category: "electronics",
+        price: { $gte: 500, $lte: 2500 }
       }
     }
   }
 ])
 ```
-
-**Why Use Lexical Prefilters:**
-
-1. **Advanced filtering**: Fuzzy, phrase, geo, wildcard not available in `$vectorSearch`
-
-2. **Performance**: Filter before vector comparison (fewer candidates)
-
-3. **Complex logic**: Boolean combinations with `compound` operator
-
-4. **Migration path**: Replaces deprecated `knnBeta` and `knnVector`
-
-**Limitations:**
-
-- `vectorSearch` operator must be top-level (cannot be inside `compound` or `embeddedDocument`)
-
-- Cannot use `highlight`, `sort`, or `searchSequenceToken` options
-
-- Not available in MongoDB Search Playground
-
-- Public Preview - syntax may change
 
 **When NOT to use this pattern:**
 
-- Basic equality filters suffice (use `$vectorSearch` stage instead)
-
-- Not using Atlas Search features
-
-- Need stable GA features (this is Preview)
+- You need exact operator syntax, analyzer choices, or deployment/version gating. Use `mongodb-search`.
 
 1. Run the "Correct" index or query example on a staging dataset.
 
@@ -2095,10 +1784,10 @@ db.products.aggregate([
 ])
 ```
 
-**The 20x Rule:**
+**The 20x Rule (starting point):**
 
 ```javascript
-numCandidates = 20 × limit (minimum recommended)
+numCandidates = 20 × limit
 ```
 
 | limit | numCandidates (20x) | Better Recall (50x) | Max Allowed |
@@ -2115,15 +1804,7 @@ numCandidates = 20 × limit (minimum recommended)
 
 | 100 | 2,000 | 5,000 | 10,000 |
 
-**Trade-off Visualization:**
-
-```javascript
-numCandidates   Recall    Latency
-     20x        ~90%       Low
-     50x        ~95%       Medium
-    100x        ~98%       Higher
-    200x        ~99%       High
-```
+Higher `numCandidates` usually improves recall and usually increases latency. Treat 20x as a starting point, not an endpoint.
 
 **How to Measure Recall:**
 
@@ -2160,7 +1841,7 @@ const ennResults = db.products.aggregate([
 // Step 3: Calculate recall
 const annIds = new Set(annResults.map(d => d._id.toString()))
 const matches = ennResults.filter(d => annIds.has(d._id.toString())).length
-const recall = matches / ennResults.length  // Should be > 0.9
+const recall = matches / ennResults.length  // Compare against your own quality target
 ```
 
 **When to Increase numCandidates:**
@@ -2168,8 +1849,6 @@ const recall = matches / ennResults.length  // Should be > 0.9
 - Low recall in testing (< 90%)
 
 - High-stakes searches where missing results is costly
-
-- Low-dimensional vectors (< 256 dims)
 
 - After enabling quantization
 
@@ -2613,42 +2292,38 @@ Reference: [https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-sta
 
 ### 2.7 Use Same Embedding Model for Data and Query
 
-**Impact: CRITICAL (Different models = zero or garbage results)**
+**Impact: CRITICAL (different embedding spaces break retrieval quality)**
 
-The embedding model used for queries MUST be the same as the model used for document embeddings. Different models produce incompatible vector spaces.
+The query embedding should use the same embedding space as the document embeddings. The safest default is using the exact same model for both indexing and querying unless the provider explicitly documents cross-model compatibility.
 
 **Incorrect: mismatched models**
 
 ```javascript
-// Data was embedded with OpenAI text-embedding-3-small
-// db.products documents have embeddings from OpenAI
+// Documents were embedded with provider-A model v1
 
-// WRONG: Query using different model (Cohere)
-const queryEmbedding = await cohereClient.embed({
-  texts: ["laptop for programming"],
-  model: "embed-english-v3.0"  // WRONG MODEL!
+// WRONG: Query embedding generated with a different model family
+const queryEmbedding = await embeddingClient.embed({
+  input: ["laptop for programming"],
+  model: "provider-b-model-v1"
 })
 
 db.products.aggregate([
   {
     $vectorSearch: {
       index: "vector_index",
-      path: "embedding",  // Contains OpenAI embeddings
-      queryVector: queryEmbedding,  // Cohere embedding - INCOMPATIBLE!
+      path: "embedding",
+      queryVector: queryEmbedding.data[0].embedding,
       numCandidates: 200,
       limit: 10
     }
   }
 ])
-// Result: Garbage results or no meaningful matches
 
-// WRONG: Using different model version
-// Data embedded with text-embedding-ada-002
-const queryEmbedding = await openai.embeddings.create({
-  input: "laptop for programming",
-  model: "text-embedding-3-small"  // Different version!
+// WRONG: Same provider, but different model family without documented compatibility
+const secondQueryEmbedding = await embeddingClient.embed({
+  input: ["laptop for programming"],
+  model: "provider-a-model-v2"
 })
-// Result: Suboptimal results due to different vector spaces
 ```
 
 **Correct: consistent model usage**
@@ -2660,8 +2335,8 @@ const queryEmbedding = await openai.embeddings.create({
   content: "Product description...",
   embedding: [0.1, 0.2, ...],
   metadata: {
-    embeddingModel: "text-embedding-3-small",
-    embeddingDimensions: 1536,
+    embeddingModel: "provider-a-model-v1",
+    embeddingDimensions: 1024,
     embeddedAt: ISODate("2024-01-15")
   }
 }
@@ -2685,8 +2360,8 @@ async function reEmbedCollection(newModel) {
   const cursor = db.products.find({ content: { $exists: true } })
 
   for await (const doc of cursor) {
-    const newEmbedding = await openai.embeddings.create({
-      input: doc.content,
+    const newEmbedding = await embeddingClient.embed({
+      input: [doc.content],
       model: newModel
     })
 
@@ -2701,9 +2376,6 @@ async function reEmbedCollection(newModel) {
       }
     )
   }
-
-  // Update index if dimensions changed
-  // (text-embedding-3-large = 3072, text-embedding-3-small = 1536)
 }
 ```
 
@@ -2730,7 +2402,7 @@ db.products.findOne({}, { "metadata.embeddingModel": 1 })
 
 **When NOT to use this pattern:**
 
-- Using MongoDB's Automated Embedding feature (model handled automatically)
+- Using MongoDB's automated embedding feature (model handled automatically by the deployment-specific workflow)
 
 - Multi-model hybrid systems (requires separate indexes)
 
@@ -2750,7 +2422,7 @@ Reference: [https://mongodb.com/docs/atlas/atlas-vector-search/troubleshooting/]
 
 **Impact: HIGH**
 
-Vector search performance depends on understanding HNSW (Hierarchical Navigable Small World) graph mechanics. Vector indexes must fit in RAM—disk spillover causes severe performance degradation. For datasets over 100K vectors, quantization becomes essential: scalar quantization reduces RAM by 3.75x with minimal accuracy loss, binary quantization reduces by 24x but requires rescoring for best results. numCandidates has diminishing returns: going from 100 to 200 significantly improves recall, but 2000 to 4000 may add latency without meaningful recall gains. Pre-filtering is the most powerful optimization—reducing candidates from 1M to 10K before vector comparison is 100x more efficient than post-filtering. Use explain() on vector search queries to debug performance issues and understand query execution. For production workloads, deploy dedicated Search Nodes to isolate search from database operations and enable independent scaling. Index size monitoring via Atlas metrics and explain() analysis are essential for maintaining performance at scale.
+Vector search performance depends on HNSW graph behavior, memory sizing, candidate selection, and filtering strategy. For best performance, keep the active index working set in memory, use quantization when memory pressure warrants it, tune `numCandidates` from measured recall/latency trade-offs, and pre-filter whenever the docs-supported filter surface is enough. Use explain plus Atlas metrics to validate every change instead of relying on generic ratios.
 
 ### 3.1 Dedicated Search Nodes for Production
 
@@ -2774,7 +2446,7 @@ Production Architecture:
 ┌─────────────────┐     ┌─────────────────┐
 │  Database Node  │     │   Search Node   │
 │     (mongod)    │────▶│    (mongot)     │
-│    M40 tier     │     │    S30 tier     │
+│ dedicated tier  │     │ sized per usage │
 └─────────────────┘     └─────────────────┘
         │                       │
    Database ops           Vector Search
@@ -2783,74 +2455,15 @@ Production Architecture:
 
 **Deployment Recommendations:**
 
-| Environment | Configuration |
-
-|-------------|---------------|
-
-| Development | M10/M20 (shared) |
-
-| Staging | M30 with Search Nodes |
-
-| Production | M40+ with dedicated Search Nodes (S30+) |
-
-**Search Node Tiers:**
-
-| Tier | RAM | CPUs | Best For |
-
-|------|-----|------|----------|
-
-| S20 (High-CPU) | 4 GB | 4 | Low latency, smaller indexes |
-
-| S30 (Low-CPU) | 8 GB | 2 | Larger indexes, moderate queries |
-
-| S40 | 16 GB | 4 | Large production workloads |
-
-| S50 | 32 GB | 8 | Very large indexes |
-
-| S80 | 64 GB | 16 | Enterprise scale |
-
-**RAM Allocation on Search Nodes:**
-
-```javascript
-Search Nodes: ~90% RAM for vector index + JVM
-Database Nodes: ~50% for MongoDB, ~50% for search (shared)
-
-Example:
-- S30 (8 GB): ~7.2 GB available for vector index
-- M40 shared: ~4 GB available for vector index
-```
-
-**Sizing Your Search Nodes:**
-
-```javascript
-// Calculate required RAM
-function calculateSearchNodeSize(vectorCount, dimensions, quantization = "none") {
-  const bytesPerVector = {
-    "none": dimensions * 4,
-    "scalar": dimensions * 1,
-    "binary": dimensions / 8
-  }
-
-  const indexBytes = vectorCount * bytesPerVector[quantization]
-  const graphOverhead = 1.3  // ~30% for HNSW graph
-  const jvmOverhead = 1.1    // ~10% for JVM
-
-  const totalBytes = indexBytes * graphOverhead * jvmOverhead
-  const requiredGB = totalBytes / (1024 ** 3)
-
-  // Recommend 10% headroom
-  return requiredGB * 1.1
-}
-
-// Example: 1M vectors, 1536 dims, no quantization
-const requiredGB = calculateSearchNodeSize(1000000, 1536, "none")
-console.log(`Required: ${requiredGB.toFixed(2)} GB`)  // ~8.8 GB → S40 tier
-```
+- Atlas Search Nodes are available on dedicated clusters, not on free, Flex, serverless, or global clusters.
+- Atlas creates an S20 Search Node by default for workload isolation; Atlas docs recommend low-CPU Search Nodes for Vector Search workloads.
+- Size Search Nodes from Atlas `Required Memory`, query throughput, and observed metrics, not from fixed tier pairings or homemade formulas.
+- Atlas docs recommend node RAM at least 10% larger than total vector size.
 
 **Migration to Search Nodes:**
 
 ```javascript
-Step 1: Ensure cluster is M10 or higher
+Step 1: Ensure the deployment uses a dedicated Atlas cluster
 Step 2: Select region with Search Node support
 Step 3: Enable "Search Nodes for workload isolation"
 Step 4: Choose search tier based on index size
@@ -2873,33 +2486,15 @@ Step 5: Monitor metrics during migration
 
 | Concurrent queries | Limited | Optimized |
 
-**Cloud Provider Availability:**
-
-```javascript
-AWS:     Available in select regions
-Azure:   Available in select regions
-GCP:     Available in ALL regions
-```
-
 **Monitoring Search Nodes:**
 
-```javascript
-// Key metrics to monitor:
-// 1. Search Normalized Process CPU - Should stay < 80%
-// 2. System Memory - Available should exceed used
-// 3. Page Faults - Should be near zero
-// 4. Index Size - Must fit in Search Node RAM
-```
+- Use the Vector Search dashboard and Search Node metrics to watch `Required Memory`, query latency, and process pressure.
+- Validate isolation benefits with live workload metrics instead of assuming a fixed tier mapping.
 
 **When NOT to use this pattern:**
 
-- Development/testing (M10/M20 shared is sufficient)
-
-- Small datasets (< 100K vectors)
-
-- Cost-sensitive prototypes
-
-- Regions without Search Node support
+- Development or prototype workloads where shared resources are acceptable
+- Deployments where Search Nodes are unavailable for the chosen cluster type or region
 
 1. Run the "Correct" index or query example on a staging dataset.
 
@@ -2911,15 +2506,14 @@ Reference: [https://mongodb.com/docs/atlas/atlas-vector-search/deployment-option
 
 ### 3.2 Enable Quantization at Scale
 
-**Impact: HIGH (3.75x-24x RAM reduction for large vector datasets)**
+**Impact: HIGH (Use quantization when vector memory pressure becomes a real sizing constraint)**
 
-Enable quantization when your vector count exceeds 100K. Without quantization, large datasets require excessive RAM and slow performance.
+Enable quantization when vector memory requirements become material. MongoDB docs recommend considering quantization for larger datasets, typically `100,000+` vectors, and performance guidance also calls it out when vector memory grows beyond roughly `3 GB`. Use those as starting signals, then benchmark on your own workload.
 
 **Incorrect: no quantization on large dataset**
 
 ```javascript
-// WRONG: 500K vectors without quantization
-// RAM required: ~3GB just for vectors
+// WRONG: large vector index with no quantization plan
 db.products.createSearchIndex("vector_index", "vectorSearch", {
   fields: [{
     type: "vector",
@@ -2934,69 +2528,31 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
 **Correct: quantization enabled**
 
 ```javascript
-// Dataset size determines quantization type
-const vectorCount = await db.products.countDocuments({ embedding: { $exists: true } })
-
-if (vectorCount > 1000000) {
-  // > 1M vectors: Use binary (24x reduction)
-  db.products.createSearchIndex("vector_index", "vectorSearch", {
-    fields: [{
-      type: "vector",
-      path: "embedding",
-      numDimensions: 1536,
-      similarity: "cosine",
-      quantization: "binary"
-    }]
-  })
-} else if (vectorCount > 100000) {
-  // 100K-1M vectors: Use scalar (3.75x reduction)
-  db.products.createSearchIndex("vector_index", "vectorSearch", {
-    fields: [{
-      type: "vector",
-      path: "embedding",
-      numDimensions: 1536,
-      similarity: "cosine",
-      quantization: "scalar"
-    }]
-  })
-}
+// Use docs-backed signals first:
+// - large datasets (typically 100K+ vectors)
+// - Atlas Required Memory / vector memory pressure
+// Then benchmark scalar vs binary on your own workload.
+db.products.createSearchIndex("vector_index", "vectorSearch", {
+  fields: [{
+    type: "vector",
+    path: "embedding",
+    numDimensions: 1536,
+    similarity: "cosine",
+    quantization: "scalar"
+  }]
+})
 ```
 
-**RAM Calculation Guide:**
+**Docs-backed rollout guidance:**
 
-```javascript
-Base RAM per vector:
-  numDimensions × 4 bytes (float32)
-  1536 dims × 4 = 6,144 bytes = 6 KB
-
-Without quantization (1M vectors × 1536 dims):
-  1,000,000 × 6 KB = 6 GB
-
-With scalar quantization:
-  6 GB / 3.75 = 1.6 GB
-
-With binary quantization:
-  6 GB / 24 = 0.25 GB
-```
-
-**Decision Matrix:**
-
-| Vector Count | Quantization | RAM (1536 dims) |
-
-|--------------|--------------|-----------------|
-
-| < 100K | none | < 600 MB |
-
-| 100K - 500K | scalar | 160 - 800 MB |
-
-| 500K - 1M | scalar or binary | 160 MB - 1.6 GB |
-
-| > 1M | binary | < 1 GB |
+- Use Atlas `Required Memory` and Search metrics as the primary sizing signals.
+- Benchmark `scalar` and `binary` on representative queries before rollout.
+- Re-run quality checks after quantization changes because memory savings and recall are a trade-off, not a free win.
 
 **Monitoring Vector Index Size:**
 
 ```javascript
-// Check index status and size
+// Check index status
 db.products.getSearchIndexes().forEach(idx => {
   if (idx.type === "vectorSearch") {
     print(`Index: ${idx.name}`)
@@ -3005,8 +2561,7 @@ db.products.getSearchIndexes().forEach(idx => {
   }
 })
 
-// Atlas UI: Check "Required Memory" metric
-// Path: Database > Collections > Search Indexes > vector_index
+// Atlas UI: check "Required Memory" and Search metrics
 ```
 
 **Migrating to Quantization:**
@@ -3023,7 +2578,7 @@ db.runCommand({
       path: "embedding",
       numDimensions: 1536,
       similarity: "cosine",
-      quantization: "binary"  // Add quantization
+      quantization: "binary"
     }]
   }
 })
@@ -3031,7 +2586,7 @@ db.runCommand({
 
 **When NOT to use this pattern:**
 
-- Small datasets (< 100K vectors) where accuracy is critical
+- Small datasets where memory pressure is minimal
 
 - Already using pre-quantized embeddings from model
 
@@ -3266,7 +2821,7 @@ db.products.aggregate([
     }
   }
 ])
-// Result: ~60% recall, fast but missing relevant results
+// Result: lower overlap with exact search on many workloads
 
 // WRONG: Too high - unnecessary latency
 db.products.aggregate([
@@ -3280,7 +2835,7 @@ db.products.aggregate([
     }
   }
 ])
-// Result: ~99.9% recall, but 5x slower than needed
+// Result: higher recall potential, but often unnecessary latency overhead
 ```
 
 **Correct: tuned for use case**
@@ -3293,12 +2848,12 @@ db.products.aggregate([
       index: "vector_index",
       path: "embedding",
       queryVector: [...],
-      numCandidates: 100,  // 10x limit - fast, acceptable recall
+      numCandidates: 200,  // 20x limit - docs-first starting point
       limit: 10
     }
   }
 ])
-// Result: ~85% recall, < 20ms latency
+// Result: useful baseline for interactive workloads
 
 // Quality-focused search: Optimize for recall
 db.products.aggregate([
@@ -3312,7 +2867,7 @@ db.products.aggregate([
     }
   }
 ])
-// Result: ~97% recall, < 50ms latency
+// Result: higher recall profile with more latency cost
 
 // Critical search: Maximum recall
 db.legalDocs.aggregate([
@@ -3326,7 +2881,7 @@ db.legalDocs.aggregate([
     }
   }
 ])
-// Result: ~99% recall, < 100ms latency
+// Result: very high candidate breadth, with correspondingly higher latency
 ```
 
 **Benchmark Your Specific Dataset:**
@@ -3373,39 +2928,18 @@ async function benchmarkNumCandidates(queryVector, testCandidates = [50, 100, 20
 }
 ```
 
-**Typical Results Pattern:**
+**Typical Results Pattern (dataset-dependent):**
 
 ```javascript
-numCandidates | Recall | Latency | Notes
-      50      |  ~75%  |   10ms  | Too low
-     100      |  ~85%  |   15ms  | Minimum viable
-     200      |  ~92%  |   25ms  | Good default
-     500      |  ~97%  |   45ms  | High quality
-    1000      |  ~99%  |   80ms  | Near-perfect
-    2000      | ~99.5% |  150ms  | Diminishing returns
+numCandidates | Recall Trend | Latency Trend | Notes
+ lower        | lower        | lower         | Risk of missing relevant results
+ medium       | better       | medium        | Often a practical balance
+ higher       | highest      | highest       | Diminishing returns likely
 ```
-
-**Use Case Guidelines:**
-
-| Use Case | Recommended | Rationale |
-
-|----------|-------------|-----------|
-
-| Autocomplete | 50-100 | Speed > precision |
-
-| Product search | 200-500 | Balance |
-
-| RAG context | 100-200 | Good enough for context |
-
-| Legal discovery | 1000-2000 | Can't miss relevant docs |
-
-| Duplicate detection | 500-1000 | High precision needed |
 
 **When NOT to use this pattern:**
 
 - Using ENN (exact: true) - numCandidates not applicable
-
-- Very small datasets (< 1000 vectors) - minimal impact
 
 - When latency doesn't matter - just use high value
 
@@ -3419,14 +2953,14 @@ Reference: [https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-sta
 
 ### 3.5 Pre-filter to Narrow Candidate Set
 
-**Impact: HIGH (Reduces vector comparisons by 10-1000x)**
+**Impact: HIGH (Reducing the candidate set before vector comparison can materially improve latency and relevance)**
 
-Pre-filtering narrows the candidate set before vector comparison. Filtering 1M to 10K candidates = 100x fewer vector operations.
+Pre-filtering narrows the candidate set before vector comparison. The more selective the filter, the less work vector search must do.
 
 **Incorrect: no filtering on large dataset**
 
 ```javascript
-// WRONG: Searching 1M vectors without filtering
+// WRONG: Searching a broad vector corpus without filtering
 db.products.aggregate([
   {
     $vectorSearch: {
@@ -3435,7 +2969,7 @@ db.products.aggregate([
       queryVector: [...],
       numCandidates: 200,
       limit: 10
-      // No filter - searches ALL 1M products
+      // No filter - searches the entire broad corpus
     }
   }
 ])
@@ -3454,7 +2988,7 @@ db.products.aggregate([
       queryVector: [...],
       numCandidates: 200,
       limit: 10,
-      filter: { category: "electronics" }  // 1M → 100K candidates
+      filter: { category: "electronics" }  // Example: broad set reduced to a narrower subset
     }
   }
 ])
@@ -3478,7 +3012,7 @@ db.products.aggregate([
     }
   }
 ])
-// 1M → 5K candidates = 200x fewer comparisons
+// Example: highly selective filter can cut candidate volume dramatically
 ```
 
 **Filter Strategy by Use Case:**
@@ -3522,22 +3056,18 @@ db.products.aggregate([
 }
 ```
 
-**Performance Impact Example:**
+**Performance Impact Pattern (illustrative):**
 
 ```javascript
-Without filter (1M docs):
-  - Vector comparisons: 1,000,000
-  - Latency: ~150ms
+Without filter:
+  - Higher candidate volume
+  - Higher latency and lower precision under mixed data
 
-With category filter (100K docs in category):
-  - Vector comparisons: 100,000
-  - Latency: ~40ms
-  - Improvement: 3.75x faster
+With selective filter:
+  - Lower candidate volume
+  - Lower latency and better relevance stability
 
-With multi-filter (10K docs matching all):
-  - Vector comparisons: 10,000
-  - Latency: ~15ms
-  - Improvement: 10x faster
+Exact gains vary by dataset size, filter selectivity, index shape, and query mix.
 ```
 
 **Index Definition for Filters:**
@@ -3601,18 +3131,17 @@ console.log(`Filter selectivity: ${((total - filtered) / total * 100).toFixed(1)
 
 Reference: [https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-stage/#std-label-vectorSearch-filter](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-stage/#std-label-vectorSearch-filter)
 
-### 3.6 Vector Index Must Fit in RAM
+### 3.6 Keep the Vector Index Working Set in Memory When Sizing
 
-**Impact: HIGH (Disk spillover causes 10-100x performance degradation)**
+**Impact: HIGH (memory pressure can cause severe latency and throughput degradation)**
 
-Vector indexes use HNSW graphs that must fit in RAM for acceptable performance. Disk spillover causes severe latency degradation.
+For best performance, size vector search so the active index working set can stay in memory on the Search process or Search Nodes. If the working set is too large, latency and throughput can degrade sharply.
 
 **Incorrect: index exceeds available RAM**
 
 ```javascript
-// WRONG: Large index on small instance
-// 2M vectors × 1536 dims = ~12GB index
-// Running on M30 with 8GB RAM = spillover to disk
+// WRONG: Large vector index on a cluster with too little Search memory
+// The index working set no longer fits comfortably in memory.
 
 db.products.createSearchIndex("vector_index", "vectorSearch", {
   fields: [{
@@ -3620,10 +3149,10 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
     path: "embedding",
     numDimensions: 1536,
     similarity: "cosine"
-    // No quantization on 2M vectors = 12GB needed
+    // No quantization and no memory-sizing validation
   }]
 })
-// Result: Query latency goes from 50ms to 5000ms
+// Result: Query latency becomes unstable and degrades under load
 ```
 
 **Correct: size index to fit RAM**
@@ -3636,12 +3165,11 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
     path: "embedding",
     numDimensions: 1536,
     similarity: "cosine",
-    quantization: "binary"  // Reduces to ~0.5GB
+    quantization: "binary"
   }]
 })
 
-// Option 2: Upgrade cluster tier
-// M30 (8GB) → M40 (16GB) → M50 (32GB)
+// Option 2: Increase available Search memory or Search Node capacity
 
 // Option 3: Use partial indexing approach
 // Only index active/recent documents
@@ -3662,48 +3190,9 @@ db.products.createSearchIndex("active_vector_index", "vectorSearch", {
 // Then always filter: filter: { status: "active" }
 ```
 
-**RAM Requirements by Cluster Tier:**
+**Sizing Guidance:**
 
-| Tier | RAM | Max Vectors (no quant) | Max Vectors (binary) |
-
-|------|-----|------------------------|----------------------|
-
-| M10 | 2 GB | ~300K | ~7M |
-
-| M20 | 4 GB | ~600K | ~14M |
-
-| M30 | 8 GB | ~1.2M | ~28M |
-
-| M40 | 16 GB | ~2.4M | ~56M |
-
-| M50 | 32 GB | ~5M | ~112M |
-
-*Based on 1536-dimensional vectors*
-
-**Calculate Your Index Size:**
-
-```javascript
-// Estimate index RAM requirement
-function estimateVectorIndexRAM(vectorCount, dimensions, quantization = "none") {
-  const bytesPerVector = {
-    "none": dimensions * 4,      // float32
-    "scalar": dimensions * 1,    // int8
-    "binary": dimensions / 8     // int1
-  }
-
-  const vectorBytes = vectorCount * bytesPerVector[quantization]
-  const hnswOverhead = 1.3  // Graph overhead ~30%
-
-  return (vectorBytes * hnswOverhead) / (1024 * 1024 * 1024)  // GB
-}
-
-// Example
-const count = await db.products.countDocuments({ embedding: { $exists: true } })
-console.log(`Vectors: ${count}`)
-console.log(`RAM (no quant): ${estimateVectorIndexRAM(count, 1536, "none").toFixed(2)} GB`)
-console.log(`RAM (scalar): ${estimateVectorIndexRAM(count, 1536, "scalar").toFixed(2)} GB`)
-console.log(`RAM (binary): ${estimateVectorIndexRAM(count, 1536, "binary").toFixed(2)} GB`)
-```
+Use Atlas `Required Memory`, Search metrics, and explain output as the authoritative sizing signals. Atlas docs recommend RAM at least 10% larger than total vector size. Treat any local estimate as a rough planning aid, not a rule.
 
 **Monitor Index Memory in Atlas:**
 
@@ -3721,19 +3210,15 @@ GET /api/atlas/v1.0/groups/{groupId}/processes/{processId}/measurements
 
 **Signs of Memory Pressure:**
 
-- Query latency spikes (50ms → 500ms+)
+- Query latency spikes
 
 - Inconsistent query times
 
-- "Memory limit exceeded" in logs
+- Atlas alerts for Search process memory
 
-- Atlas alerts for search process memory
+- Search metrics showing sustained memory pressure
 
 **When NOT to use this pattern:**
-
-- Using dedicated Search Nodes (separate memory pool)
-
-- Serverless instances (auto-scaling)
 
 - Development/testing with small datasets
 
@@ -3744,6 +3229,7 @@ GET /api/atlas/v1.0/groups/{groupId}/processes/{processId}/measurements
 3. Confirm version-gated behavior on your target MongoDB release before production rollout.
 
 Reference: [https://mongodb.com/docs/atlas/sizing-tier-selection/](https://mongodb.com/docs/atlas/sizing-tier-selection/)
+Reference: [https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-quantization/](https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-quantization/)
 
 ---
 
@@ -4573,7 +4059,7 @@ Reference: [https://mongodb.com/docs/atlas/atlas-vector-search/rag/](https://mon
 
 **Impact: MEDIUM**
 
-Hybrid search combines vector (semantic) search with traditional text (lexical) search using $rankFusion or $scoreFusion. This captures both conceptual similarity and exact keyword matches. $rankFusion (MongoDB 8.0+) uses Reciprocal Rank Fusion to merge result lists by position. $scoreFusion (MongoDB 8.2+) merges by actual score values with normalization options (sigmoid, minMaxScaler) and custom combination expressions, offering more granular control for applications where score magnitudes matter. MongoDB 8.2 docs currently classify fusion-stage capabilities as Preview features, so treat behavior and output contracts as release-sensitive. Key constraints: sub-pipelines run serially (not parallel), same-collection only (use $unionWith for cross-collection), limited stages allowed ($search, $vectorSearch, $match, $sort, $geoNear), no pagination support. Weights should be tuned per-query rather than globally—a technical query might weight lexical higher, while a conceptual query weights semantic higher.
+Hybrid search combines vector (semantic) search with traditional text (lexical) search using $rankFusion or $scoreFusion. This captures both conceptual similarity and exact keyword matches. $rankFusion (MongoDB 8.0+) uses Reciprocal Rank Fusion to merge result lists by position. $scoreFusion (MongoDB 8.2+) merges by actual score values with normalization options (sigmoid, minMaxScaler) and custom combination expressions, offering more granular control for applications where score magnitudes matter. MongoDB 8.2 docs currently classify fusion-stage capabilities as Preview features, so treat behavior and output contracts as release-sensitive. Key constraints: sub-pipelines run serially (not parallel), same-collection only (use $unionWith for cross-collection), and operator-specific allowed stages apply. `$rankFusion` permits `$sample`; `$scoreFusion` instead permits `$score` for pipelines that need an explicit score. Weights should be tuned per-query rather than globally—a technical query might weight lexical higher, while a conceptual query weights semantic higher.
 
 ### 5.1 Hybrid Search Limitations
 
@@ -4582,6 +4068,8 @@ Hybrid search combines vector (semantic) search with traditional text (lexical) 
 `$rankFusion` and `$scoreFusion` have specific constraints. Understanding them prevents errors.
 
 Current MongoDB 8.2 docs describe fusion stages as Preview features. Keep rollout plans conservative and validate on your exact target release.
+
+For exact stage legality and deployment routing, use `mongodb-search`. This section should be read as retrieval-strategy guidance, not the authoritative allowed-stage matrix.
 
 **Incorrect: violating limitations**
 
@@ -4673,13 +4161,15 @@ db.products.aggregate([
 
 | `$sort` | Yes | Re-order results |
 
-| `$sample` | Yes* | Random sampling in sub-pipelines |
+| `$sample` | Yes for `$rankFusion` | Not documented for `$scoreFusion` |
 
 | `$skip` | Yes | Candidate paging inside sub-pipelines |
 
 | `$limit` | Yes | Limit candidate/results per sub-pipeline |
 
 | `$geoNear` | Yes | Geographic search |
+
+| `$score` | Yes for `$scoreFusion` | Add explicit scores for non-scoring pipelines |
 
 | `$project` | **No** | Use after $rankFusion |
 
@@ -4689,7 +4179,7 @@ db.products.aggregate([
 
 | `$unwind` | **No** | Not supported |
 
-`*` `$sample` support is documented for `$rankFusion`; verify `$scoreFusion` support on your target MongoDB patch release before production rollout.
+Use `mongodb-search` for the authoritative stage matrix when generating production pipelines.
 
 **Key Limitations:**
 
@@ -5200,6 +4690,21 @@ db.products.aggregate([
 ])
 ```
 
+**Score Stage Requirement for Non-Scoring Pipelines:**
+
+```javascript
+// $vectorSearch and $search return scores automatically.
+// For pipelines that do not return a score on their own, add $score.
+{
+  categoryBoost: [
+    { $match: { category: "electronics" } },
+    { $score: { score: 0.15 } }
+  ]
+}
+```
+
+Do not try to read `$meta: "textScore"` from a plain `$match` pipeline. That metadata exists only when a preceding stage actually produces it.
+
 **Score Details for Debugging:**
 
 ```javascript
@@ -5274,6 +4779,7 @@ db.products.aggregate([
 3. Confirm version-gated behavior on your target MongoDB release before production rollout.
 
 Reference: [https://mongodb.com/docs/manual/reference/operator/aggregation/scoreFusion/](https://mongodb.com/docs/manual/reference/operator/aggregation/scoreFusion/)
+Reference: [https://www.mongodb.com/docs/manual/reference/operator/aggregation/score/](https://www.mongodb.com/docs/manual/reference/operator/aggregation/score/)
 
 ### 5.4 Tuning Hybrid Search Weights
 

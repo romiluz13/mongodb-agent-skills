@@ -161,7 +161,7 @@ db.system.profile.find({
 }).count()
 // Frequent repeated lookups on the same paths can indicate over-normalized hot paths
 
-// Check if collections are always accessed together
+// Check if collections are commonly accessed together
 // If orders always needs customer, items, addresses
 // → they should be embedded
 db.system.profile.aggregate([

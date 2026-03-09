@@ -1,30 +1,28 @@
 ---
 title: numDimensions Must Match Embedding Model
 impact: CRITICAL
-impactDescription: Mismatched dimensions cause index failure or zero search results
+impactDescription: Mismatched dimensions break indexing or query correctness
 tags: numDimensions, embedding-model, dimensions, vector-index
 ---
 
 ## numDimensions Must Match Embedding Model
 
-The `numDimensions` in your index MUST exactly match the output dimensions of your embedding model. Mismatches cause silent failures.
-
-**Maximum supported dimensions: 8192** (increased from 4096 in March 2025).
+The `numDimensions` in your index must exactly match the length of the vectors you index and query. MongoDB docs currently support up to `8192` dimensions for the vector field type.
 
 **Incorrect (wrong dimensions):**
 
 ```javascript
-// WRONG: OpenAI text-embedding-3-small outputs 1536 dims
-// but index specifies 768
+// WRONG: Stored/query vectors are length 1024
+// but the index is defined as 768
 db.products.createSearchIndex("vector_index", "vectorSearch", {
   fields: [{
     type: "vector",
     path: "embedding",
-    numDimensions: 768,  // WRONG! Model outputs 1536
+    numDimensions: 768,
     similarity: "cosine"
   }]
 })
-// Result: Documents won't be indexed, queries return nothing
+// Result: indexing/querying will fail or behave incorrectly
 
 // WRONG: Guessing dimensions
 db.products.createSearchIndex("vector_index", "vectorSearch", {
@@ -50,27 +48,7 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
 **Correct (matching model dimensions):**
 
 ```javascript
-// CORRECT: OpenAI text-embedding-3-small = 1536 dimensions
-db.products.createSearchIndex("vector_index", "vectorSearch", {
-  fields: [{
-    type: "vector",
-    path: "embedding",
-    numDimensions: 1536,
-    similarity: "cosine"
-  }]
-})
-
-// CORRECT: OpenAI text-embedding-3-large = 3072 dimensions
-db.products.createSearchIndex("vector_index", "vectorSearch", {
-  fields: [{
-    type: "vector",
-    path: "embedding",
-    numDimensions: 3072,
-    similarity: "cosine"
-  }]
-})
-
-// CORRECT: Cohere embed-english-v3.0 = 1024 dimensions
+// CORRECT: Match the actual vector length you store and query
 db.products.createSearchIndex("vector_index", "vectorSearch", {
   fields: [{
     type: "vector",
@@ -81,23 +59,7 @@ db.products.createSearchIndex("vector_index", "vectorSearch", {
 })
 ```
 
-**Common Embedding Model Dimensions:**
-
-Voyage models can support multiple output dimensions. If you configure a non-default output dimension at embedding time, your `numDimensions` must match that configured output exactly.
-
-| Model | Dimensions |
-|-------|------------|
-| OpenAI text-embedding-3-small | 1536 |
-| OpenAI text-embedding-3-large | 3072 |
-| OpenAI text-embedding-ada-002 | 1536 |
-| Cohere embed-english-v3.0 | 1024 |
-| Cohere embed-multilingual-v3.0 | 1024 |
-| Voyage voyage-4 / voyage-4-lite / voyage-4-large | 1024 default (also 256, 512, 2048) |
-| Voyage voyage-code-3 | 1024 default (also 256, 512, 2048) |
-| Voyage voyage-3-large / voyage-3.5 (older) | 1024 default (also 256, 512, 2048) |
-| Google text-embedding-004 | 768 |
-| HuggingFace all-MiniLM-L6-v2 | 384 |
-| HuggingFace all-mpnet-base-v2 | 768 |
+Provider output dimensions are provider-defined. Treat the provider response and a sample of stored vectors as the source of truth before creating or changing the index.
 
 **How to Check Your Embedding Dimensions:**
 
@@ -108,7 +70,7 @@ db.products.aggregate([
   { $limit: 1 },
   { $project: { dimensions: { $size: "$embedding" } } }
 ])
-// Output: { dimensions: 1536 }
+// Output: { dimensions: 1024 }
 
 // Verify all vectors have consistent dimensions
 db.products.aggregate([
@@ -146,6 +108,4 @@ db.products.getSearchIndexes()
 2. Validate expected behavior and performance using explain and Atlas metrics.
 3. Confirm version-gated behavior on your target MongoDB release before production rollout.
 
-Reference:
-- [MongoDB Vector Index Definition](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/#std-label-avs-types-vector-numDimensions)
-- [Voyage Text Embeddings Models](https://www.mongodb.com/docs/voyageai/models/text-embeddings.md)
+Reference: [MongoDB Vector Index Definition](https://mongodb.com/docs/atlas/atlas-vector-search/vector-search-type/#std-label-avs-types-vector-numDimensions)

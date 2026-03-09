@@ -34,7 +34,7 @@ Example mapping:
 
 **When NOT to use this pattern:**
 
-- Never. Production Search operations always require a runbook.
+- Throwaway local experimentation where there is no operational response path to maintain.
 
 Reference: [Atlas Alert Conditions](https://www.mongodb.com/docs/atlas/reference/alert-conditions.md)
 Reference: [Fix Atlas Search Issues](https://www.mongodb.com/docs/atlas/reference/alert-resolutions/atlas-search-alerts.md)

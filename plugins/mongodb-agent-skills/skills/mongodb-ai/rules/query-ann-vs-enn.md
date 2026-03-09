@@ -129,8 +129,6 @@ db.products.aggregate([
 // - Scientific research
 // - Measuring ANN accuracy
 // - Batch processing
-// - Collections with < 10,000 candidate docs
-// - Highly selective pre-filters (for example, <5% of data matches filter)
 // - Perfect recall required
 ```
 

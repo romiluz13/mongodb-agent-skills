@@ -1,7 +1,7 @@
 {
-  "version": "1.0.1",
+  "version": "1.2.0",
   "organization": "MongoDB",
-  "date": "February 2026",
+  "date": "March 2026",
   "abstract": "MongoDB Search engine guidance for Atlas and self-managed deployments with 24 rules across 6 categories: Deployment Modes and Release Gates (CRITICAL), Index Architecture and Mappings (CRITICAL), Query Composition and Relevance (CRITICAL), Hybrid and Vector Interop (HIGH), Operations and Troubleshooting (HIGH), and Skill Boundary Rules (MEDIUM). The skill enforces deployment and release-stage gating, mapping guardrails against over-indexing, operator/analyzer selection, facet and score correctness, hybrid stage compatibility, and operational triage for Search alerts and index failures. It cross-links to mongodb-ai for model/provider semantics and RAG-specific concerns.",
   "references": [
     "https://www.mongodb.com/docs/atlas/atlas-search/changelog.md",

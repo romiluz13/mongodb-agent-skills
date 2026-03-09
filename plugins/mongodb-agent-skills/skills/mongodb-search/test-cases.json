@@ -43,7 +43,7 @@
       "ruleId": "community-preview-safety",
       "ruleTitle": "Apply Community Search Preview Safety Controls",
       "type": "bad",
-      "code": "Recommend Community Search for strict SLA production without preview caveat.",
+      "code": "Recommend Community Search for strict SLA production without checking current release status or versioned docs.",
       "language": "text",
       "description": "bad pattern for community-preview-safety"
     },
@@ -51,7 +51,7 @@
       "ruleId": "community-preview-safety",
       "ruleTitle": "Apply Community Search Preview Safety Controls",
       "type": "good",
-      "code": "Label Community Search as Preview and require staging validation before production.",
+      "code": "Check the current release-status source, record GA/Preview status, and require staging validation before production when the feature is not GA.",
       "language": "text",
       "description": "good pattern for community-preview-safety"
     },

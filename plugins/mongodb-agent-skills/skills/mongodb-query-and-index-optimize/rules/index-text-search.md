@@ -1,13 +1,15 @@
 ---
-title: Use Text Indexes for Full-Text Search
+title: Use Text Indexes for Built-In $text Search
 impact: HIGH
 impactDescription: "Keyword search across documents: text index with stemming and ranking vs regex COLLSCAN"
 tags: index, text, search, fulltext, keywords, stemming, ranking
 ---
 
-## Use Text Indexes for Full-Text Search
+## Use Text Indexes for Built-In $text Search
 
-**Text indexes enable efficient keyword search with stemming, stop words, and relevance ranking.** Searching for "running" matches "run", "runs", "runner" automatically. Without text indexes, you'd need regex patterns that can't use regular indexes and scan every document. For production search, consider Atlas Search for more features.
+Use this rule for built-in `$text` queries and text indexes. If the workload is Atlas Search, `$search`, `$searchMeta`, analyzers, synonyms, or autocomplete on Atlas-hosted data, use `mongodb-search` instead.
+
+**Text indexes enable efficient keyword search with stemming, stop words, and relevance ranking.** Searching for "running" matches "run", "runs", "runner" automatically. Without text indexes, you'd need regex patterns that can't use regular indexes and scan every document.
 
 **Incorrect (regex for keyword search—COLLSCAN):**
 
@@ -186,7 +188,7 @@ db.articles.find({
 // Other filters need separate indexes or scan results
 ```
 
-**Text search vs Atlas Search:**
+**Built-In `$text` Search vs Atlas Search:**
 
 ```javascript
 // Built-in text index:
@@ -198,7 +200,7 @@ db.articles.find({
 // ✗ No facets/aggregations
 // ✗ Limited analyzers
 
-// Atlas Search (recommended for production):
+// Atlas Search:
 db.products.aggregate([
   {
     $search: {
@@ -219,9 +221,9 @@ db.products.aggregate([
 ])
 // Features: fuzzy, autocomplete, facets, synonyms, custom analyzers
 
-// Recommendation:
-// - Dev/simple use: Built-in text index
-// - Production search: Atlas Search
+// Routing:
+// - Built-in $text and text indexes: this skill
+// - Atlas Search and $search/$searchMeta: mongodb-search
 ```
 
 **When NOT to use text indexes:**
@@ -284,4 +286,6 @@ function analyzeTextSearch(collection, searchTerms) {
 analyzeTextSearch("articles", "mongodb database performance")
 ```
 
+Reference: [Text Search on Self-Managed Deployments](https://www.mongodb.com/docs/manual/text-search/)
 Reference: [Text Indexes](https://mongodb.com/docs/manual/core/indexes/index-types/index-text/)
+Reference: [Atlas Search](https://www.mongodb.com/docs/atlas/atlas-search/)

@@ -1,25 +1,26 @@
 ---
 name: mongodb-ai
-description: MongoDB Atlas Vector Search and AI integration. Use when creating vector indexes, writing $vectorSearch queries, building RAG applications, implementing hybrid search, or storing AI agent memory. Triggers on "vector search", "vector index", "$vectorSearch", "embedding", "semantic search", "RAG", "retrieval augmented generation", "numCandidates", "similarity search", "cosine similarity", "hybrid search", "$rankFusion", "$scoreFusion", "rerank", "two-stage retrieval", "AI agent", "LLM memory", "quantization", "multi-tenant", "Search Nodes", "explain vectorsearch", "HNSW", "automated embedding", "autoEmbed", "Voyage AI", "voyage-4", "voyage-4-large", "voyage-code-3", "input_type", "asymmetric retrieval", "lexical prefilter", "fuzzy search vector", "phrase filter".
+description: MongoDB Vector Search and AI integration. Use when creating vector indexes, writing $vectorSearch queries, building RAG applications, implementing hybrid retrieval strategies, or storing AI agent memory. Triggers on "vector search", "vector index", "$vectorSearch", "embedding", "semantic search", "RAG", "retrieval augmented generation", "numCandidates", "similarity search", "cosine similarity", "hybrid search", "$rankFusion", "$scoreFusion", "rerank", "two-stage retrieval", "AI agent", "LLM memory", "quantization", "multi-tenant", "Search Nodes", "explain vectorsearch", "HNSW", "automated embedding", "autoEmbed", "Voyage AI", "voyage-4", "voyage-4-large", "voyage-code-3", "input_type", "asymmetric retrieval".
 license: Apache-2.0
 metadata:
   author: mongodb
-  version: "1.6.0"
+  version: "1.7.0"
 ---
 
 # MongoDB AI: Vector Search and AI Integration
 
-Vector Search patterns and AI integration strategies for MongoDB, maintained by MongoDB. Contains **33 rules across 6 categories**, prioritized by impact. This skill bridges the critical knowledge gap where AI assistants have outdated or incorrect information about MongoDB's AI capabilities.
+Vector Search patterns and AI integration strategies for MongoDB, maintained by MongoDB. Contains **33 rules across 6 categories**, prioritized by impact. This skill covers MongoDB Vector Search across Atlas clusters, self-managed deployments, and local Atlas deployments created with Atlas CLI.
 
 ## Critical Warning
 
 > **Your AI assistant's knowledge about MongoDB Vector Search is likely outdated or incorrect.**
 >
-> Atlas Vector Search syntax, `$vectorSearch` stage, vector index creation, and related features have evolved significantly. Do NOT trust pre-trained knowledge. Always reference these rules and verify against your actual MongoDB cluster.
+> MongoDB Vector Search syntax, `$vectorSearch` stage, vector index creation, and related features have evolved significantly. Do NOT trust pre-trained knowledge. Always reference these rules and verify against your actual MongoDB deployment and version.
 
 ## When to Apply
 
 Reference these guidelines when:
+- Confirming which deployment track you are on before choosing syntax or rollout guidance
 - Creating vector indexes for semantic search
 - Writing `$vectorSearch` aggregation queries
 - Tuning numCandidates for recall vs. latency
@@ -30,10 +31,10 @@ Reference these guidelines when:
 - Choosing similarity functions (cosine, euclidean, dotProduct)
 - Enabling vector quantization for large datasets
 - Integrating Voyage AI embedding models (for example `voyage-4` or `voyage-code-3`)
-- Pre-filtering vector search results
+- Pre-filtering vector search results with MQL-style metadata filters
 - Debugging "no results" or slow vector queries
 
-Use `mongodb-search` instead when the request is primarily about lexical Search engine design (`$search`, analyzers, synonyms, facets, search alerts, or Community `mongot` operations) rather than model/provider semantics.
+Use `mongodb-search` instead when the request is primarily about lexical Search engine design (`$search`, analyzers, synonyms, facets, search alerts, or Community `mongot` operations), or when you need stage/operator legality for `$search.vectorSearch`, `$rankFusion`, or `$scoreFusion`.
 
 ## Rule Categories by Priority
 
@@ -53,7 +54,7 @@ Use `mongodb-search` instead when the request is primarily about lexical Search 
 - `index-vector-definition` - Required fields: type, path, numDimensions, similarity
 - `index-similarity-function` - Choosing cosine vs euclidean vs dotProduct
 - `index-filter-fields` - Pre-filtering with filter type indexes
-- `index-quantization` - Scalar (3.75x) vs binary (24x) RAM reduction
+- `index-quantization` - Choose scalar vs binary quantization from docs-backed memory/quality trade-offs
 - `index-dimensions-match` - numDimensions must match embedding model
 - `index-multitenant` - Single collection with tenant_id for SaaS apps
 - `index-views-partial` - Partial indexing via MongoDB Views
@@ -66,14 +67,14 @@ Use `mongodb-search` instead when the request is primarily about lexical Search 
 - `query-numcandidates-tuning` - The 20x rule for recall vs latency
 - `query-ann-vs-enn` - When to use exact: true
 - `query-prefiltering` - Filter before vector comparison ($exists, $ne, $not)
-- `query-lexical-prefilter` - Advanced text filters (fuzzy, phrase, geo) via $search.vectorSearch
+- `query-lexical-prefilter` - Route Atlas Search operator filters to `mongodb-search`
 - `query-get-scores` - Using $meta: "vectorSearchScore"
 - `query-same-embedding-model` - Data/query embeddings must share space, dimensions, and correct `input_type`
 
 ### 3. Performance Tuning (HIGH) - 6 rules
 
-- `perf-quantization-scale` - Enable at 100K+ vectors
-- `perf-index-in-memory` - Vector indexes must fit in RAM
+- `perf-quantization-scale` - Use large-vector and Required Memory signals to decide when to quantize
+- `perf-index-in-memory` - Keep vector index working set in memory when sizing
 - `perf-numcandidates-tradeoff` - Benchmark recall/latency/cost trade-offs by model and `numCandidates`
 - `perf-prefilter-narrow` - Reduce candidate set before vector comparison
 - `perf-explain-vectorsearch` - Debug with explain() for vector queries
@@ -91,7 +92,7 @@ Use `mongodb-search` instead when the request is primarily about lexical Search 
 - `hybrid-rankfusion` - Combining vector + text search (MongoDB 8.0+, Preview)
 - `hybrid-scorefusion` - Score-based hybrid search (MongoDB 8.2+, Preview)
 - `hybrid-weights` - Per-query weight tuning
-- `hybrid-limitations` - Stage restrictions plus decision matrix (`$rankFusion` vs `$scoreFusion` vs retrieval+rerank)
+- `hybrid-limitations` - Strategy constraints plus decision matrix (`$rankFusion` vs `$scoreFusion` vs retrieval+rerank)
 
 ### 6. AI Agent Integration (MEDIUM) - 3 rules
 
@@ -190,6 +191,7 @@ references/docs-navigation.md
 
 | Need | Canonical Doc |
 |------|---------------|
+| Deployment scope and feature entry point | [Atlas Vector Search Overview](https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-overview/) |
 | Vector index definition (`vector` / `autoEmbed`) | [Atlas Vector Search Type](https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-type.md) |
 | Query stage syntax and operator support | [Atlas `$vectorSearch` Stage](https://www.mongodb.com/docs/atlas/atlas-vector-search/vector-search-stage.md) |
 | Hybrid overview and limitations | [Atlas Hybrid Search](https://www.mongodb.com/docs/atlas/atlas-vector-search/hybrid-search.md) |
